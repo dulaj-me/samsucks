@@ -74,10 +74,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   const tInfo = h('span', 'osd-info', times);
   const tLeft = h('span', 'osd-left', times);
   const hintEl = h('div', 'osd-hint', osdBottom);
-  hintEl.innerHTML = '▼ Audio &amp; subtitles';
 
   const panel = h('div', 'tracks hidden', el);
   const upnext = h('div', 'upnext hidden', el);
+  const skipBtn = h('div', 'skip hidden', el);
+  skipBtn.textContent = 'Skip Intro';
   const errorEl = h('div', 'player-error hidden', el);
 
   let item = initial;
@@ -106,13 +107,21 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let cueTrack = null;
   let cueTimer = 0;
   let cueFor = null;
+  let markers = [];
+  let skipFor = null;
+  let nextLookup = null;
+  let switching = false;
+  let hintTimer = 0;
   const playSession = uuid();
 
   const player = createPlayer(stage, {
     onTime(ms) {
       if (!started) return;
       position = base + ms;
-      if (seekTarget == null) renderProgress(position);
+      if (seekTarget == null) {
+        renderProgress(position);
+        updateSkip(position);
+      }
     },
     onBuffering(on) { toggleClass(spinner, 'on', on); },
     onEnd() { finished(); },
@@ -163,6 +172,21 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       setText(osdTitle, item.title);
       setText(osdSub, item.year || '');
     }
+    renderHint();
+  }
+
+  function renderHint() {
+    clearTimeout(hintTimer);
+    setText(hintEl, item.type === 'episode'
+      ? '▼ Audio & subtitles      CH ▲▼ Next / previous episode'
+      : '▼ Audio & subtitles');
+  }
+
+  function flashHint(msg) {
+    setText(hintEl, msg);
+    showOsd();
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(renderHint, OSD_HIDE_MS);
   }
 
   // --- Timeline ---------------------------------------------------------
@@ -286,6 +310,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       if (!alive) return;
       item = full;
       duration = item.duration || duration;
+      // Only the credits that run to the end; earlier ones can precede a post-credits scene.
+      const credits = (item.Marker || []).filter(m => m.type === 'credits');
+      const endCredits = credits.find(m => m.final) || credits[credits.length - 1];
+      markers = (item.Marker || []).filter(m => m.type === 'intro').concat(endCredits || []);
       media = (item.Media || [])[0];
       part = media && media.Part && media.Part[0];
       if (!part) throw new Error('No playable media');
@@ -376,6 +404,43 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     }
   }
 
+  // --- Skip intro / credits ---------------------------------------------
+
+  function updateSkip(ms) {
+    // Hide a second early so the button doesn't flash up right as the marker ends.
+    const m = markers.find(x => !x.dismissed && ms >= x.startTimeOffset && ms < x.endTimeOffset - 1000) || null;
+    if (m === skipFor) return;
+    skipFor = m;
+    toggleClass(skipBtn, 'hidden', !m);
+    if (!m) return;
+    if (m.type === 'intro') { setText(skipBtn, 'Skip Intro'); return; }
+    setText(skipBtn, item.type === 'episode' ? 'Next Episode' : 'Mark Watched');
+    lookupNext().then(ep => { if (skipFor === m && !ep) setText(skipBtn, 'Mark Watched'); });
+  }
+
+  function skip() {
+    const m = skipFor;
+    m.dismissed = true;
+    updateSkip(position);
+    if (m.type === 'credits') { doneAndNext(); return; }
+    seekTarget = Math.min(m.endTimeOffset, duration - 3000);
+    commitSeek();
+  }
+
+  async function doneAndNext() {
+    started = false;
+    clearInterval(timelineTimer);
+    player.close();
+    position = duration;
+    report('stopped');
+    session.server.scrobble(item.ratingKey).catch(e => warn('scrobble failed', e.message));
+    toggleClass(spinner, 'on', true);
+    const ep = await lookupNext();
+    if (!alive) return;
+    if (ep) router.replace(PlayerScreen(ep, { offset: 0 }));
+    else exit();
+  }
+
   // --- Audio / subtitle picker ------------------------------------------
 
   let panelCol = 0;
@@ -450,15 +515,41 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   // --- Ending -----------------------------------------------------------
 
-  async function nextEpisode() {
+  // dir: 1 = next, -1 = previous, crossing season boundaries.
+  async function siblingEpisode(dir) {
     const server = session.server;
     const eps = await server.children(item.parentRatingKey);
     const i = eps.findIndex(e => e.ratingKey === item.ratingKey);
-    if (i >= 0 && i < eps.length - 1) return eps[i + 1];
+    if (i >= 0 && eps[i + dir]) return eps[i + dir];
     const seasons = (await server.children(item.grandparentRatingKey)).filter(s => s.type === 'season');
     const si = seasons.findIndex(s => s.ratingKey === item.parentRatingKey);
-    if (si >= 0 && si < seasons.length - 1) return (await server.children(seasons[si + 1].ratingKey))[0] || null;
-    return null;
+    const season = si >= 0 && seasons[si + dir];
+    if (!season) return null;
+    const list = await server.children(season.ratingKey);
+    return (dir > 0 ? list[0] : list[list.length - 1]) || null;
+  }
+
+  // Shared by the credits button and the end-of-file up-next card. Failures aren't cached.
+  function lookupNext() {
+    if (item.type !== 'episode') return Promise.resolve(null);
+    if (!nextLookup) nextLookup = siblingEpisode(1).catch(e => { nextLookup = null; warn('next episode lookup failed', e.message); return null; });
+    return nextLookup;
+  }
+
+  async function jumpEpisode(dir) {
+    if (item.type !== 'episode' || switching) return;
+    switching = true;
+    toggleClass(spinner, 'on', true);
+    let ep = null;
+    try { ep = await siblingEpisode(dir); } catch (e) { warn('episode lookup failed', e.message); }
+    switching = false;
+    if (!alive) return;
+    if (!ep) {
+      toggleClass(spinner, 'on', !started);
+      flashHint(dir > 0 ? 'No next episode' : 'No previous episode');
+      return;
+    }
+    router.replace(PlayerScreen(ep, { offset: 0 }));
   }
 
   async function finished() {
@@ -467,7 +558,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     clearInterval(timelineTimer);
     player.close();
     if (item.type !== 'episode') { exit(); return; }
-    try { nextItem = await nextEpisode(); } catch (e) { nextItem = null; }
+    nextItem = await lookupNext();
     if (!alive) return;
     if (!nextItem) { exit(); return; }
     let left = 10;
@@ -499,7 +590,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     if (!alive) return;
     alive = false;
     if (started && position < duration) report('stopped');
-    [seekTimer, osdTimer, subTimer].forEach(clearTimeout);
+    [seekTimer, osdTimer, subTimer, hintTimer].forEach(clearTimeout);
     clearInterval(timelineTimer);
     clearInterval(upnextTimer);
     clearInterval(cueTimer);
@@ -536,7 +627,17 @@ export function PlayerScreen(initial, { offset = null } = {}) {
         return true;
       }
       if (!panel.classList.contains('hidden')) return panelKey(action);
+      if (skipFor && seekTarget == null) {
+        if (action === 'enter') { skip(); return true; }
+        if (action === 'back' && !el.classList.contains('osd-on')) {
+          skipFor.dismissed = true;
+          updateSkip(position);
+          return true;
+        }
+      }
       switch (action) {
+        case 'pageup': jumpEpisode(1); return true;
+        case 'pagedown': jumpEpisode(-1); return true;
         case 'enter':
           if (seekTarget != null) commitSeek();
           else if (el.classList.contains('osd-on') || paused) togglePause();

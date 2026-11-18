@@ -369,6 +369,13 @@ html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .r
 .tracks-opt.on::before { content: '✓  '; color: var(--coral); }
 .tracks-opt.focus { background: var(--cream); color: var(--bg); }
 
+.skip {
+  position: absolute; right: 96px; bottom: 120px; padding: 22px 44px;
+  border-radius: 14px; background: var(--cream); color: var(--bg);
+  font: 600 30px var(--body); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.osd-on .skip { bottom: 230px; }
+
 .upnext {
   position: absolute; right: 96px; bottom: 120px; width: 660px; padding: 34px 40px;
   border-radius: 22px; background: var(--raised); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
