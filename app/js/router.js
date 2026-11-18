@@ -12,12 +12,16 @@ let globalKey = null;
 export function init(container, onGlobalKey) {
   root = container;
   globalKey = onGlobalKey;
-  setHandler(action => {
-    const top = stack[stack.length - 1];
-    if (top && top.onKey && top.onKey(action) === true) return;
-    if (globalKey && globalKey(action) === true) return;
-    if (action === 'back') back();
-  });
+  setHandler(dispatch);
+}
+
+function dispatch(action) {
+  const top = stack[stack.length - 1];
+  if (top && top.onKey && top.onKey(action) === true) return;
+  if (globalKey && globalKey(action) === true) return;
+  if (action === 'back') back();
+  // Screens without a long-press action treat it as a plain OK.
+  if (action === 'hold') dispatch('enter');
 }
 
 function hide(screen) {

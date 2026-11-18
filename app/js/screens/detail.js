@@ -2,6 +2,7 @@
 import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { Row } from '../ui/row.js';
+import { Menu } from '../ui/menu.js';
 import { session } from '../session.js';
 import { metaLine, clock, episodeLabel } from '../util/format.js';
 import { clearLogo } from './home.js';
@@ -11,6 +12,9 @@ import { playItem } from '../nav.js';
 import { error } from '../util/log.js';
 
 const SHIFT = 400; // how far the body slides up to reveal seasons/episodes
+
+const isWatched = it => (it.type === 'show' || it.type === 'season')
+  ? it.viewedLeafCount >= it.leafCount : !!it.viewCount;
 
 export function DetailScreen(initial, { autoplay = false } = {}) {
   const el = h('div', 'screen detail');
@@ -26,6 +30,8 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   const buttonsEl = h('div', 'detail-buttons', body);
   const seasonsEl = h('div', 'detail-seasons', body);
   const episodesWrap = h('div', 'detail-episodes', body);
+  h('div', 'detail-hint', el).textContent = 'Hold OK for options';
+  const menu = new Menu(el);
 
   let item = initial;
   let buttons = [];
@@ -92,7 +98,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
         add(icons.play, isShowLike() ? 'Play ' + prefix : 'Play', () => playItem(t, { offset: 0 }));
       }
     }
-    const watched = isShowLike() ? item.viewedLeafCount >= item.leafCount : !!item.viewCount;
+    const watched = isWatched(item);
     add(watched ? icons.check : icons.uncheck, watched ? 'Watched' : 'Mark watched', toggleWatched);
     if (item.type === 'episode' && item.grandparentRatingKey) {
       add(icons.tv, 'Go to show', () => router.push(DetailScreen({ ratingKey: item.grandparentRatingKey, type: 'show', title: item.grandparentTitle })));
@@ -103,7 +109,11 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
 
   function renderSeasons() {
     seasonsEl.innerHTML = '';
-    seasons.forEach(s => { s.el = h('div', 'pill', seasonsEl); s.el.textContent = s.title; });
+    seasons.forEach(s => {
+      s.el = h('div', 'pill', seasonsEl);
+      s.el.textContent = s.title;
+      if (s.leafCount && isWatched(s)) s.el.insertAdjacentHTML('beforeend', icons.check);
+    });
     renderFocus();
   }
 
@@ -118,7 +128,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     toggleClass(el, 'shifted', zone !== 'buttons');
   }
 
-  async function loadEpisodes(season) {
+  async function loadEpisodes(season, keepKey) {
     const kids = await session.server.children(season.ratingKey);
     if (!alive) return;
     if (!episodes) {
@@ -130,11 +140,13 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       episodes = { row, items: kids };
     } else {
       episodes.items = kids;
-      episodes.row.setItems(kids);
+      episodes.row.setItems(kids, keepKey);
     }
-    // Land on the first unwatched episode.
-    const next = kids.findIndex(k => !k.viewCount || k.viewOffset);
-    episodes.row.focusIndex(next >= 0 ? next : 0);
+    if (!keepKey) {
+      // Land on the first unwatched episode.
+      const next = kids.findIndex(k => !k.viewCount || k.viewOffset);
+      episodes.row.focusIndex(next >= 0 ? next : 0);
+    }
     renderFocus();
   }
 
@@ -168,17 +180,53 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     }
   }
 
-  async function toggleWatched() {
+  async function setWatched(it) {
     const server = session.server;
-    const watched = isShowLike() ? item.viewedLeafCount >= item.leafCount : !!item.viewCount;
+    if (isWatched(it)) await server.unscrobble(it.ratingKey);
+    else await server.scrobble(it.ratingKey);
+    server.invalidate();
+  }
+
+  async function toggleWatched() {
     try {
-      if (watched) await server.unscrobble(item.ratingKey);
-      else await server.scrobble(item.ratingKey);
-      server.invalidate();
+      await setWatched(item);
       await load();
     } catch (e) {
       error('toggle watched failed', e);
     }
+  }
+
+  // A season or episode of this show. Refreshes in place, unlike load(),
+  // so focus stays on the tile or pill that was marked.
+  async function toggleChild(it) {
+    if (!it) return;
+    const server = session.server;
+    try {
+      await setWatched(it);
+      const keep = episodes && episodes.row.current();
+      const [full, kids] = await Promise.all([server.metadata(item.ratingKey), server.children(item.ratingKey)]);
+      if (!alive) return;
+      if (full) item = full;
+      seasons = kids.filter(s => s.type === 'season');
+      seasonIndex = Math.min(seasonIndex, seasons.length - 1);
+      renderSeasons();
+      renderButtons();
+      if (seasons[seasonIndex]) await loadEpisodes(seasons[seasonIndex], keep && keep.ratingKey);
+    } catch (e) {
+      error('mark watched failed', e);
+    }
+  }
+
+  function openMenu(it) {
+    if (!it) return;
+    const watched = isWatched(it);
+    menu.open({
+      title: it.title,
+      sub: it.type === 'episode' ? episodeLabel(it) : item.title,
+      items: [
+        { icon: watched ? icons.uncheck : icons.check, label: watched ? 'Mark as unwatched' : 'Mark as watched', run: () => toggleChild(it) },
+      ],
+    });
   }
 
   if (item.title) renderHeader();
@@ -208,6 +256,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       shown = true;
     },
     onKey(action) {
+      if (menu.isOpen) return menu.onKey(action);
       if (action === 'up') { moveZone(-1); return true; }
       if (action === 'down') { moveZone(1); return true; }
       if (action === 'play' || action === 'playpause') {
@@ -230,7 +279,9 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
           return true;
         }
         if (action === 'enter') { moveZone(1); return true; }
+        if (action === 'hold') { openMenu(seasons[seasonIndex]); return true; }
       } else if (zone === 'episodes') {
+        if (action === 'hold') { openMenu(episodes.row.current()); return true; }
         if (action === 'left') { episodes.row.move(-1); return true; }
         if (action === 'right') { episodes.row.move(1); return true; }
         if (action === 'enter') { episodes.row.select(); return true; }

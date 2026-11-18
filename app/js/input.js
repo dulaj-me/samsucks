@@ -2,11 +2,15 @@
 // (extra presses of the same key in one frame collapse), so holding a direction
 // can never queue up work and the UI stops the instant the key is released.
 // While a key is held, <html> gets .fast which shortens transitions.
+// OK fires on release so a long press can send 'hold' instead.
 import { actionFor } from './platform/tizen.js';
 
 const NAV = { left: 1, right: 1, up: 1, down: 1 };
+const HOLD_MS = 500;
 
 let handler = null;
+let enterDown = false;
+let holdTimer = 0;
 let pending = null;
 let scheduled = false;
 let fastTimer = 0;
@@ -38,6 +42,15 @@ document.addEventListener('keydown', e => {
   const tag = document.activeElement && document.activeElement.tagName;
   if (tag === 'INPUT' && action !== 'back' && action !== 'down' && action !== 'up' && action !== 'enter') return;
   e.preventDefault();
+
+  if (action === 'enter') {
+    // Ignore autorepeat; e.repeat isn't reliable on every remote.
+    if (enterDown) return;
+    enterDown = true;
+    holdTimer = setTimeout(() => { holdTimer = 0; dispatch('hold'); }, HOLD_MS);
+    return;
+  }
+
   stats.keyAt = performance.now();
 
   if (NAV[action]) {
@@ -76,10 +89,30 @@ export function inject(action) {
   if (handler) handler(action);
 }
 
-document.addEventListener('keyup', () => {
+function dispatch(action) {
+  stats.keyAt = performance.now();
+  if (handler) handler(action);
+}
+
+function resetEnter() {
+  clearTimeout(holdTimer);
+  holdTimer = 0;
+  enterDown = false;
+}
+
+document.addEventListener('keyup', e => {
+  if (enterDown && actionFor(e) === 'enter') {
+    const tap = holdTimer !== 0;
+    resetEnter();
+    if (tap) dispatch('enter');
+  }
   clearTimeout(fastTimer);
   fastTimer = setTimeout(() => setFast(false), 60);
 });
+
+// A keyup lost to suspend or focus change would otherwise swallow the next OK.
+window.addEventListener('blur', resetEnter);
+document.addEventListener('visibilitychange', resetEnter);
 
 export function isFast() {
   return root.classList.contains('fast');
