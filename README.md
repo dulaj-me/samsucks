@@ -108,7 +108,7 @@ choose **Add to Home**.
 | --- | --- |
 | Arrows / OK | Move around / select |
 | Play/Pause | Play whatever is focused, or pause and resume |
-| Back | Go back (while watching, the first press hides the controls) |
+| Back | Go back (while watching, the first press hides the controls; at Home, press twice to exit) |
 | ▼ while watching | Audio and subtitle tracks |
 | ◀ ▶ while watching | Seek; hold to go faster |
 | Yellow | Change the sort order in a library |
