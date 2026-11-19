@@ -1,4 +1,3 @@
-// Settings in five groups: profile and account, server, playback, about, advanced.
 import { DEV, VERSION } from '../config.js';
 import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import * as store from '../util/store.js';
@@ -26,6 +25,10 @@ function setPref(key, value) {
 }
 
 const onOff = on => (on ? 'On' : 'Off');
+
+function serverAddress(uri) {
+  try { return new URL(uri).host; } catch (e) { return uri.replace(/[?&]X-Plex-Token=.*/i, ''); }
+}
 
 export function SettingsScreen() {
   const el = h('div', 'screen settings');
@@ -69,7 +72,8 @@ export function SettingsScreen() {
       { label: 'Performance overlay', value: () => onOff(hudEnabled()), run: () => setHud(!hudEnabled()) },
       // For before/after recordings: brings back the full-screen gradients that took ~2s per repaint.
       { label: 'Demo: original slow renderer', value: () => onOff(legacyGradients()), run: () => setLegacyGradients(!legacyGradients()) },
-      { label: 'Server address', value: () => (session.server ? session.server.uri.replace(/X-Plex-Token=.*/, '') : '—') },
+      // Host and port only: a plex.direct host is long enough that the ellipsis would hide the port.
+      { label: 'Server address', value: () => (session.server ? serverAddress(session.server.uri) : '—') },
     ]],
   ];
 
@@ -136,7 +140,7 @@ export function SettingsScreen() {
         servers = await getServers(profileToken());
       } catch (e) {
         error('server list failed', e);
-        if (alive) setStatus(it, "Couldn't reach plex.tv");
+        if (alive) setStatus(it, e.status === 401 ? 'Sign-in expired' : "Couldn't reach plex.tv");
         return;
       }
       if (!alive) return;
