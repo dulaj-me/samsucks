@@ -13,6 +13,8 @@ import * as router from '../router.js';
 import { log, warn, error } from '../util/log.js';
 import { request } from '../plex/client.js';
 import { parseSubtitles, CueTrack } from '../player/subtitles.js';
+import { load as loadImage } from '../ui/images.js';
+import * as store from '../util/store.js';
 
 // What a 2022 Samsung (Tizen 6.5) decodes natively. No DTS on 2018+ models.
 const DIRECT = {
@@ -25,6 +27,9 @@ const TEXT_SUBS = { srt: 1, subrip: 1, ass: 1, ssa: 1, mov_text: 1, vtt: 1, webv
 const OSD_HIDE_MS = 4000;
 const SEEK_COMMIT_MS = 900;
 const TIMELINE_MS = 10000;
+const UPNEXT_SECONDS = 10;
+const UPNEXT_ART_W = 640;
+const UPNEXT_ART_H = 360;
 
 function streamsOf(part, type) {
   return (part && part.Stream || []).filter(s => s.streamType === type);
@@ -52,6 +57,19 @@ function subtitleLabel(s) {
   const title = s.displayTitle && s.displayTitle !== 'Unknown' ? s.displayTitle : (s.language || '');
   const kind = (s.codec || '').toUpperCase() + (s.key ? ' · external' : '');
   return title ? title + (s.key ? ' · external' : '') : kind || 'Subtitle';
+}
+
+// Settings owns the prefs object; a missing key means on.
+function autoplayNext() {
+  const prefs = store.get('prefs', null);
+  return !(prefs && prefs.autoplayNext === false);
+}
+
+function button(parent, icon, label) {
+  const b = h('div', 'btn', parent);
+  b.innerHTML = icon;
+  h('span', '', b).textContent = label;
+  return b;
 }
 
 function cleanSubtitle(text) {
@@ -82,6 +100,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   const tNow = h('span', 'osd-now', times);
   const tInfo = h('span', 'osd-info', times);
   const tLeft = h('span', 'osd-left', times);
+  const controls = h('div', 'osd-controls', osdBottom);
   const hintEl = h('div', 'osd-hint', osdBottom);
 
   const panel = h('div', 'tracks hidden', el);
@@ -121,7 +140,25 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let nextLookup = null;
   let switching = false;
   let hintTimer = 0;
+  // Focus inside the OSD: the seek bar, or the button row under it.
+  let zone = 'bar';
+  let btnIndex = 0;
+  let upnextIndex = 0;
+  let upnextButtons = [];
+  let upnextLabel = null;
   const playSession = uuid();
+
+  const buttons = [
+    { el: button(controls, icons.pause, 'Pause'), run: togglePause },
+    { el: button(controls, icons.subtitles, 'Audio & subtitles'), run: () => { if (part) openPanel(); } },
+  ];
+  if (initial.type === 'episode') {
+    buttons.push({ el: button(controls, icons.previous, 'Previous episode'), run: () => jumpEpisode(-1) });
+    buttons.push({ el: button(controls, icons.next, 'Next episode'), run: () => jumpEpisode(1) });
+  }
+  const playBtn = buttons[0].el;
+  playBtn.classList.add('osd-play');
+  playBtn._paused = false;
 
   const player = createPlayer(stage, {
     onTime(ms) {
@@ -162,10 +199,35 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     }
   }
 
-  function showOsd(sticky) {
+  // from: the zone to focus when this reveals a hidden OSD.
+  function showOsd(sticky, from) {
+    if (!el.classList.contains('osd-on')) {
+      zone = from || 'bar';
+      renderFocus();
+    }
     toggleClass(el, 'osd-on', true);
     clearTimeout(osdTimer);
-    if (!sticky && !paused) osdTimer = setTimeout(() => toggleClass(el, 'osd-on', false), OSD_HIDE_MS);
+    if (!sticky && !paused) osdTimer = setTimeout(hideOsd, OSD_HIDE_MS);
+  }
+
+  function setZone(z) {
+    if (zone === z) return;
+    zone = z;
+    renderFocus();
+  }
+
+  function renderFocus() {
+    buttons.forEach((b, i) => toggleClass(b.el, 'focus', zone === 'buttons' && i === btnIndex));
+    toggleClass(el, 'osd-buttons', zone === 'buttons');
+  }
+
+  function setPaused(p) {
+    paused = p;
+    toggleClass(el, 'paused', p);
+    if (playBtn._paused === p) return;
+    playBtn._paused = p;
+    playBtn.innerHTML = p ? icons.play : icons.pause;
+    h('span', '', playBtn).textContent = p ? 'Play' : 'Pause';
   }
 
   function hideOsd() {
@@ -181,21 +243,13 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       setText(osdTitle, item.title);
       setText(osdSub, item.year || '');
     }
-    renderHint();
-  }
-
-  function renderHint() {
-    clearTimeout(hintTimer);
-    setText(hintEl, item.type === 'episode'
-      ? '▼ Audio & subtitles      CH ▲▼ Next / previous episode'
-      : '▼ Audio & subtitles');
   }
 
   function flashHint(msg) {
     setText(hintEl, msg);
     showOsd();
     clearTimeout(hintTimer);
-    hintTimer = setTimeout(renderHint, OSD_HIDE_MS);
+    hintTimer = setTimeout(() => setText(hintEl, ''), OSD_HIDE_MS);
   }
 
   // --- Timeline ---------------------------------------------------------
@@ -275,10 +329,9 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     }
     syncSidecar();
     player.play();
-    paused = false;
+    setPaused(false);
     started = true;
     position = atMs;
-    toggleClass(el, 'paused', false);
     toggleClass(spinner, 'on', false);
     log('playing after ' + (Date.now() - t0) + 'ms (' + mode + ')');
     report('playing');
@@ -378,14 +431,13 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     if (!started) return;
     if (paused) {
       player.play();
-      paused = false;
+      setPaused(false);
       showOsd();
     } else {
       player.pause();
-      paused = true;
+      setPaused(true);
       showOsd(true);
     }
-    toggleClass(el, 'paused', paused);
     report(paused ? 'paused' : 'playing');
   }
 
@@ -401,6 +453,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     setText(seekLabel, clock(seekTarget));
     renderProgress(seekTarget);
     showOsd(true);
+    setZone('bar');
     clearTimeout(seekTimer);
     seekTimer = setTimeout(commitSeek, SEEK_COMMIT_MS);
   }
@@ -524,7 +577,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   }
 
   function panelKey(action) {
-    if (action === 'back' || action === 'up' && panelIndex[panelCol] === 0) { panel.classList.add('hidden'); return true; }
+    if (action === 'back' || action === 'up' && panelIndex[panelCol] === 0) {
+      panel.classList.add('hidden');
+      showOsd(false, 'buttons');
+      return true;
+    }
     if (action === 'left' || action === 'right') panelCol = action === 'left' ? 0 : 1;
     if (action === 'up') panelIndex[panelCol]--;
     if (action === 'down') panelIndex[panelCol] = Math.min(panelLists[panelCol].length - 1, panelIndex[panelCol] + 1);
@@ -565,7 +622,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     switching = true;
     toggleClass(spinner, 'on', true);
     let ep = null;
-    try { ep = await siblingEpisode(dir); } catch (e) { warn('episode lookup failed', e.message); }
+    try { ep = dir > 0 ? await lookupNext() : await siblingEpisode(dir); } catch (e) { warn('episode lookup failed', e.message); }
     switching = false;
     if (!alive) return;
     if (!ep) {
@@ -577,28 +634,60 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   }
 
   async function finished() {
+    // Keys must not reach the closed player while the next episode is looked up.
+    started = false;
     position = duration;
     report('stopped');
     clearInterval(timelineTimer);
     player.close();
+    hideOsd();
     if (item.type !== 'episode') { exit(); return; }
     nextItem = await lookupNext();
     if (!alive) return;
     if (!nextItem) { exit(); return; }
-    let left = 10;
+    showUpNext();
+  }
+
+  function showUpNext() {
+    upnext.innerHTML = '';
+    const art = h('div', 'tile-frame upnext-art', upnext);
+    loadImage(h('img', 'tile-img', art), session.server.image(nextItem.thumb || nextItem.art, UPNEXT_ART_W, UPNEXT_ART_H));
+    upnextLabel = h('div', 'upnext-label', upnext);
+    h('div', 'upnext-title', upnext).textContent = episodeLabel(nextItem) + '   ' + nextItem.title;
+    const actions = h('div', 'upnext-actions', upnext);
+    upnextButtons = [button(actions, icons.play, 'Play now'), button(actions, '', 'Close')];
+    upnextIndex = 0;
+    renderUpnextFocus();
+    toggleClass(el, 'ended', true);
     upnext.classList.remove('hidden');
-    const render = () => {
-      upnext.innerHTML = '';
-      h('div', 'upnext-label', upnext).textContent = 'Up next in ' + left;
-      h('div', 'upnext-title', upnext).textContent = episodeLabel(nextItem) + '   ' + nextItem.title;
-      h('div', 'upnext-hint', upnext).textContent = 'OK to play now · Back to stop';
-    };
-    render();
+    if (!autoplayNext()) { setText(upnextLabel, 'Next episode'); return; }
+    let left = UPNEXT_SECONDS;
+    setText(upnextLabel, 'Up next in ' + left);
     upnextTimer = setInterval(() => {
       left--;
       if (left <= 0) playNext();
-      else render();
+      else setText(upnextLabel, 'Up next in ' + left);
     }, 1000);
+  }
+
+  function renderUpnextFocus() {
+    upnextButtons.forEach((b, i) => toggleClass(b, 'focus', i === upnextIndex));
+  }
+
+  // Moving focus means the viewer has taken over, so the countdown stops.
+  function upnextKey(action) {
+    switch (action) {
+      case 'left': case 'right':
+        clearInterval(upnextTimer);
+        setText(upnextLabel, 'Next episode');
+        upnextIndex = action === 'left' ? 0 : 1;
+        renderUpnextFocus();
+        return true;
+      case 'enter': if (upnextIndex === 0) playNext(); else exit(); return true;
+      case 'play': case 'playpause': playNext(); return true;
+      case 'back': case 'stop': exit(); return true;
+    }
+    return true;
   }
 
   function playNext() {
@@ -645,12 +734,20 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       if (!started) start();
     },
     onKey(action) {
-      if (!upnext.classList.contains('hidden')) {
-        if (action === 'enter') { playNext(); return true; }
-        if (action === 'back' || action === 'stop') { exit(); return true; }
-        return true;
-      }
+      if (!upnext.classList.contains('hidden')) return upnextKey(action);
       if (!panel.classList.contains('hidden')) return panelKey(action);
+      if (zone === 'buttons' && el.classList.contains('osd-on')) {
+        switch (action) {
+          case 'left': case 'right':
+            btnIndex = Math.max(0, Math.min(buttons.length - 1, btnIndex + (action === 'left' ? -1 : 1)));
+            renderFocus();
+            showOsd();
+            return true;
+          case 'up': case 'back': setZone('bar'); showOsd(); return true;
+          case 'down': showOsd(); return true;
+          case 'enter': buttons[btnIndex].run(); return true;
+        }
+      }
       if (skipFor && seekTarget == null) {
         if (action === 'enter') { skip(); return true; }
         if (action === 'back' && !el.classList.contains('osd-on')) {
@@ -673,7 +770,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
         case 'left': case 'rw': seekBy(-1); return true;
         case 'right': case 'ff': seekBy(1); return true;
         case 'up': case 'info': showOsd(); return true;
-        case 'down': if (part) openPanel(); return true;
+        case 'down': showOsd(false, 'buttons'); setZone('buttons'); return true;
         case 'stop': exit(); return true;
         case 'back':
           if (seekTarget != null) { seekTarget = null; toggleClass(el, 'seeking', false); renderProgress(position); showOsd(); return true; }
