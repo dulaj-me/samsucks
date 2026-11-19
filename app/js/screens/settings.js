@@ -26,8 +26,15 @@ function setPref(key, value) {
 
 const onOff = on => (on ? 'On' : 'Off');
 
+// A plex.direct host is "<ip-with-dashes>.<32 hex>.plex.direct"; the IP is the useful part.
 function serverAddress(uri) {
-  try { return new URL(uri).host; } catch (e) { return uri.replace(/[?&]X-Plex-Token=.*/i, ''); }
+  try {
+    const u = new URL(uri);
+    const direct = u.hostname.match(/^([\d-]+)\.[0-9a-f]+\.plex\.direct$/);
+    return (direct ? direct[1].replace(/-/g, '.') : u.hostname) + (u.port ? ':' + u.port : '');
+  } catch (e) {
+    return uri.replace(/[?&]X-Plex-Token=.*/i, '');
+  }
 }
 
 export function SettingsScreen() {
