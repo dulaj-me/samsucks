@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · E · Evening</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0A0B0E;
+  --text: #F5F3EF;
+  --soft: rgba(245, 243, 239, 0.78);
+  --mute: rgba(245, 243, 239, 0.58);
+  --veil: rgba(10, 11, 14, 0.62);
+  --hair: rgba(245, 243, 239, 0.16);
+  --sans: 'Mona Sans', sans-serif;
+  --r-tile: 14px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--ink); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+
+/* Ambience: the app's 2x2 canvas of the art's UltraBlur colors, stretched by the compositor. */
+#amb { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+
+/* The art fills the screen and dissolves into its own colors on the left and bottom. */
+.art { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; object-position: center top;
+  -webkit-mask-image: linear-gradient(to right, transparent 22%, #000 64%), linear-gradient(to top, transparent 34%, #000 76%);
+  -webkit-mask-composite: source-in; }
+.topveil { position: absolute; left: 0; top: 0; width: 1920px; height: 220px; background: linear-gradient(rgba(10,11,14,0.6), transparent); }
+
+/* Nav */
+.top { position: absolute; left: 96px; right: 96px; top: 48px; height: 56px; display: flex; align-items: center; }
+.brand { font: 650 32px/1 var(--sans); font-stretch: 108%; letter-spacing: -0.01em; margin-right: 48px; display: flex; align-items: center; gap: 12px; }
+.brand svg { width: 34px; height: 34px; }
+.nav { display: flex; align-items: center; gap: 4px; }
+.ni { height: 52px; padding: 0 22px; border-radius: 26px; display: flex; align-items: center; font: 560 25px/1 var(--sans); color: var(--mute); }
+.ni.on { color: var(--text); background: rgba(245, 243, 239, 0.14); }
+.ni svg { width: 27px; height: 27px; }
+.icons { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.ni.icon { width: 52px; padding: 0; justify-content: center; }
+.who { margin-left: 16px; width: 52px; height: 52px; border-radius: 26px; overflow: hidden; background: #C9825B; display: flex; align-items: center; justify-content: center; font: 650 22px/1 var(--sans); color: #2A160C; box-shadow: 0 0 0 2px rgba(245, 243, 239, 0.9); }
+
+/* Hero */
+.info { position: absolute; left: 96px; top: 196px; width: 820px; }
+.logo-box { height: 196px; display: flex; align-items: flex-end; }
+.logo { display: block; max-width: 600px; max-height: 196px; object-fit: contain; object-position: left bottom; }
+.title { font: 700 96px/0.98 var(--sans); font-stretch: 104%; letter-spacing: -0.025em; text-wrap: balance; }
+.kicker { display: none; }
+.meta { margin-top: 28px; display: flex; align-items: center; gap: 12px; font: 520 25px/1 var(--sans); color: var(--soft); white-space: nowrap; }
+.meta .dot { width: 5px; height: 5px; border-radius: 3px; background: var(--mute); }
+.meta .b { padding: 5px 9px 4px; border-radius: 6px; border: 1.5px solid rgba(245, 243, 239, 0.42); font: 640 17px/1 var(--sans); letter-spacing: 0.04em; color: var(--soft); }
+.ep { margin-top: 18px; font: 600 27px/1.2 var(--sans); color: var(--text); }
+.ep span { color: var(--mute); font-weight: 520; }
+.sum { margin-top: 12px; width: 760px; font: 440 24px/36px var(--sans); color: var(--soft); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.resume { margin-top: 22px; display: flex; align-items: center; gap: 16px; font: 560 22px/1 var(--sans); color: var(--soft); }
+.resume i { position: relative; width: 220px; height: 5px; border-radius: 3px; background: rgba(245, 243, 239, 0.24); overflow: hidden; }
+.resume i b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--text); border-radius: 3px; }
+
+/* Rows */
+.rows { position: absolute; left: 0; top: 616px; width: 1920px; height: 440px; }
+.row { position: absolute; left: 0; width: 1920px; }
+.row.off { opacity: 0.55; }
+.rh { margin-left: 96px; font: 620 29px/40px var(--sans); color: var(--text); }
+.tile { position: absolute; top: 64px; }
+.f { position: relative; width: 432px; height: 243px; overflow: hidden; border-radius: var(--r-tile); background: rgba(245,243,239,0.08); }
+.poster .f { width: 240px; height: 360px; }
+.f img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bar { position: absolute; left: 16px; right: 16px; bottom: 14px; height: 5px; border-radius: 3px; background: rgba(10, 11, 14, 0.55); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; background: var(--text); }
+.count { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 17px; background: rgba(10,11,14,0.72); font: 650 19px/34px var(--sans); text-align: center; }
+.cap { margin-top: 16px; width: 432px; font: 600 23px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap small { display: block; margin-top: 5px; font: 500 20px/1.2 var(--sans); color: var(--mute); }
+
+/* Focus: the anchored tile lifts; the ring hugs it and never moves. */
+.tile.focus .f { transform: scale(1.07); }
+.lift { position: absolute; box-shadow: 0 20px 44px rgba(0,0,0,0.55); }
+.ring { position: absolute; border: 4px solid var(--text); }
+</style>
+</head>
+<body>
+<canvas id="amb" width="2" height="2"></canvas>
+<img class="art" id="art" alt="">
+<div class="topveil"></div>
+<div class="top">
+  <div class="brand"><svg viewBox="0 0 34 34"><rect x="2" y="5" width="30" height="21" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 31h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="17" cy="15.5" r="3.5" fill="currentColor"/></svg>kinescope</div>
+  <div class="nav" id="nav"></div>
+  <div class="icons" id="icons"></div>
+  <div class="who">A</div>
+</div>
+<div class="info">
+  <div class="logo-box"><img class="logo" id="logo" alt=""><div class="title" id="title"></div></div>
+  <div class="meta" id="meta"></div>
+  <div class="ep" id="ep"></div>
+  <p class="sum" id="sum"></p>
+</div>
+<div class="rows" id="rows"></div>
+<script type="module">
+import * as D from './data.js';
+const $ = id => document.getElementById(id);
+const { sections, rows } = await D.load();
+const start = Number(new URLSearchParams(location.search).get('row') || 0);
+const state = { rows, row: start, col: Number(new URLSearchParams(location.search).get('col') || 0) };
+const SEARCH = '<svg viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="2.4" cx="10.5" cy="10.5" r="6.5"/><path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M15.5 15.5L20 20"/></svg>';
+const GEAR = '<svg viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="2.2" cx="12" cy="12" r="3.2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7L12 21.2l-1.6-2.4-2.8.7-.7-2.8-2.4-1.6L5.7 12 4.5 9.4l2.4-1.6.7-2.8 2.8.7z"/></svg>';
+D.h('div', 'ni on', $('nav'), 'Home');
+sections.forEach(s => D.h('div', 'ni', $('nav'), s.title));
+D.h('div', 'ni icon', $('icons')).innerHTML = SEARCH;
+D.h('div', 'ni icon', $('icons')).innerHTML = GEAR;
+
+const DIM = 0.42, GRAY = 0.3;
+function ambience(u) {
+  const c = $('amb').getContext('2d');
+  const img = c.createImageData(2, 2);
+  const px = u ? [u.topLeft, u.topRight, u.bottomLeft, u.bottomRight] : ['1b1f2b', '0f1118', '2a1414', '0b0d12'];
+  px.forEach((hex, i) => {
+    const n = parseInt(hex, 16);
+    const c3 = [n >> 16 & 255, n >> 8 & 255, n & 255];
+    const avg = (c3[0] + c3[1] + c3[2]) / 3;
+    img.data.set(c3.map(v => (v + (avg - v) * GRAY) * DIM).concat(255), i * 4);
+  });
+  c.putImageData(img, 0, 0);
+}
+
+async function hero(it) {
+  ambience(it.UltraBlurColors);
+  $('art').src = D.img(D.heroArt(it), 1920, 1080);
+  const logo = D.clearLogo(it);
+  $('logo').style.display = logo ? '' : 'none';
+  $('title').style.display = logo ? 'none' : '';
+  if (logo) $('logo').src = D.img(logo, 600, 196, 'png');
+  $('title').textContent = D.showTitle(it);
+  const full = await D.detail(it);
+  const m = $('meta');
+  m.innerHTML = '';
+  const facts = it.type === 'episode'
+    ? [D.year(it), it.contentRating, D.runtime(it.duration)]
+    : [D.year(it), it.contentRating, D.runtime(it.duration), (full.Genre || []).slice(0, 2).map(g => g.tag).join(', ')];
+  facts.filter(Boolean).forEach((t, i) => { if (i) D.h('i', 'dot', m); D.h('span', '', m, t); });
+  const ep = $('ep');
+  ep.innerHTML = '';
+  if (it.type === 'episode') { ep.textContent = it.title + ' '; D.h('span', '', ep, ' ' + D.epCode(it)); }
+  ep.style.display = it.type === 'episode' ? '' : 'none';
+  $('sum').textContent = it.summary || '';
+  const f = D.formats(it, full) || {};
+  [[f.res === '4K' ? '4K' : '', true], ['DOLBY VISION', f.dv], ['HDR', f.hdr && !f.dv], ['ATMOS', f.atmos]]
+    .forEach(([t, on]) => on && t && D.h('span', 'b', m, t));
+}
+
+function caption(it) {
+  if (it.type === 'episode') return [D.showTitle(it), [D.epCode(it), D.left(it)].filter(Boolean).join('  ·  ')];
+  return [it.title, D.left(it) || [D.year(it), D.runtime(it.duration)].filter(Boolean).join('  ·  ')];
+}
+
+function render() {
+  const box = $('rows');
+  box.innerHTML = '';
+  let y = 0;
+  state.rows.slice(state.row, state.row + 2).forEach((r, ri) => {
+    const wide = /continue|ondeck/i.test(r.hubIdentifier);
+    const row = D.h('section', 'row' + (ri ? ' off' : ''), box);
+    row.style.top = y + 'px';
+    D.h('div', 'rh', row, r.title);
+    const w = wide ? 432 : 240, hgt = wide ? 243 : 360, step = w + (wide ? 36 : 32);
+    const from = ri === 0 ? state.col : 0;
+    if (ri === 0) {
+      const S = 1.07, W = w * S, H = hgt * S, x = 96 - (W - w) / 2, yy = 64 - (H - hgt) / 2;
+      D.h('div', 'lift', row).style.cssText = `left:${x}px;top:${yy}px;width:${W}px;height:${H}px;border-radius:${14 * S}px`;
+      D.h('div', 'ring', row).style.cssText = `left:${x - 8}px;top:${yy - 8}px;width:${W + 16}px;height:${H + 16}px;border-radius:${14 * S + 8}px`;
+    }
+    r.Metadata.slice(from, from + 9).forEach((it, i) => {
+      const t = D.h('div', 'tile' + (wide ? '' : ' poster') + (ri === 0 && i === 0 ? ' focus' : ''), row);
+      t.style.left = (96 + i * step + (ri === 0 && i > 0 ? 16 : 0)) + 'px';
+      const f = D.h('div', 'f', t);
+      D.h('img', '', f).src = D.img(wide ? D.wideArt(it) : D.posterArt(it), w, hgt);
+      const p = D.progress(it);
+      if (p) { const b = D.h('div', 'bar', f); D.h('i', '', b).style.width = (p * 100).toFixed(1) + '%'; }
+      if ((it.type === 'show' || it.type === 'season') && it.leafCount) {
+        const n = it.leafCount - (it.viewedLeafCount || 0);
+        if (n > 0) D.h('div', 'count', f, String(n));
+      }
+      if (wide) { const [a, b] = caption(it); const c = D.h('div', 'cap', t, a); D.h('small', '', c, b); }
+    });
+    y += wide ? 432 : 470;
+  });
+  hero(state.rows[state.row].Metadata[state.col]);
+}
+render();
+D.dpad(state, render);
+</script>
+</body>
+</html>
