@@ -131,12 +131,15 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let subTimer = 0;
   let lastText = 0;
   let upnextTimer = 0;
+  // 'credits': the card sits over the still-playing credits. 'end': the file is done.
+  let upnextMode = null;
   let ending = false; // the file is done; only Back and Stop apply until the next screen
   let nextItem = null;
   let cueTrack = null;
   let cueTimer = 0;
   let cueFor = null;
   let markers = [];
+  let creditsMarker = null;
   let skipFor = null;
   let nextLookup = null;
   let switching = false;
@@ -202,6 +205,8 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   // from: the zone to focus when this reveals a hidden OSD.
   function showOsd(sticky, from) {
+    // The OSD and the credits card never share the screen; the card returns only when the credits are entered again.
+    if (upnextMode === 'credits') hideUpNext();
     if (!el.classList.contains('osd-on')) {
       zone = from || 'bar';
       renderFocus();
@@ -390,8 +395,8 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       duration = item.duration || duration;
       // Only the credits that run to the end; earlier ones can precede a post-credits scene.
       const credits = (item.Marker || []).filter(m => m.type === 'credits');
-      const endCredits = credits.find(m => m.final) || credits[credits.length - 1];
-      markers = (item.Marker || []).filter(m => m.type === 'intro').concat(endCredits || []);
+      creditsMarker = credits.find(m => m.final) || credits[credits.length - 1] || null;
+      markers = (item.Marker || []).filter(m => m.type === 'intro').concat(creditsMarker || []);
       media = (item.Media || [])[0];
       part = media && media.Part && media.Part[0];
       if (!part) throw new Error('No playable media');
@@ -488,12 +493,23 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     // Hide a second early so the button doesn't flash up right as the marker ends.
     const m = markers.find(x => !x.dismissed && ms >= x.startTimeOffset && ms < x.endTimeOffset - 1000) || null;
     if (m === skipFor) return;
+    // The card outlasts the file's final credits, not credits that a post-credits scene follows.
+    // Seeking never gets here with the card up: the seek opens the OSD, which hides it.
+    if (upnextMode === 'credits' && !creditsMarker.final) hideUpNext();
     skipFor = m;
-    toggleClass(skipBtn, 'hidden', !m);
+    // An episode's credits get the up-next card instead, once the next episode is known.
+    const episodeCredits = !!m && m.type === 'credits' && item.type === 'episode';
+    toggleClass(skipBtn, 'hidden', !m || episodeCredits);
     if (!m) return;
     if (m.type === 'intro') { setText(skipBtn, 'Skip Intro'); return; }
-    setText(skipBtn, item.type === 'episode' ? 'Next Episode' : 'Mark Watched');
-    lookupNext().then(ep => { if (skipFor === m && !ep) setText(skipBtn, 'Mark Watched'); });
+    if (!episodeCredits) { setText(skipBtn, 'Mark Watched'); return; }
+    lookupNext().then(ep => {
+      if (skipFor !== m || ending || !alive) return;
+      if (seekTarget != null) { skipFor = null; return; } // decide again where the seek lands
+      if (ep) { nextItem = ep; showUpNext('credits'); return; }
+      setText(skipBtn, 'Mark Watched');
+      toggleClass(skipBtn, 'hidden', false);
+    });
   }
 
   function skip() {
@@ -508,6 +524,8 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   async function doneAndNext() {
     ending = true;
     started = false;
+    clearTimeout(seekTimer);
+    seekTarget = null;
     clearInterval(timelineTimer);
     player.close();
     position = duration;
@@ -647,14 +665,22 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     player.close();
     hideOsd();
     if (item.type !== 'episode') { exit(); return; }
+    // The credits card stays as it is, countdown and focus included; only Watch credits no longer applies.
+    if (upnextMode === 'credits') {
+      upnextMode = 'end';
+      upnextButtons[1].lastChild.textContent = 'Close';
+      toggleClass(el, 'ended', true);
+      return;
+    }
     nextItem = await lookupNext();
     if (!alive) return;
     if (!nextItem) { exit(); return; }
-    showUpNext();
+    showUpNext('end');
   }
 
-  function showUpNext() {
-    clearInterval(upnextTimer);
+  function showUpNext(mode) {
+    stopCountdown();
+    upnextMode = mode;
     hideOsd();
     panel.classList.add('hidden');
     upnext.innerHTML = '';
@@ -663,10 +689,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     upnextLabel = h('div', 'upnext-label', upnext);
     h('div', 'upnext-title', upnext).textContent = episodeLabel(nextItem) + '   ' + nextItem.title;
     const actions = h('div', 'upnext-actions', upnext);
-    upnextButtons = [button(actions, icons.play, 'Play now'), button(actions, '', 'Close')];
+    upnextButtons = [button(actions, icons.play, 'Play now'), button(actions, '', mode === 'credits' ? 'Watch credits' : 'Close')];
     upnextIndex = 0;
     renderUpnextFocus();
-    toggleClass(el, 'ended', true);
+    toggleClass(el, 'ended', mode === 'end');
     upnext.classList.remove('hidden');
     if (!autoplayNext()) { setText(upnextLabel, 'Next episode'); return; }
     let left = UPNEXT_SECONDS;
@@ -682,26 +708,60 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     upnextButtons.forEach((b, i) => toggleClass(b, 'focus', i === upnextIndex));
   }
 
-  // Moving focus means the viewer has taken over, so the countdown stops.
+  function stopCountdown() {
+    if (!upnextTimer) return;
+    clearInterval(upnextTimer);
+    upnextTimer = 0;
+    setText(upnextLabel, 'Next episode');
+  }
+
+  function hideUpNext() {
+    stopCountdown();
+    upnextMode = null;
+    upnext.classList.add('hidden');
+  }
+
+  // For the rest of this file: seeking back into the credits doesn't bring the card back.
+  function watchCredits() {
+    creditsMarker.dismissed = true;
+    hideUpNext();
+    updateSkip(position);
+  }
+
+  // An arrow means the viewer has taken over, so the countdown stops.
   function upnextKey(action) {
+    const credits = upnextMode === 'credits';
     switch (action) {
       case 'left': case 'right':
-        clearInterval(upnextTimer);
-        setText(upnextLabel, 'Next episode');
+        stopCountdown();
         upnextIndex = action === 'left' ? 0 : 1;
         renderUpnextFocus();
         return true;
-      case 'enter': if (upnextIndex === 0) playNext(); else exit(); return true;
+      case 'up': if (credits) showOsd(); return true;
+      case 'down': if (credits) stopCountdown(); return true;
+      case 'rw': case 'ff': if (credits) seekBy(action === 'ff' ? 1 : -1); return true;
+      case 'enter':
+        if (upnextIndex === 0) playNext();
+        else if (credits) watchCredits();
+        else exit();
+        return true;
       case 'play': case 'playpause': playNext(); return true;
-      case 'back': case 'stop': exit(); return true;
+      case 'back': if (credits) watchCredits(); else exit(); return true;
+      case 'stop': exit(); return true;
     }
     return true;
   }
 
   function playNext() {
     clearInterval(upnextTimer);
+    upnextTimer = 0;
     if (!alive) return;
-    router.replace(PlayerScreen(nextItem, { offset: 0 }));
+    if (upnextMode === 'credits') {
+      hideUpNext();
+      doneAndNext();
+    } else {
+      router.replace(PlayerScreen(nextItem, { offset: 0 }));
+    }
   }
 
   function exit() {
@@ -725,6 +785,8 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   function onVisibility() {
     if (document.hidden) {
+      // Autoplay must not open the next episode while another app is in front.
+      stopCountdown();
       if (started && !paused) togglePause();
       player.suspend();
     } else {
@@ -761,7 +823,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
           case 'enter': buttons[btnIndex].run(); return true;
         }
       }
-      if (skipFor && seekTarget == null) {
+      if (skipFor && seekTarget == null && !skipBtn.classList.contains('hidden')) {
         if (action === 'enter') { skip(); return true; }
         if (action === 'back' && !el.classList.contains('osd-on')) {
           skipFor.dismissed = true;

@@ -95,7 +95,11 @@
 .upnext {
   position: absolute; right: 96px; bottom: 120px; width: 720px; padding: 40px;
   border-radius: 22px; background: var(--raised); box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.6);
+  will-change: opacity;
 }
+/* Over the credits it fades in; on black at the end of the file it appears at once. */
+.player:not(.ended) .upnext { animation: upnext-in 250ms ease; }
+@keyframes upnext-in { from { opacity: 0; } }
 .upnext-label { font: 700 22px var(--body); color: var(--coral); letter-spacing: 0.08em; text-transform: uppercase; }
 .upnext-title { margin: 12px 0; font: 600 42px/1.1 var(--display); }
 .upnext-art { width: 640px; height: 360px; margin-bottom: 28px; }
