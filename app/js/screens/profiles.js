@@ -2,7 +2,7 @@
 // of server when the picked profile can't use the current one.
 import { h, setText, toggleClass } from '../util/dom.js';
 import { session, refreshUsers, resolveProfile, useProfile, signOut } from '../session.js';
-import { connect } from '../plex/auth.js';
+import { connect, getUser } from '../plex/auth.js';
 import * as router from '../router.js';
 import { useAmbience } from '../ui/backdrop.js';
 import { error, warn } from '../util/log.js';
@@ -150,8 +150,15 @@ export function ProfilesScreen({ rejected = false } = {}) {
       showServers(u, res);
     } catch (e) {
       if (!alive || mine !== attempt) return;
+      // A wrong PIN may come back as 401 too. Sign out only if plex.tv rejects the account itself.
+      const accountRejected = e.status === 401 && await getUser(session.token).then(() => false, err => err.status === 401);
+      if (!alive || mine !== attempt) return;
       busy = false;
-      if (e.status === 403) {
+      if (accountRejected) {
+        warn('plex.tv rejected the account token');
+        signOut();
+        restart();
+      } else if (e.status === 403 || e.status === 401) {
         // A wrong PIN, or a PIN the list didn't say this profile needs.
         if (mode === 'pin') {
           pin = '';
@@ -160,12 +167,9 @@ export function ProfilesScreen({ rejected = false } = {}) {
         } else {
           showPin(u);
         }
-      } else if (e.status === 401) {
-        warn('plex.tv rejected the account token');
-        signOut();
-        restart();
       } else {
         error('profile switch failed', e);
+        if (mode === 'pin') { pin = ''; renderPin(); }
         setText(status, 'Can’t reach plex.tv right now. ' + (session.user ? session.user.title + ' is still watching.' : ''));
       }
     }

@@ -6,7 +6,7 @@ import { getServers, connect } from '../plex/auth.js';
 import { setHud, hudEnabled } from '../ui/hud.js';
 import * as router from '../router.js';
 import { ServerPicker } from './login.js';
-import { ProfilesScreen } from './profiles.js';
+import { openProfiles } from '../nav.js';
 import { error } from '../util/log.js';
 import { useAmbience, setLegacyGradients, legacyGradients } from '../ui/backdrop.js';
 
@@ -27,7 +27,7 @@ export function SettingsScreen() {
     // Signing out leaves the whole Plex account, not just the profile.
     const account = hasProfiles()
       ? [
-        { label: 'Profile', value: who, run: () => router.push(ProfilesScreen()), action: 'Switch' },
+        { label: 'Profile', value: who, run: openProfiles, action: 'Switch' },
         { label: 'Plex account', value: 'Sign out', run: doSignOut },
       ]
       : [{ label: 'Signed in as', value: who, run: doSignOut, action: 'Sign out' }];
@@ -55,8 +55,7 @@ export function SettingsScreen() {
       const servers = await getServers(profileToken());
       if (servers.length === 1) {
         const uri = await connect(servers[0]);
-        useServer(servers[0], uri);
-        restart();
+        if (useServer(servers[0], uri)) restart();
         return;
       }
       router.push(ServerPicker({ servers, onDone: restart }));

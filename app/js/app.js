@@ -29,9 +29,10 @@ function goLogin() {
 }
 
 async function verify() {
-  // Home already painted from cache; make sure the saved connection still works.
+  // Home already painted from cache; make sure the saved connection and token still work.
+  // '/' needs auth, unlike /identity, so a dead token reaches the recovery below.
   try {
-    await session.server.get('/identity');
+    await session.server.get('/');
     return;
   } catch (e) {
     warn('saved server failed, re-resolving', e.message);

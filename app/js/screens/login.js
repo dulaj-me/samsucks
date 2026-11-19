@@ -125,7 +125,7 @@ export function ServerPicker({ servers, onDone }) {
       if (action === 'enter') {
         const s = servers[index];
         setText(status, 'Connecting to ' + s.name + '…');
-        connect(s).then(uri => { useServer(s, uri); onDone(); }, e => setText(status, e.message));
+        connect(s).then(uri => { if (useServer(s, uri)) onDone(); }, e => setText(status, e.message));
         return true;
       }
       return false;

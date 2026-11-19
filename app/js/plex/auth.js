@@ -5,11 +5,13 @@ import { request, clientId, PRODUCT, query } from './client.js';
 import * as config from '../config.js';
 import { log, warn } from '../util/log.js';
 
-const TV = (config.DEV_PLEX_TV || 'https://plex.tv') + '/api/v2';
+// Tied to DEV so a stray value can never send a release build's account token elsewhere.
+const fixtures = config.DEV && config.DEV_PLEX_TV;
+const TV = (fixtures || 'https://plex.tv') + '/api/v2';
 
 // The dev LAN shortcut has no plex.tv account, except in the preview, whose fixtures stand in.
 export function hasPlexTv(token) {
-  return !!token && (token !== 'lan-dev' || !!config.DEV_PLEX_TV);
+  return !!token && (token !== 'lan-dev' || !!fixtures);
 }
 
 export async function createPin() {
@@ -52,7 +54,9 @@ export async function getServers(token) {
   const resources = await request(TV + '/resources', {
     token, params: { includeHttps: 1, includeRelay: 1, includeIPv6: 0 },
   });
-  return resources.filter(r => (r.provides || '').indexOf('server') !== -1);
+  // forToken lets useServer() refuse a resource listed for a profile that is no longer active.
+  return resources.filter(r => (r.provides || '').indexOf('server') !== -1)
+    .map(r => Object.assign(r, { forToken: token }));
 }
 
 function probe(uri, token, timeout) {

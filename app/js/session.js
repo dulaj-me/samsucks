@@ -40,9 +40,13 @@ export function signIn(token, user) {
   store.set('user', session.user);
 }
 
+// Returns false, changing nothing, when the resource was listed for another profile: a
+// lookup that outlived a profile switch would install that profile's server token.
 export function useServer(resource, uri) {
+  if (resource.forToken && resource.forToken !== profileToken()) return false;
   session.server = new Server({ uri, token: resource.accessToken, name: resource.name, id: resource.clientIdentifier });
   store.set('server', { uri, token: resource.accessToken, name: resource.name, id: resource.clientIdentifier });
+  return true;
 }
 
 export function signOut() {
@@ -64,15 +68,18 @@ export async function reconnect() {
   const resource = current || servers[0];
   if (!resource) throw new Error('No Plex servers on this account');
   const uri = await connect(resource);
-  useServer(resource, uri);
+  if (!useServer(resource, uri)) throw new Error('profile changed while reconnecting');
   log('reconnected', resource.name, uri);
   return session.server;
 }
 
 // Resolves true when the list changed.
 export async function refreshUsers() {
-  if (!hasPlexTv(session.token)) return false;
-  const users = (await getHomeUsers(session.token)).map(u => ({
+  const token = session.token;
+  if (!hasPlexTv(token)) return false;
+  const list = await getHomeUsers(token);
+  if (session.token !== token) return false; // signed out meanwhile
+  const users = list.map(u => ({
     uuid: u.uuid,
     title: u.title || u.username || u.friendlyName || '',
     thumb: u.thumb || '',
