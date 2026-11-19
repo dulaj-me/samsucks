@@ -107,11 +107,13 @@ choose **Add to Home**.
 | Remote | What it does |
 | --- | --- |
 | Arrows / OK | Move around / select |
+| Hold OK on a poster | Play, or mark watched or unwatched |
+| ▲ from the top row | Top bar: Home, libraries, search, settings, profile |
 | Play/Pause | Play whatever is focused, or pause and resume |
 | Back | Go back (while watching, the first press hides the controls) |
 | ▼ while watching | Audio and subtitle tracks |
 | ◀ ▶ while watching | Seek; hold to go faster |
-| Yellow | Change the sort order in a library |
+| ▲ in a library | Filter bar: genre, unwatched, sort (Yellow also cycles the sort) |
 | CH ▲ / CH ▼ | Jump by letter in a library |
 
 What's in it: home rows (Continue Watching, On Deck, Recently Added…), full library
