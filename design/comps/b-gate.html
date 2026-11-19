@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · B · Gate</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --booth: #060606;
+  --lamp: #F3EFE6;
+  --dim: #8F8A80;
+  --tape: #E8B72A;
+  --ink: #111111;
+  --plate: rgba(6, 6, 6, 0.7);
+  --label: 'Big Shoulders Display', sans-serif;
+  --body: 'Hanken Grotesk', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--booth); color: var(--lamp); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+
+.top { position: absolute; left: 96px; right: 96px; top: 40px; height: 64px; display: flex; align-items: center; }
+.brand { font: 800 34px/1 var(--label); letter-spacing: 0.14em; color: var(--lamp); margin-right: 72px; }
+.nav { display: flex; align-items: center; gap: 8px; }
+.ni { height: 44px; padding: 0 18px; display: flex; align-items: center; font: 600 24px/1 var(--body); color: var(--dim); }
+.ni.on { background: var(--tape); color: var(--ink); transform: rotate(-1deg); }
+.ni svg { width: 26px; height: 26px; }
+.gap { width: 28px; }
+.who { margin-left: auto; width: 48px; height: 48px; border-radius: 24px; background: #1B1A18; display: flex; align-items: center; justify-content: center; font: 600 22px/1 var(--body); color: var(--dim); }
+
+/* The screen: the hero image is a hard-masked projected frame, never faded into the room. */
+.screen { position: absolute; left: 816px; top: 136px; width: 1008px; height: 456px; overflow: hidden; background: #111; }
+.screen img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.info { position: absolute; left: 96px; top: 168px; width: 648px; }
+.logo { display: block; max-width: 560px; max-height: 150px; object-fit: contain; object-position: left bottom; }
+.title { font: 800 92px/0.92 var(--label); text-transform: uppercase; letter-spacing: 0.01em; }
+.meta { margin-top: 28px; font: 500 25px/1.3 var(--body); color: var(--dim); }
+.meta b { font-weight: 600; color: var(--lamp); }
+.sum { margin-top: 18px; font: 400 24px/36px var(--body); color: #C8C3B8; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Rows run through the gate. Everything outside the aperture sits under the plate. */
+.rows { position: absolute; left: 0; top: 632px; width: 1920px; height: 448px; overflow: hidden; }
+.row { position: absolute; left: 0; width: 1920px; }
+.row.off .label { opacity: 0.35; }
+.label { z-index: 2; position: absolute; left: 96px; top: 0; height: 34px; padding: 0 14px; background: var(--tape); color: var(--ink); font: 800 22px/34px var(--label); letter-spacing: 0.08em; text-transform: uppercase; transform: rotate(-0.6deg); }
+.tile { position: absolute; top: 56px; }
+.f { position: relative; width: 384px; height: 216px; overflow: hidden; background: #151514; border-radius: 6px; }
+.poster .f { width: 216px; height: 324px; }
+.f img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(0,0,0,0.55); }
+.bar i { display: block; height: 100%; background: var(--lamp); }
+.cap { margin-top: 14px; width: 384px; font: 600 22px/1.2 var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap small { display: block; margin-top: 4px; font: 500 19px/1.2 var(--body); color: var(--dim); }
+.gate { z-index: 1; position: absolute; left: 88px; top: 48px; width: 400px; height: 232px; border-radius: 10px; border: 2px solid var(--lamp); box-shadow: 0 0 0 2400px var(--plate); pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">KINESCOPE</div>
+  <div class="nav" id="nav"></div>
+  <div class="who">D</div>
+</div>
+<div class="screen"><img id="art" alt=""></div>
+<div class="info">
+  <img class="logo" id="logo" alt="">
+  <div class="title" id="title"></div>
+  <div class="meta" id="meta"></div>
+  <p class="sum" id="sum"></p>
+</div>
+<div class="rows" id="rows"></div>
+<script type="module">
+import * as D from './data.js';
+const $ = id => document.getElementById(id);
+const { sections, rows } = await D.load();
+const state = { rows, row: 0, col: 0 };
+const SEARCH = '<svg viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="2.4" cx="10.5" cy="10.5" r="6.5"/><path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M15.5 15.5L20 20"/></svg>';
+const GEAR = '<svg viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="2.2" cx="12" cy="12" r="3.2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7L12 21.2l-1.6-2.4-2.8.7-.7-2.8-2.4-1.6L5.7 12 4.5 9.4l2.4-1.6.7-2.8 2.8.7z"/></svg>';
+D.h('div', 'ni on', $('nav'), 'Home');
+sections.forEach(s => D.h('div', 'ni', $('nav'), s.title));
+D.h('i', 'gap', $('nav'));
+D.h('div', 'ni', $('nav')).innerHTML = SEARCH;
+D.h('div', 'ni', $('nav')).innerHTML = GEAR;
+
+function hero(it) {
+  $('art').src = D.img(D.heroArt(it), 1008, 456);
+  const logo = D.clearLogo(it);
+  $('logo').style.display = logo ? '' : 'none';
+  $('title').style.display = logo ? 'none' : '';
+  if (logo) $('logo').src = D.img(logo, 560, 150, 'png');
+  $('title').textContent = D.showTitle(it);
+  const bits = it.type === 'episode'
+    ? ['<b>' + D.epCode(it) + '</b>', it.title, D.left(it) || D.runtime(it.duration)]
+    : [D.year(it), it.contentRating, D.left(it) || D.runtime(it.duration)];
+  $('meta').innerHTML = bits.filter(Boolean).join('  ·  ');
+  $('sum').textContent = it.summary || '';
+}
+
+function render() {
+  const box = $('rows');
+  box.innerHTML = '';
+  let y = 0;
+  state.rows.slice(state.row, state.row + 2).forEach((r, ri) => {
+    const wide = /continue|ondeck/i.test(r.hubIdentifier);
+    const row = D.h('section', 'row' + (ri ? ' off' : ''), box);
+    row.style.top = y + 'px';
+    D.h('div', 'label', row, r.title);
+    const w = wide ? 384 : 216, step = w + 32;
+    const start = ri === 0 ? state.col : 0;
+    r.Metadata.slice(start, start + 9).forEach((it, i) => {
+      const t = D.h('div', 'tile' + (wide ? '' : ' poster'), row);
+      t.style.left = (96 + i * step) + 'px';
+      const f = D.h('div', 'f', t);
+      D.h('img', '', f).src = D.img(wide ? D.wideArt(it) : D.posterArt(it), w, wide ? 216 : 324);
+      const p = D.progress(it);
+      if (p) { const b = D.h('div', 'bar', f); D.h('i', '', b).style.width = (p * 100).toFixed(1) + '%'; }
+      if (wide) {
+        const c = D.h('div', 'cap', t, D.showTitle(it));
+        D.h('small', '', c, [D.epCode(it), D.left(it)].filter(Boolean).join('  ·  '));
+      }
+    });
+    if (ri === 0) {
+      const g = D.h('div', 'gate', box);
+      g.style.top = (y + 48) + 'px';
+      if (!wide) { g.style.width = '232px'; g.style.height = '340px'; }
+    }
+    y += wide ? 376 : 420;
+  });
+  hero(state.rows[state.row].Metadata[state.col]);
+}
+render();
+D.dpad(state, render);
+</script>
+</body>
+</html>
