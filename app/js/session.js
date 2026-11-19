@@ -75,6 +75,7 @@ export function signOut() {
   store.set('server', undefined);
   store.set('homeCache', undefined);
   store.set('homeUsers', undefined);
+  store.removeAll('recentSearches.');
 }
 
 // The saved URI can go stale (DHCP, remote vs. home). Re-resolve it from plex.tv.

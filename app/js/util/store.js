@@ -16,3 +16,16 @@ export function set(key, value) {
     else localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch (e) { /* quota */ }
 }
+
+// Removes every key that starts with keyPrefix, e.g. one entry per profile.
+export function removeAll(keyPrefix) {
+  try {
+    const full = PREFIX + keyPrefix;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(full)) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch (e) { /* storage unavailable */ }
+}

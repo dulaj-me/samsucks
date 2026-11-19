@@ -114,7 +114,7 @@ choose **Add to Home**.
 | ▼ while watching | Controls: play/pause, audio and subtitles, previous and next episode |
 | ◀ ▶ while watching | Seek; hold to go faster |
 | CH ▲ / CH ▼ while watching | Next or previous episode |
-| ▲ in a library | Filter bar: genre, unwatched, sort (Yellow also cycles the sort) |
+| ▲ in a library | Filter bar: genre, decade, rating and collection; unwatched; sort (Yellow also cycles the sort) |
 | CH ▲ / CH ▼ | Jump by letter in a library |
 
 What's in it: home rows (Continue Watching, On Deck, Recently Added…), full library
