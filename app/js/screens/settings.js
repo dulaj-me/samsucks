@@ -9,7 +9,7 @@ import * as router from '../router.js';
 import { ServerPicker } from './login.js';
 import { openProfiles } from '../nav.js';
 import { error } from '../util/log.js';
-import { useAmbience } from '../ui/backdrop.js';
+import { useAmbience, setLegacyGradients, legacyGradients } from '../ui/backdrop.js';
 
 // Device-wide preferences. The player reads store 'prefs' directly, so a missing key
 // must mean its default there too.
@@ -67,6 +67,8 @@ export function SettingsScreen() {
     ]],
     ['Advanced', [
       { label: 'Performance overlay', value: () => onOff(hudEnabled()), run: () => setHud(!hudEnabled()) },
+      // For before/after recordings: brings back the full-screen gradients that took ~2s per repaint.
+      { label: 'Demo: original slow renderer', value: () => onOff(legacyGradients()), run: () => setLegacyGradients(!legacyGradients()) },
       { label: 'Server address', value: () => (session.server ? session.server.uri.replace(/X-Plex-Token=.*/, '') : '—') },
     ]],
   ];
