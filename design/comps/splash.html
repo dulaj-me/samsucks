@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · Splash</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="evening.css">
+<style>
+/* The nav lockup at 3.25x, so launch and Home share one mark. */
+.lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 38px; padding-bottom: 16px; font: 650 104px/1 var(--sans); font-stretch: 108%; letter-spacing: -0.01em; }
+.lock svg { width: 110px; height: 110px; }
+</style>
+</head>
+<body>
+<canvas id="amb" width="2" height="2"></canvas>
+<div class="lock" id="lock"></div>
+<script type="module">
+import { MARK, ambience } from './chrome.js';
+ambience(document.getElementById('amb'), { topLeft: '6e4a33', topRight: '2c2b33', bottomLeft: '3e2c22', bottomRight: '1c1d26' });
+document.getElementById('lock').innerHTML = MARK + 'kinescope';
+</script>
+</body>
+</html>

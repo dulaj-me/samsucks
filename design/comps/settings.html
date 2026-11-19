@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · Settings</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="evening.css">
+<style>
+/* Groups on the left; the selected group's rows on the right. Left/Right moves between the two. */
+.head { position: absolute; left: 96px; top: 48px; }
+.groups { position: absolute; left: 96px; top: 184px; width: 440px; }
+.opt.on { background: var(--faint); color: var(--text); }
+.pane { position: absolute; left: 632px; top: 184px; width: 880px; }
+.setting.two { height: 108px; }
+.setting small { display: block; margin-top: 8px; font: 500 21px/1.2 var(--sans); color: var(--mute); }
+.setting.focus small { color: rgba(18, 19, 24, 0.62); }
+.note { margin-top: 24px; padding: 0 32px; font: 500 22px/1.4 var(--sans); color: var(--mute); }
+
+.lockup { display: flex; align-items: center; gap: 18px; font: 650 56px/1 var(--sans); font-stretch: 108%; letter-spacing: -0.01em; }
+.lockup svg { width: 58px; height: 58px; }
+.about .t-meta { margin-top: 20px; }
+.about .t-body { margin-top: 28px; width: 760px; }
+.about .t-row { margin-top: 56px; }
+.credits { margin-top: 16px; border-top: 1.5px solid var(--hair); }
+.credit { display: flex; align-items: center; justify-content: space-between; height: 76px; border-bottom: 1.5px solid var(--hair); font: 580 25px/1 var(--sans); }
+.credit span:last-child { font-weight: 500; color: var(--mute); }
+</style>
+</head>
+<body>
+<canvas id="amb" width="2" height="2"></canvas>
+<h1 class="head t-page">Settings</h1>
+<div class="groups" id="groups"></div>
+<div class="pane" id="pane"></div>
+<script type="module">
+import * as D from './data.js';
+import { icon, ambience, MARK } from './chrome.js';
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+const state = qs.get('state');
+const current = qs.get('group') || (state === 'about' ? 'about' : 'playback');
+// About has nothing to act on, so focus stays on its group; elsewhere it sits on the first row.
+const onGroup = qs.get('focus') === 'group' || current === 'about';
+
+const [{ rows }, server] = await Promise.all([
+  D.load(),
+  fetch('/pms/', { headers: { Accept: 'application/json' } }).then(r => r.json()).then(j => j.MediaContainer),
+]);
+ambience($('amb'), rows[0] && rows[0].Metadata[0].UltraBlurColors);
+
+const GROUPS = [
+  { id: 'profile', label: 'Profile and account', icon: icon.user, rows: [['Switch profile', ''], ['Sign out', '']] },
+  { id: 'server', label: 'Server', icon: icon.server, rows: [['Server', server.friendlyName]] },
+  { id: 'playback', label: 'Playback', icon: icon.play, rows: [['Autoplay next episode', 'On', 'The next episode starts after a short countdown.']],
+    note: 'Audio and subtitle choices follow your Plex account settings.' },
+  { id: 'about', label: 'About', icon: icon.info },
+  { id: 'advanced', label: 'Advanced', icon: icon.sliders, rows: [['Performance overlay', 'Off']] },
+];
+
+GROUPS.forEach(g => {
+  const el = D.h('div', 'opt' + (g.id === current ? (onGroup ? ' focus' : ' on') : ''), $('groups'));
+  el.innerHTML = g.icon;
+  D.h('span', '', el, g.label);
+});
+
+const pane = $('pane');
+const g = GROUPS.find(x => x.id === current);
+if (g.id === 'about') {
+  pane.className = 'pane about';
+  D.h('div', 'lockup', pane).innerHTML = MARK + 'kinescope';
+  D.h('div', 't-meta', pane, 'Version 0.1.0');
+  D.h('p', 't-body', pane).innerHTML = 'Based on SamSUCKS by rfaile313.<br>Free software under the GNU General Public License 3.0.';
+  D.h('div', 't-row', pane, 'Credits');
+  const list = D.h('div', 'credits', pane);
+  [['Mona Sans', 'SIL Open Font License 1.1'], ['qrcode-generator by Kazuhiko Arase', 'MIT License']].forEach(([a, b]) => {
+    const r = D.h('div', 'credit', list);
+    D.h('span', '', r, a);
+    D.h('span', '', r, b);
+  });
+} else {
+  g.rows.forEach(([label, value, sub], i) => {
+    const r = D.h('div', 'setting' + (sub ? ' two' : '') + (!onGroup && i === 0 ? ' focus' : ''), pane);
+    const l = D.h('span', '', r, label);
+    if (sub) D.h('small', '', l, sub);
+    D.h('span', '', r, value);
+  });
+  if (g.note) D.h('p', 'note', pane, g.note);
+}
+</script>
+</body>
+</html>
