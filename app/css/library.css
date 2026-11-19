@@ -1,12 +1,23 @@
 /* A fixed box, so a focus change repaints only this text and lays out nothing else. */
 .lib-focus {
-  position: absolute; top: 146px; left: 96px; width: 960px;
+  position: absolute; top: 146px; left: 96px; width: 700px;
   font: 500 26px var(--body); color: var(--cream);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* 4px lower: the ★ in the focus line comes from a fallback font that pushes its baseline down. */
-.lib-head { position: absolute; top: 150px; right: 96px; display: flex; align-items: baseline; white-space: nowrap; }
-.lib-count { font: 500 26px var(--body); color: var(--dim); }
-.lib-sort { margin-left: 32px; font: 500 24px var(--body); color: var(--dim); }
-.lib-hint { margin-left: 32px; font: 500 22px var(--body); color: var(--dim); }
-.key-yellow { display: inline-block; width: 18px; height: 18px; border-radius: 4px; background: var(--key-yellow); vertical-align: -2px; }
+/*
+ * Count and filter chips. A chip's width follows its label, which changes only with its filter.
+ * 3px below centered: the ★ in the focus line comes from a fallback font that pushes its baseline down.
+ */
+.lib-head { position: absolute; top: 139px; right: 96px; display: flex; align-items: baseline; white-space: nowrap; }
+.lib-count { margin-right: 20px; }
+/* Capped so a 5-digit count plus a long genre ("Action & Adventure") stays clear of .lib-focus. */
+.lib-genre { display: inline-block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+.lib-head .pill:last-child { margin-right: 0; }
+.lib-empty { position: absolute; top: 236px; left: 96px; }
+.lib-count, .lib-empty { font: 500 26px var(--body); color: var(--dim); }
+
+/* The side Menu (ui/menu.js) on every screen: a fixed clip whose list scrolls by transform. */
+.menu-list { height: 744px; overflow: hidden; }
+.menu-track { position: relative; will-change: transform; transition: transform 220ms var(--ease); }
+.menu-track.now { transition: none; }
+html.fast .menu-track { transition-duration: 110ms; }
