@@ -1,3 +1,7 @@
 .settings-title { position: absolute; left: 160px; top: 110px; font: 700 80px/1 var(--display); }
-.settings-list { position: absolute; left: 160px; top: 260px; width: 1100px; }
-.settings-foot { position: absolute; left: 160px; bottom: 64px; font: 500 20px var(--body); color: var(--dim); }
+.settings-clip { position: absolute; left: 160px; top: 236px; width: 1100px; height: 790px; overflow: hidden; }
+.settings-track { position: absolute; top: 0; left: 0; width: 1100px; will-change: transform; }
+.settings-head { margin: 34px 0 12px; }
+.settings-head:first-child { margin-top: 0; }
+.settings-track .setting-label { flex-shrink: 0; }
+.settings-track .setting-value { min-width: 0; margin-left: 48px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

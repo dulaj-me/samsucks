@@ -110,7 +110,7 @@ choose **Add to Home**.
 | Hold OK on a poster | Play, or mark watched or unwatched |
 | ▲ from the top row | Top bar: Home, libraries, search, settings, profile |
 | Play/Pause | Play whatever is focused, or pause and resume |
-| Back | Go back (while watching, the first press hides the controls) |
+| Back | Go back (while watching, the first press hides the controls; at Home, press twice to exit) |
 | ▼ while watching | Controls: play/pause, audio and subtitles, previous and next episode |
 | ◀ ▶ while watching | Seek; hold to go faster |
 | CH ▲ / CH ▼ while watching | Next or previous episode |

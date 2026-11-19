@@ -4,10 +4,15 @@
 // A screen is { el, onKey(action) -> bool?, onShow?(), onHide?(), destroy?() }.
 import { setHandler } from './input.js';
 import { exitApp } from './platform/tizen.js';
+import { toast } from './ui/toast.js';
+
+// A second Back at the root inside this window exits.
+const EXIT_WINDOW = 3000;
 
 const stack = [];
 let root = null;
 let globalKey = null;
+let exitUntil = 0;
 
 export function init(container, onGlobalKey) {
   root = container;
@@ -35,6 +40,7 @@ function reveal(screen) {
 }
 
 export function push(screen) {
+  exitUntil = 0; // the exit prompt only counts on the screen that showed it
   const top = stack[stack.length - 1];
   if (top) hide(top);
   stack.push(screen);
@@ -67,9 +73,16 @@ export function popToRoot() {
   reveal(stack[0]);
 }
 
+// At the root (Home, the sign-in screen, or the profile picker after a rejected token)
+// the first Back only asks, so one stray press never closes the app.
 export function back() {
   if (stack.length <= 1) {
-    exitApp();
+    if (Date.now() < exitUntil) {
+      exitApp();
+      return;
+    }
+    exitUntil = Date.now() + EXIT_WINDOW;
+    toast('Press Back again to exit', EXIT_WINDOW);
     return;
   }
   destroy(stack.pop());
