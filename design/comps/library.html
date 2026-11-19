@@ -9,7 +9,7 @@
 <style>
 .bar-row { position: absolute; left: 96px; right: 96px; top: 148px; height: 56px; display: flex; align-items: center; gap: 14px; z-index: 4; }
 .total { margin-left: auto; font: 520 23px/1 var(--sans); color: var(--mute); }
-.grid { position: absolute; left: 0; top: 248px; width: 1920px; height: 832px; overflow: hidden; }
+.grid { position: absolute; left: 0; top: 224px; width: 1920px; height: 856px; overflow: hidden; }
 .grid .tile .f { width: 220px; height: 330px; }
 .grid .cap { width: 220px; font-size: 21px; }
 .grid .cap small { font-size: 18px; }
@@ -55,17 +55,18 @@ D.h('div', 'total', bar, total + (total === 1 ? ' movie' : ' movies'));
 
 // Grid: 7 columns, the focused poster lifts in place.
 const grid = D.h('div', 'grid', document.body);
-const W = 220, H = 330, GX = 30, GY = 112, COLS = 7, FOCUS = state === 'genre' || state === 'empty' ? -1 : 2;
+// HEAD: room above the first row for the lifted poster and its ring, (1.07 - 1) / 2 * H + 8 + 4.
+const HEAD = 40, W = 220, H = 330, GX = 30, GY = 112, COLS = 7, FOCUS = state === 'genre' || state === 'empty' ? -1 : 2;
 if (state === 'loading') {
   for (let i = 0; i < 14; i++) {
     const t = D.h('div', 'tile', grid);
-    t.style.left = (96 + (i % COLS) * (W + GX)) + 'px'; t.style.top = (16 + Math.floor(i / COLS) * (H + GY)) + 'px';
+    t.style.left = (96 + (i % COLS) * (W + GX)) + 'px'; t.style.top = (HEAD + Math.floor(i / COLS) * (H + GY)) + 'px';
     D.h('div', 'skel', t).style.cssText = `width:${W}px;height:${H}px`;
     D.h('div', 'skel-line', t).style.cssText = 'width:150px;margin-top:18px';
   }
 } else {
   items.forEach((it, i) => {
-    const x = 96 + (i % COLS) * (W + GX), y = 16 + Math.floor(i / COLS) * (H + GY);
+    const x = 96 + (i % COLS) * (W + GX), y = HEAD + Math.floor(i / COLS) * (H + GY);
     if (i === FOCUS) lift(grid, x, y, W, H);
     const t = D.h('div', 'tile' + (i === FOCUS ? ' focus' : ''), grid);
     t.style.left = x + 'px'; t.style.top = y + 'px';
