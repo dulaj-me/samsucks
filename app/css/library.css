@@ -10,8 +10,8 @@
  */
 .lib-head { position: absolute; top: 139px; right: 96px; display: flex; align-items: baseline; white-space: nowrap; }
 .lib-count { margin-right: 20px; }
-/* Capped so a 5-digit count plus a long genre ("Action & Adventure") stays clear of .lib-focus. */
-.lib-genre { display: inline-block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+/* Capped so a 5-digit count and every chip at its longest stay clear of .lib-focus. */
+.lib-filter { display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
 .lib-head .pill:last-child { margin-right: 0; }
 .lib-empty { position: absolute; top: 236px; left: 96px; }
 .lib-count, .lib-empty { font: 500 26px var(--body); color: var(--dim); }

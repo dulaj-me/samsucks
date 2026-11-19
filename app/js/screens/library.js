@@ -1,13 +1,14 @@
 // A whole library as a virtualized poster grid, loaded page by page, under the nav.
-// Zones from the top: nav, filter bar (genre, unwatched, sort), grid.
+// Zones from the top: nav, filter bar (filter, unwatched, sort), grid.
 // Yellow cycles the sort; CH▲/CH▼ jump by letter (title sort) or by page.
 import { h, setText, show, toggleClass } from '../util/dom.js';
 import { Grid } from '../ui/grid.js';
 import { useAmbience } from '../ui/backdrop.js';
 import { TopNav } from '../ui/topnav.js';
 import { Menu } from '../ui/menu.js';
-import { openItemMenu } from '../ui/itemmenu.js';
+import { openItemMenu, isWatched } from '../ui/itemmenu.js';
 import * as icons from '../ui/icons.js';
+import * as store from '../util/store.js';
 import { session } from '../session.js';
 import { prefetch } from '../ui/images.js';
 import { isFast } from '../input.js';
@@ -16,12 +17,28 @@ import { error } from '../util/log.js';
 import { metaLine } from '../util/format.js';
 
 const PAGE = 140;
+// `chip` is the label in the bar, short so the band fits the Filter chip at its widest.
 const SORTS = [
   { id: 'titleSort', label: 'A–Z' },
-  { id: 'addedAt:desc', label: 'Recently added' },
-  { id: 'originallyAvailableAt:desc', label: 'Release date' },
+  { id: 'addedAt:desc', label: 'Recently added', chip: 'Added' },
+  { id: 'originallyAvailableAt:desc', label: 'Release date', chip: 'Released' },
   { id: 'audienceRating:desc', label: 'Rating' },
 ];
+// The Filter chip's menu. Each id is both the section's directory of values and the
+// filter parameter /all takes. Plex filters a collection by its tag, like a genre.
+const CATEGORIES = [
+  { id: 'genre', title: 'Genre', all: 'All genres' },
+  { id: 'decade', title: 'Decade', all: 'All decades' },
+  { id: 'contentRating', title: 'Content rating', all: 'All ratings' },
+  { id: 'collection', title: 'Collection', all: 'All collections' },
+];
+
+// Directory keys come URL-encoded ("Not%20Rated") and query() encodes them again.
+function tag(d) {
+  let key = d.key;
+  try { key = decodeURIComponent(key); } catch (e) { /* a literal % */ }
+  return { key, title: d.title };
+}
 
 export function LibraryScreen(section) {
   const el = h('div', 'screen library');
@@ -39,29 +56,42 @@ export function LibraryScreen(section) {
   // A show counts as unwatched while any episode is, as in Plex's own filter.
   const unwatchedParam = isShow ? 'unwatchedLeaves' : 'unwatched';
 
-  let sortIndex = 0;
-  let genre = null;          // one of `genres`, or null for all
-  let unwatched = false;
-  let genres = null;         // [{ key, title }] once loaded
+  // Remembered per profile, server and library. A value is { key, title } or null.
+  const storeKey = [session.user && session.user.uuid, session.server.id, section.key].join('/');
+  const savedFilters = () => {
+    const s = store.get('libFilters');
+    return s && typeof s === 'object' && !Array.isArray(s) ? s : {};
+  };
+  const f = Object.assign({ sort: SORTS[0].id, unwatched: false }, savedFilters()[storeKey]);
+  if (!SORTS.some(s => s.id === f.sort)) f.sort = SORTS[0].id;
+  let lists = null;          // category id -> [{ key, title }] once loaded
+  let listsLoading = null;   // the lists request, started once page 0 has settled
+  let menuWaits = false;     // the Filter menu shows "Loading…" until the lists arrive
+  let alive = true;
+  let visible = true;
   let pages = new Map();     // page -> 'loading' | true
   let items = [];
   let letters = [];          // [{ title: 'A', start: 0 }]
   let generation = 0;
   let isEmpty = false;       // the current filters matched nothing
   let zone = 'grid';
+  let inPicker = false;      // the menu shows one category's values
+
+  const sortIndex = () => Math.max(0, SORTS.findIndex(s => s.id === f.sort));
+  const anyFilter = () => f.unwatched || CATEGORIES.some(c => f[c.id]);
 
   function chip(run) {
     const c = { el: h('div', 'pill', head), run };
     c.label = h('span', '', c.el);
     return c;
   }
-  const genreChip = chip(openGenres);
-  genreChip.label.className = 'lib-genre';
-  const unwatchedChip = chip(() => { unwatched = !unwatched; filtersChanged(); });
+  const filterChip = chip(openFilters);
+  filterChip.label.className = 'lib-filter';
+  const unwatchedChip = chip(() => { f.unwatched = !f.unwatched; filtersChanged(); });
   setText(unwatchedChip.label, 'Unwatched');
   unwatchedChip.icon = h('span', '', unwatchedChip.el);
   const sortChip = chip(openSorts);
-  let bar = [genreChip, unwatchedChip, sortChip];
+  let bar = [filterChip, unwatchedChip, sortChip];
   let barIndex = 0;
 
   const grid = new Grid({
@@ -77,7 +107,8 @@ export function LibraryScreen(section) {
       }
       if (!item) { setText(focusInfo, ''); return; }
       setText(focusInfo, item.title + '   ' + metaLine(item));
-      ambience.set(item.UltraBlurColors);
+      // The backdrop is shared: a late answer must not tint the screen on top.
+      if (visible) ambience.set(item.UltraBlurColors);
     },
     onSelect: item => openItem(item),
   });
@@ -90,7 +121,9 @@ export function LibraryScreen(section) {
 
   // The same filters go to the items and to the first characters, or letter jump lands on the wrong rows.
   function filters() {
-    return { type, genre: genre ? genre.key : undefined, [unwatchedParam]: unwatched ? 1 : undefined };
+    const params = { type, [unwatchedParam]: f.unwatched ? 1 : undefined };
+    for (const c of CATEGORIES) params[c.id] = f[c.id] ? f[c.id].key : undefined;
+    return params;
   }
 
   async function loadPage(p) {
@@ -99,7 +132,7 @@ export function LibraryScreen(section) {
     pages.set(p, 'loading');
     const gen = generation;
     try {
-      const res = await session.server.items(section.key, p * PAGE, PAGE, Object.assign({ sort: SORTS[sortIndex].id }, filters()));
+      const res = await session.server.items(section.key, p * PAGE, PAGE, Object.assign({ sort: f.sort }, filters()));
       if (gen !== generation) return;
       res.items.forEach((it, i) => { items[p * PAGE + i] = it; });
       pages.set(p, true);
@@ -113,11 +146,18 @@ export function LibraryScreen(section) {
       error('library page failed', section.title, p, e);
       if (p === 0) showEmpty("Couldn't load this library.");
     }
+    // The four filter lists wait for the first page, so they never hold up its posters.
+    if (p === 0) ensureLists();
+  }
+
+  function ensureLists() {
+    if (!listsLoading) listsLoading = loadLists();
+    return listsLoading;
   }
 
   function showTotal(total) {
     setText(count, total + (isShow ? ' show' : ' movie') + (total === 1 ? '' : 's'));
-    if (!total) showEmpty(genre || unwatched ? 'Nothing matches these filters. Press Back to clear them.' : 'This library is empty.');
+    if (!total) showEmpty(anyFilter() ? 'Nothing matches these filters. Press Back to clear them.' : 'This library is empty.');
   }
 
   function showEmpty(text) {
@@ -130,7 +170,7 @@ export function LibraryScreen(section) {
 
   async function loadLetters() {
     letters = [];
-    if (SORTS[sortIndex].id !== 'titleSort') return;
+    if (f.sort !== 'titleSort') return;
     const gen = generation;
     try {
       const mc = await session.server.get('/library/sections/' + section.key + '/firstCharacter', filters());
@@ -144,18 +184,23 @@ export function LibraryScreen(section) {
     } catch (e) { /* letter jump just won't work */ }
   }
 
-  async function loadGenres() {
-    try {
-      const mc = await session.server.get('/library/sections/' + section.key + '/genre', { type }, { maxAge: 300000 });
-      genres = mc.Directory || [];
-    } catch (e) {
-      genres = [];
-      error('library genres failed', section.title, e);
-    }
-    if (genres.length) return;
+  async function loadLists() {
+    const all = await Promise.all(CATEGORIES.map(c =>
+      session.server.get('/library/sections/' + section.key + '/' + c.id, { type }, { maxAge: 300000 })
+        .then(mc => (mc.Directory || []).map(tag), e => {
+          error('library filter list failed', section.title, c.id, e);
+          return [];
+        })));
+    if (!alive) return;
+    lists = {};
+    CATEGORIES.forEach((c, i) => { lists[c.id] = all[i]; });
+    if (menuWaits && menu.isOpen) openFilters();
+    menuWaits = false;
+    // A failed list looks empty too; a remembered value keeps the chip so it can be cleared.
+    if (CATEGORIES.some(c => lists[c.id].length || f[c.id])) return;
     const focused = bar[barIndex];
-    head.removeChild(genreChip.el);
-    bar = bar.filter(c => c !== genreChip);
+    head.removeChild(filterChip.el);
+    bar = bar.filter(c => c !== filterChip);
     barIndex = Math.max(0, bar.indexOf(focused));
     renderBar();
   }
@@ -175,6 +220,9 @@ export function LibraryScreen(section) {
   }
 
   function filtersChanged() {
+    const saved = savedFilters();
+    saved[storeKey] = f;
+    store.set('libFilters', saved);
     renderChips();
     reload();
   }
@@ -182,45 +230,66 @@ export function LibraryScreen(section) {
   // Only a filter change touches the labels. A focus move toggles .focus and nothing that
   // lays out, or the band repaints far beyond the chip.
   function renderChips() {
-    setText(genreChip.label, genre ? genre.title : 'All genres');
-    toggleClass(genreChip.el, 'current', !!genre);
-    unwatchedChip.icon.innerHTML = unwatched ? icons.check : icons.uncheck;
-    toggleClass(unwatchedChip.el, 'current', unwatched);
-    setText(sortChip.label, 'Sort: ' + SORTS[sortIndex].label);
+    const values = CATEGORIES.filter(c => f[c.id]).map(c => f[c.id].title);
+    setText(filterChip.label, values.length ? values.join(' · ') : 'Filter');
+    toggleClass(filterChip.el, 'current', values.length > 0);
+    unwatchedChip.icon.innerHTML = f.unwatched ? icons.check : icons.uncheck;
+    toggleClass(unwatchedChip.el, 'current', f.unwatched);
+    const sort = SORTS[sortIndex()];
+    setText(sortChip.label, 'Sort: ' + (sort.chip || sort.label));
   }
 
   function renderBar() {
     bar.forEach((c, i) => toggleClass(c.el, 'focus', zone === 'bar' && i === barIndex));
   }
 
-  function openGenres() {
-    if (!genres) return;
+  function openFilters() {
+    inPicker = false;
+    if (!lists) {
+      menuWaits = true;
+      menu.open({ title: 'Filter', sub: section.title, items: [{ label: 'Loading…', run() {} }] });
+      ensureLists();
+      return;
+    }
+    const entries = CATEGORIES.filter(c => lists[c.id].length || f[c.id]).map(c => ({
+      label: c.title + ': ' + (f[c.id] ? f[c.id].title : 'All'),
+      run: () => openPicker(c),
+    }));
+    if (CATEGORIES.some(c => f[c.id])) {
+      entries.push({ label: 'Clear filters', run: () => { clearCategories(); filtersChanged(); } });
+    }
+    menu.open({ title: 'Filter', sub: section.title, items: entries });
+  }
+
+  function openPicker(c) {
+    const cur = f[c.id];
     menu.open({
-      title: 'Genre', sub: section.title,
-      items: [null].concat(genres).map(g => ({
-        label: g ? g.title : 'All genres',
-        current: g === genre,
-        run: () => { if (g !== genre) { genre = g; filtersChanged(); } },
+      title: c.title, sub: section.title,
+      items: [null].concat(lists[c.id]).map(v => ({
+        label: v ? v.title : c.all,
+        current: v ? !!cur && cur.key === v.key : !cur,
+        run: () => { if ((v && v.key) !== (cur && cur.key)) { f[c.id] = v; filtersChanged(); } },
       })),
     });
+    inPicker = true;
   }
 
   function openSorts() {
+    menuWaits = false;
     menu.open({
       title: 'Sort by', sub: section.title,
-      items: SORTS.map((s, i) => ({ label: s.label, current: i === sortIndex, run: () => setSort(i) })),
+      items: SORTS.map((s, i) => ({ label: s.label, current: i === sortIndex(), run: () => setSort(i) })),
     });
   }
 
   function setSort(i) {
-    if (i === sortIndex) return;
-    sortIndex = i;
+    if (SORTS[i].id === f.sort) return;
+    f.sort = SORTS[i].id;
     filtersChanged();
   }
 
   renderChips();
   reload();
-  loadGenres();
 
   function jump(dir) {
     if (letters.length) {
@@ -234,12 +303,15 @@ export function LibraryScreen(section) {
     }
   }
 
+  // By key: a page refetch may have replaced the object the menu was opened on.
+  const indexOf = it => items.findIndex(x => x && x.ratingKey === it.ratingKey);
+
   // Swap in the item's new watched state without reloading the page it's on.
   async function refreshItem(it) {
     const gen = generation;
     try {
       const full = await session.server.metadata(it.ratingKey);
-      const i = items.indexOf(it);
+      const i = indexOf(it);
       if (gen !== generation || !full || i < 0) return;
       items[i] = full;
       grid.refresh();
@@ -248,11 +320,43 @@ export function LibraryScreen(section) {
     }
   }
 
+  // Under Unwatched, a title marked watched leaves at once. Focus keeps its place and lands
+  // on the title that moved up into it.
+  function removeItem(it) {
+    if (!alive) return;
+    if (!f.unwatched) { refreshItem(it); return; }
+    const i = indexOf(it);
+    if (i < 0) return;
+    items.splice(i, 1);
+    // Every later title moved up one on the server too. Refetch from this page on, so no page
+    // keeps a gap at its end or lands one place off, and drop answers already on their way.
+    generation++;
+    const p = Math.floor(i / PAGE);
+    for (const k of [...pages.keys()]) if (k >= p || pages.get(k) === 'loading') pages.delete(k);
+    const total = grid.total - 1;
+    showTotal(total);
+    grid.setTotal(total);
+    // If focus moved past the removed title while the scrobble was on its way, it shifts with its title.
+    const j = grid.index > i ? grid.index - 1 : grid.index;
+    if (total) grid.focusIndex(Math.min(j, total - 1));
+    loadLetters();
+  }
+
   function setZone(z) {
     zone = z;
     topnav.setActive(z === 'nav');
     grid.setActive(z === 'grid');
     renderBar();
+  }
+
+  function clearCategories() {
+    for (const c of CATEGORIES) f[c.id] = null;
+  }
+
+  function clearFilters() {
+    clearCategories();
+    f.unwatched = false;
+    filtersChanged();
   }
 
   function barKey(action) {
@@ -265,12 +369,10 @@ export function LibraryScreen(section) {
       case 'up': setZone('nav'); return true;
       case 'down': if (!isEmpty) setZone('grid'); return true;
       case 'enter': bar[barIndex].run(); return true;
-      case 'yellow': setSort((sortIndex + 1) % SORTS.length); return true;
+      case 'yellow': setSort((sortIndex() + 1) % SORTS.length); return true;
       case 'back':
-        if (!isEmpty || !(genre || unwatched)) return false;
-        genre = null;
-        unwatched = false;
-        filtersChanged();
+        if (!isEmpty || !anyFilter()) return false;
+        clearFilters();
         return true;
     }
     return false;
@@ -279,13 +381,20 @@ export function LibraryScreen(section) {
   return {
     el,
     name: 'library',
-    destroy() { generation++; },
+    destroy() { alive = false; generation++; },
     onShow() {
+      visible = true;
       ambience.restore();
       topnav.render();
     },
+    onHide() { visible = false; },
     onKey(action) {
-      if (menu.isOpen) return menu.onKey(action);
+      if (menu.isOpen) {
+        // Back from one category's values returns to the list of categories.
+        if (inPicker && action === 'back') { openFilters(); return true; }
+        return menu.onKey(action);
+      }
+      inPicker = false;
       if (zone === 'nav') {
         if (topnav.onKey(action)) return true;
         if (action === 'down') { setZone('bar'); return true; }
@@ -301,9 +410,15 @@ export function LibraryScreen(section) {
         case 'pageup': jump(-1); return true;
         case 'pagedown': jump(1); return true;
         case 'enter': grid.select(); return true;
-        case 'hold': openItemMenu(menu, grid.current(), { changed: refreshItem }); return true;
+        case 'hold': {
+          const it = grid.current();
+          // Read before the change: an unwatched title marked watched no longer matches.
+          const leaves = f.unwatched && it && !isWatched(it);
+          openItemMenu(menu, it, { changed: leaves ? removeItem : refreshItem });
+          return true;
+        }
         case 'play': case 'playpause': if (grid.current()) playItem(grid.current()); return true;
-        case 'yellow': setSort((sortIndex + 1) % SORTS.length); return true;
+        case 'yellow': setSort((sortIndex() + 1) % SORTS.length); return true;
         case 'back':
           if (grid.index > grid.cols * 2) { grid.focusIndex(0); return true; }
           return false;
