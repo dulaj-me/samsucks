@@ -67,10 +67,6 @@ html.playing .ambience { display: none; }
 .brand-mark { width: 81px; height: 84px; display: block; }
 .brand-text { margin-left: 16px; }
 .brand-wordmark { width: 206px; height: 44px; display: block; }
-.brand-by {
-  margin-top: 6px; padding-left: 2px;
-  font: 500 17px/1 var(--body); letter-spacing: 0.06em; color: rgba(var(--white-rgb), 0.86);
-}
 
 /* A fixed clip with a sliding track: many libraries scroll instead of overflowing. */
 .nav {

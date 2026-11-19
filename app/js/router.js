@@ -60,6 +60,13 @@ function destroy(screen) {
   if (screen.el.parentNode) screen.el.parentNode.removeChild(screen.el);
 }
 
+// Straight back to the bottom of the stack (Home), e.g. from a library's nav.
+export function popToRoot() {
+  if (stack.length <= 1) return;
+  while (stack.length > 1) destroy(stack.pop());
+  reveal(stack[0]);
+}
+
 export function back() {
   if (stack.length <= 1) {
     exitApp();

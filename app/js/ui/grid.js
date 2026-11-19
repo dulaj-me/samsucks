@@ -2,7 +2,7 @@
 // Each row is its own compositor layer, so scrolling only re-rasterizes the one
 // row that gets recycled with new posters. The track moves by transform; the
 // focus ring moves horizontally on its own layer.
-import { h, setTransform } from '../util/dom.js';
+import { h, setTransform, toggleClass } from '../util/dom.js';
 import { createTile, fillTile, KINDS } from './tile.js';
 
 export class Grid {
@@ -55,6 +55,11 @@ export class Grid {
 
   current() {
     return this.getItem(this.index);
+  }
+
+  // The ring shows only while the grid has focus.
+  setActive(on) {
+    toggleClass(this.ring, 'on', on);
   }
 
   // Data for some rows arrived: re-fill whatever is on screen.

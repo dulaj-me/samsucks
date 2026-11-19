@@ -1,8 +1,9 @@
-// A whole library as a virtualized poster grid, loaded page by page.
+// A whole library as a virtualized poster grid, loaded page by page, under the nav.
 // Yellow cycles the sort; CH▲/CH▼ jump by letter (title sort) or by page.
 import { h, setText } from '../util/dom.js';
 import { Grid } from '../ui/grid.js';
 import { useAmbience } from '../ui/backdrop.js';
+import { TopNav } from '../ui/topnav.js';
 import { session } from '../session.js';
 import { prefetch } from '../ui/images.js';
 import { isFast } from '../input.js';
@@ -21,12 +22,13 @@ const SORTS = [
 export function LibraryScreen(section) {
   const el = h('div', 'screen library');
   const ambience = useAmbience();
-  const head = h('header', 'lib-head', el);
-  h('h1', 'lib-title', head).textContent = section.title;
+  // The nav's current entry names the library, so the line below it is about the focus.
+  const topnav = new TopNav(el, section.key);
+  const focusInfo = h('div', 'lib-focus', el);
+  const head = h('div', 'lib-head', el);
   const count = h('div', 'lib-count', head);
   const sortEl = h('div', 'lib-sort', head);
-  const focusInfo = h('div', 'lib-focus', el);
-  const hint = h('div', 'lib-hint', el);
+  const hint = h('div', 'lib-hint', head);
   hint.innerHTML = '<i class="key-yellow"></i> Sort &nbsp;&nbsp; CH ▲▼ Jump';
 
   let sortIndex = 0;
@@ -34,6 +36,7 @@ export function LibraryScreen(section) {
   let items = [];
   let letters = [];          // [{ title: 'A', start: 0 }]
   let generation = 0;
+  let zone = 'grid';
 
   const type = section.type === 'show' ? 2 : 1;
 
@@ -121,15 +124,30 @@ export function LibraryScreen(section) {
     }
   }
 
+  function setZone(z) {
+    zone = z;
+    topnav.setActive(z === 'nav');
+    grid.setActive(z === 'grid');
+  }
+
   return {
     el,
     name: 'library',
-    onShow() { ambience.restore(); },
+    onShow() {
+      ambience.restore();
+      topnav.render();
+    },
     onKey(action) {
+      if (zone === 'nav') {
+        if (topnav.onKey(action)) return true;
+        if (action === 'down') { setZone('grid'); return true; }
+        if (action === 'back') return false;
+        return true;
+      }
       switch (action) {
         case 'left': grid.move(-1, 0); return true;
         case 'right': grid.move(1, 0); return true;
-        case 'up': grid.move(0, -1); return true;
+        case 'up': if (!grid.move(0, -1)) setZone('nav'); return true;
         case 'down': grid.move(0, 1); return true;
         case 'pageup': jump(-1); return true;
         case 'pagedown': jump(1); return true;

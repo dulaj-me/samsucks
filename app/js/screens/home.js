@@ -1,18 +1,17 @@
-// Home: hero for the focused item, nav bar, and Plex's home hubs as rows.
+// Home: hero for the focused item, the nav, and Plex's home hubs as rows.
 // The last hub payload is cached so a cold start paints instantly.
 import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import { Row } from '../ui/row.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
+import { TopNav } from '../ui/topnav.js';
 import { session } from '../session.js';
 import { metaLine } from '../util/format.js';
 import { isFast } from '../input.js';
 import * as store from '../util/store.js';
-import * as icons from '../ui/icons.js';
-import { openItem, playItem, openLibrary, openSearch, openSettings } from '../nav.js';
+import { openItem, playItem } from '../nav.js';
 import { error, log } from '../util/log.js';
 
 const ROWS_TOP = 600;
-const NAV_PAD = 80; // wider than the 64px edge fade in app.css
 
 function slimHub(hub) {
   // Keep the cache small: only fields the home screen renders.
@@ -45,17 +44,7 @@ export function HomeScreen() {
   const ambience = useAmbience();
   const hero = new HeroArt(el, 'hero-art home-art');
 
-  const top = h('header', 'topbar', el);
-  const brand = h('div', 'brand', top);
-  h('img', 'brand-mark', brand).src = 'img/mascot.png';
-  const brandText = h('div', 'brand-text', brand);
-  h('img', 'brand-wordmark', brandText).src = 'img/wordmark.png';
-  h('div', 'brand-by', brandText).textContent = 'by rfaile313';
-  // The nav is a clip with a sliding track, so any number of libraries fits.
-  const navEl = h('nav', 'nav', top);
-  const navTrack = h('div', 'nav-track', navEl);
-  const who = h('div', 'topbar-who', top);
-  setText(who, session.server ? session.server.name : '');
+  const topnav = new TopNav(el, 'home');
 
   const info = h('div', 'hero-info', el);
   const heroLogo = h('img', 'hero-logo', info);
@@ -72,54 +61,15 @@ export function HomeScreen() {
   let offsets = [];
   let rowIndex = 0;
   let zone = 'rows';
-  let navItems = [];
-  let navIndex = 0;
-  let navScroll = 0;
   let loadedAt = 0;
   let heroTimer = 0;
   let artTimer = 0;
   let reportedPaint = false;
 
-  function buildNav(sections) {
-    navTrack.innerHTML = '';
-    navItems = [{ label: 'Home', id: 'home' }]
-      .concat(sections.map(s => ({ label: s.title, id: 'section', section: s })))
-      .concat([{ label: 'Search', id: 'search', icon: icons.search }, { label: 'Settings', id: 'settings', icon: icons.gear }]);
-    navIndex = Math.min(navIndex, navItems.length - 1);
-    navItems.forEach((n, i) => {
-      if (n.icon && !navItems[i - 1].icon) h('i', 'nav-sep', navTrack);
-      n.el = h('div', 'nav-item' + (n.icon ? ' nav-icon' : ''), navTrack);
-      if (n.icon) n.el.innerHTML = n.icon;
-      else h('span', '', n.el).textContent = n.label;
-    });
-    renderNav();
-  }
-
-  // Slide the track just enough to keep the focused item clear of the edge fades.
-  function scrollNav() {
-    const room = navEl.clientWidth;
-    if (!room) return; // hidden screen: nothing to measure
-    const max = Math.max(0, navTrack.offsetWidth - room);
-    const n = navItems[navIndex];
-    if (zone === 'nav' && n) {
-      const left = n.el.offsetLeft;
-      const right = left + n.el.offsetWidth;
-      if (left - NAV_PAD < navScroll) navScroll = left - NAV_PAD;
-      else if (right + NAV_PAD > navScroll + room) navScroll = right + NAV_PAD - room;
-    }
-    navScroll = Math.round(Math.max(0, Math.min(max, navScroll)));
-    setTransform(navTrack, 'translateX(' + (-navScroll) + 'px)');
-    toggleClass(navEl, 'more-left', navScroll > 0);
-    toggleClass(navEl, 'more-right', navScroll < max - 1);
-  }
-
-  function renderNav() {
-    scrollNav(); // measure before the class writes below dirty the style
-    navItems.forEach((n, i) => {
-      toggleClass(n.el, 'focus', zone === 'nav' && i === navIndex);
-      toggleClass(n.el, 'current', n.id === 'home');
-    });
-    toggleClass(el, 'in-nav', zone === 'nav');
+  function setZone(z) {
+    zone = z;
+    topnav.setActive(z === 'nav');
+    toggleClass(el, 'in-nav', z === 'nav');
   }
 
   function showHero(item) {
@@ -202,7 +152,7 @@ export function HomeScreen() {
     loadedAt = Date.now();
     try {
       const [sections, hubs] = await Promise.all([server.sections(), server.hubs()]);
-      buildNav(sections);
+      topnav.setSections(sections);
       setHubs(hubs);
       store.set('homeCache', { server: server.id, sections, hubs: hubs.map(slimHub) });
     } catch (e) {
@@ -213,42 +163,32 @@ export function HomeScreen() {
 
   const cached = store.get('homeCache');
   if (cached && session.server && cached.server === session.server.id) {
-    buildNav(cached.sections || []);
+    topnav.setSections(cached.sections || []);
     setHubs(cached.hubs || []);
   } else {
-    buildNav([]);
+    topnav.setSections([]);
   }
-  // Inter swaps in after first paint and changes the label widths.
-  if (document.fonts) document.fonts.ready.then(renderNav);
   load();
-
-  function activateNav(n) {
-    if (n.id === 'section') openLibrary(n.section);
-    else if (n.id === 'search') openSearch();
-    else if (n.id === 'settings') openSettings();
-  }
 
   return {
     el,
     name: 'home',
     onShow() {
       ambience.restore();
-      renderNav(); // widths can't be measured while the screen was hidden
+      topnav.render();
       // Coming back from playback: progress and Continue Watching changed.
       if (Date.now() - loadedAt > 5000) load();
     },
     onKey(action) {
       if (zone === 'nav') {
-        if (action === 'left') { navIndex = Math.max(0, navIndex - 1); renderNav(); return true; }
-        if (action === 'right') { navIndex = Math.min(navItems.length - 1, navIndex + 1); renderNav(); return true; }
-        if (action === 'down' && rows.length) { zone = 'rows'; renderNav(); renderRows(); return true; }
-        if (action === 'enter') { activateNav(navItems[navIndex]); return true; }
+        if (topnav.onKey(action)) return true;
+        if (action === 'down' && rows.length) { setZone('rows'); renderRows(); return true; }
         if (action === 'back') return false;
         return true;
       }
       const row = rows[rowIndex];
       if (!row) {
-        if (action === 'up') { zone = 'nav'; renderNav(); return true; }
+        if (action === 'up') { setZone('nav'); return true; }
         if (action === 'enter') { load(); return true; }
         return false;
       }
@@ -256,7 +196,7 @@ export function HomeScreen() {
         case 'left': row.move(-1); return true;
         case 'right': row.move(1); return true;
         case 'up':
-          if (rowIndex === 0) { zone = 'nav'; renderNav(); renderRows(); return true; }
+          if (rowIndex === 0) { setZone('nav'); renderRows(); return true; }
           rowIndex--; renderRows(); onFocusItem(rows[rowIndex].current()); return true;
         case 'down':
           if (rowIndex < rows.length - 1) { rowIndex++; renderRows(); onFocusItem(rows[rowIndex].current()); }
