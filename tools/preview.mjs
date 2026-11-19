@@ -1,7 +1,10 @@
 // Desktop preview with real library data and no sign-in:
 //  - serves app/ with caching off,
 //  - serves js/config.js as a dev build whose Plex server is this proxy's /pms,
-//  - proxies /pms/* to PLEX_SERVER_URL and adds PLEX_TOKEN on the way out.
+//  - proxies /pms/* to PLEX_SERVER_URL and adds PLEX_TOKEN on the way out,
+//  - answers plex.tv calls from tools/fixtures/plextv.json under /plextv, so Plex Home
+//    profiles work without a real account: four profiles, Robin's PIN is 1234, and
+//    Visitor can't reach this server. Every profile still sees PLEX_TOKEN's library.
 // The token stays in this process: the page never sees it, and responses are scrubbed of it.
 //
 //   node tools/preview.mjs                          # port derived from the checkout path
@@ -43,7 +46,43 @@ function configJs() {
   return readFileSync(path.join(appDir, 'js/config.js'), 'utf8')
     .replace(/^export const DEV = .*$/m, 'export const DEV = true;')
     .replace(/^export const DEV_HOST = .*$/m, `export const DEV_HOST = '${process.env.DEV_HOST || ''}';`)
-    .replace(/^export const DEV_PLEX_URL = .*$/m, "export const DEV_PLEX_URL = '/pms';");
+    .replace(/^export const DEV_PLEX_URL = .*$/m, "export const DEV_PLEX_URL = '/pms';") +
+    "export const DEV_PLEX_TV = '/plextv';\n";
+}
+
+const tv = JSON.parse(readFileSync(path.join(root, 'tools/fixtures/plextv.json'), 'utf8'));
+const profilePrefix = 'fixture-profile-';
+
+function plexTv(req, res, url) {
+  const send = (status, body) => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify(body));
+  };
+  const auth = req.headers['x-plex-token'] || url.searchParams.get('X-Plex-Token');
+  if (!auth) return send(401, tv.unauthorized);
+  const p = url.pathname.slice('/plextv'.length);
+  if (req.method === 'GET' && p === '/api/v2/user') return send(200, tv.user);
+  if (req.method === 'GET' && p === '/api/v2/home/users') return send(200, tv.homeUsers);
+  const sw = req.method === 'POST' && p.match(/^\/api\/v2\/home\/users\/([^/]+)\/switch$/);
+  if (sw) {
+    const u = tv.homeUsers.users.find(x => x.uuid === decodeURIComponent(sw[1]));
+    if (!u) return send(404, { errors: [{ code: 1002, message: 'Not found', status: 404 }] });
+    if (u.protected && url.searchParams.get('pin') !== tv.pin) return send(403, tv.invalidPin);
+    return send(201, Object.assign({}, tv.user, {
+      id: u.id, uuid: u.uuid, title: u.title, username: u.username, email: u.email, thumb: u.thumb,
+      protected: u.protected, restricted: u.restricted, homeAdmin: u.admin, authToken: profilePrefix + u.uuid,
+    }));
+  }
+  if (req.method === 'GET' && p === '/api/v2/resources') {
+    const who = auth.startsWith(profilePrefix) ? auth.slice(profilePrefix.length) : 'account';
+    const blocked = tv.noAccess.includes(who);
+    return send(200, tv.resources
+      .filter(r => r.provides !== 'server' || (r.clientIdentifier === 'lan-dev') !== blocked)
+      .map(r => Object.assign({}, r, { accessToken: r.provides === 'server' ? 'fixture-server-' + who : '' })));
+  }
+  send(404, { errors: [{ code: 1002, message: 'No fixture for ' + req.method + ' ' + p, status: 404 }] });
 }
 
 function serveStatic(req, res, pathname) {
@@ -122,6 +161,8 @@ createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/pms' || url.pathname.startsWith('/pms/')) {
       proxy(req, res, req.url.slice(4) || '/');
+    } else if (url.pathname.startsWith('/plextv/')) {
+      plexTv(req, res, url);
     } else {
       serveStatic(req, res, url.pathname);
     }

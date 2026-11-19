@@ -1,0 +1,93 @@
+{
+  "_about": "plex.tv stand-ins for tools/preview.mjs. Shapes recorded from the real API in Nov 2026, every value fake. invalidPin comes from other Plex clients: no profile on the recorded account had a PIN.",
+  "pin": "1234",
+  "noAccess": ["fixture-visitor-0004"],
+  "homeUsers": {
+    "id": 1000000,
+    "name": "Fixture Home",
+    "guestUserID": 1000099,
+    "guestUserUUID": "fixture-guest-0099",
+    "guestEnabled": false,
+    "subscription": true,
+    "users": [
+      {
+        "id": 1000001, "uuid": "fixture-admin-0001", "title": "Alex", "username": "alex",
+        "email": "alex@example.invalid", "friendlyName": null,
+        "thumb": "https://plex.tv/users/fixture-admin-0001/avatar?c=1",
+        "hasPassword": true, "restricted": false, "updatedAt": 1700000000, "restrictionProfile": null,
+        "admin": true, "guest": false, "protected": false,
+        "subscription": { "state": "active", "type": "plexpass" }
+      },
+      {
+        "id": 1000002, "uuid": "fixture-robin-0002", "title": "Robin", "username": "robin",
+        "email": "robin@example.invalid", "friendlyName": null, "thumb": "",
+        "hasPassword": true, "restricted": false, "updatedAt": 1700000000, "restrictionProfile": null,
+        "admin": false, "guest": false, "protected": true,
+        "subscription": { "state": "inactive", "type": "free" }
+      },
+      {
+        "id": 1000003, "uuid": "fixture-kid-0003", "title": "Kiddo", "username": "",
+        "email": "", "friendlyName": "Kiddo",
+        "thumb": "https://plex.tv/users/fixture-kid-0003/avatar?c=1",
+        "hasPassword": false, "restricted": true, "updatedAt": 1700000000, "restrictionProfile": null,
+        "admin": false, "guest": false, "protected": false
+      },
+      {
+        "id": 1000004, "uuid": "fixture-visitor-0004", "title": "Visitor", "username": "",
+        "email": "", "friendlyName": "Visitor", "thumb": "",
+        "hasPassword": false, "restricted": true, "updatedAt": 1700000000, "restrictionProfile": null,
+        "admin": false, "guest": false, "protected": false
+      }
+    ]
+  },
+  "user": {
+    "id": 1000001, "uuid": "fixture-admin-0001", "username": "alex", "title": "Alex",
+    "email": "alex@example.invalid", "friendlyName": "Alex", "locale": null, "confirmed": false,
+    "joinedAt": 1600000000, "emailOnlyAuth": false, "hasPassword": true, "protected": false,
+    "thumb": "https://plex.tv/users/fixture-admin-0001/avatar?c=1", "authToken": "fixture-account",
+    "mailingListStatus": null, "mailingListActive": false, "scrobbleTypes": "", "country": "ZZ",
+    "subscription": { "active": false, "subscribedAt": null, "status": "Inactive", "paymentService": null, "plan": null, "features": ["home"] },
+    "restricted": false, "anonymous": null, "restrictionProfile": null, "mappedRestrictionProfile": null,
+    "home": true, "guest": false, "homeSize": 4, "homeAdmin": true, "maxHomeSize": 15, "rememberExpiresAt": null,
+    "profile": {
+      "autoSelectAudio": true, "defaultAudioAccessibility": 0, "defaultAudioLanguage": "en", "defaultAudioLanguages": null,
+      "defaultSubtitleLanguage": "en", "defaultSubtitleLanguages": null, "autoSelectSubtitle": 2,
+      "defaultSubtitleAccessibility": 0, "defaultSubtitleForced": 0, "watchedIndicator": 1,
+      "mediaReviewsVisibility": 0, "mediaReviewsLanguages": null, "mediaPostsVisibility": true, "clearLogosVisibility": true
+    },
+    "entitlements": [], "subscriptions": [], "pastSubscriptions": [], "trials": [],
+    "services": [{ "identifier": "metadata", "endpoint": "https://example.invalid", "token": "fixture-service", "secret": null, "status": "online" }],
+    "adsConsent": true, "adsConsentSetAt": 1600000000, "adsConsentReminderAt": 1600000000,
+    "experimentalFeatures": false, "twoFactorEnabled": false, "backupCodesCreated": false, "attributionPartner": null
+  },
+  "resources": [
+    {
+      "name": "Plex (LAN dev)", "product": "Plex Media Server", "productVersion": "1.43.0.0000-fixture",
+      "platform": "Linux", "platformVersion": "6.0", "device": "PC", "clientIdentifier": "lan-dev",
+      "provides": "server", "ownerId": null, "sourceTitle": null, "publicAddress": "203.0.113.1",
+      "accessToken": "", "searchEnabled": true, "createdAt": "2024-01-01T00:00:00Z", "lastSeenAt": "2026-11-01T00:00:00Z",
+      "owned": true, "home": false, "synced": false, "relay": false, "presence": true, "httpsRequired": true,
+      "publicAddressMatches": true, "dnsRebindingProtection": false, "natLoopbackSupported": true,
+      "connections": [{ "protocol": "http", "address": "localhost", "port": 0, "uri": "/pms", "local": true, "relay": false, "IPv6": false }]
+    },
+    {
+      "name": "Elsewhere", "product": "Plex Media Server", "productVersion": "1.43.0.0000-fixture",
+      "platform": "Linux", "platformVersion": "6.0", "device": "PC", "clientIdentifier": "fixture-elsewhere",
+      "provides": "server", "ownerId": 1000001, "sourceTitle": "Alex", "publicAddress": "203.0.113.2",
+      "accessToken": "", "searchEnabled": true, "createdAt": "2024-01-01T00:00:00Z", "lastSeenAt": "2026-11-01T00:00:00Z",
+      "owned": false, "home": true, "synced": false, "relay": false, "presence": true, "httpsRequired": false,
+      "publicAddressMatches": false, "dnsRebindingProtection": true, "natLoopbackSupported": true,
+      "connections": [{ "protocol": "https", "address": "127.0.0.1", "port": 9, "uri": "https://127-0-0-1.fixture.invalid:9", "local": true, "relay": false, "IPv6": false }]
+    },
+    {
+      "name": "Living Room TV", "product": "Plex for Samsung", "productVersion": "1.0.0",
+      "platform": "Tizen", "platformVersion": "9.0", "device": "TV", "clientIdentifier": "fixture-player",
+      "provides": "client,player", "ownerId": null, "sourceTitle": null, "publicAddress": "203.0.113.1",
+      "accessToken": "", "searchEnabled": false, "createdAt": "2024-01-01T00:00:00Z", "lastSeenAt": "2026-11-01T00:00:00Z",
+      "owned": true, "home": false, "synced": false, "relay": false, "presence": false, "httpsRequired": false,
+      "publicAddressMatches": false, "connections": []
+    }
+  ],
+  "invalidPin": { "errors": [{ "code": 1041, "message": "Invalid PIN", "status": 403 }] },
+  "unauthorized": { "errors": [{ "code": 1001, "message": "User could not be authenticated", "status": 401 }] }
+}
