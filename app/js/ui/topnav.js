@@ -104,9 +104,6 @@ export class TopNav {
     if (!n || n.id === this.current) return;
     if (n.id === 'search') { openSearch(); return; }
     if (n.id === 'settings') { openSettings(); return; }
-    // Switching top-level screens: when this one shows again, focus is on its own entry.
-    this.index = this.currentIndex();
-    this.render();
     if (n.id === 'home') goHome();
     else openLibrary(n.section);
   }

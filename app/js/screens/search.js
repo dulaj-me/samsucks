@@ -73,7 +73,7 @@ export function SearchScreen() {
     try {
       const full = await session.server.metadata(it.ratingKey);
       if (!full || rows.indexOf(row) < 0) return;
-      row.setItems(row.items.map(x => (x === it ? full : x)), full.ratingKey);
+      row.setItems(row.items.map(x => (x === it ? full : x)));
     } catch (e) {
       error('search refresh failed', e);
     }

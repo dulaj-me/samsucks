@@ -150,6 +150,7 @@ export function LibraryScreen(section) {
   return {
     el,
     name: 'library',
+    destroy() { generation++; },
     onShow() {
       ambience.restore();
       topnav.render();
