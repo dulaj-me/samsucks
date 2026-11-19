@@ -165,8 +165,17 @@ tools/tveval.sh "__css('.hero-art{display:none}')"           # A/B test a CSS ch
 With `DEV_SKIP_LOGIN=1` and `PLEX_SERVER_URL` in `.env`, dev builds skip sign-in and
 use a server that allows unauthenticated local-network access.
 
-The UI also runs in desktop Chrome: `./scripts/deploy.sh --build-only`, then serve
-`build/app/` with any static server. It uses a `<video>` element instead of AVPlay there.
+The UI also runs in desktop Chrome, the quickest way to work on layout. No build is needed:
+
+```sh
+npx -y http-server app -p 8123 -c-1   # then open http://localhost:8123
+```
+
+`-c-1` turns off caching, so a reload picks up your edits. Avoid `python3 -m http.server`:
+it drops connections when Chrome requests every module at once, and the app hangs on the
+splash screen. Use arrows and Enter (hold for the long-press menu), Backspace or Esc for
+Back, and Space for Play/Pause. Playback uses a plain `<video>` element instead of AVPlay,
+with no track picker, so check anything player-related on the TV.
 </details>
 
 <details>
