@@ -17,8 +17,24 @@ export const session = {
   users: store.get('homeUsers') || null,
 };
 
+// Failed server reads are reported, so app.js can tell a lost server or a rejected token
+// from one bad request and recover. Every browsing call goes through get().
+let failureHandler = null;
+export function onServerFailure(fn) {
+  failureHandler = fn;
+}
+
+class WatchedServer extends Server {
+  get(path, params, opts) {
+    return super.get(path, params, opts).catch(e => {
+      if (failureHandler) failureHandler(this, e);
+      throw e;
+    });
+  }
+}
+
 const saved = store.get('server');
-if (saved) session.server = new Server(saved);
+if (saved) session.server = new WatchedServer(saved);
 
 export function profileToken() {
   return (session.user && session.user.token) || session.token;
@@ -44,7 +60,7 @@ export function signIn(token, user) {
 // lookup that outlived a profile switch would install that profile's server token.
 export function useServer(resource, uri) {
   if (resource.forToken && resource.forToken !== profileToken()) return false;
-  session.server = new Server({ uri, token: resource.accessToken, name: resource.name, id: resource.clientIdentifier });
+  session.server = new WatchedServer({ uri, token: resource.accessToken, name: resource.name, id: resource.clientIdentifier });
   store.set('server', { uri, token: resource.accessToken, name: resource.name, id: resource.clientIdentifier });
   return true;
 }
