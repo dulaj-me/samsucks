@@ -1,4 +1,14 @@
 // Real library data for the comps, through design/serve.mjs -> tools/preview.mjs.
+// Packaged into a TV build, the comps use the app's stored server and token instead.
+const tv = (() => { try { return JSON.parse(localStorage.getItem('ss.server') || 'null'); } catch (e) { return null; } })();
+const BASE = tv ? tv.uri : '/pms';
+const withToken = u => tv && tv.token ? u + (u.includes('?') ? '&' : '?') + 'X-Plex-Token=' + encodeURIComponent(tv.token) : u;
+if (tv) {
+  const f = window.fetch.bind(window);
+  window.fetch = (u, o) => f(typeof u === 'string' && u.startsWith('/pms') ? withToken(BASE + u.slice(4)) : u, o);
+}
+// Back (Esc on desktop, the remote's Back on the TV) returns to the comp index.
+addEventListener('keydown', e => { if (e.key === 'Escape' || e.keyCode === 10009) history.back(); });
 const J = { headers: { Accept: 'application/json' } };
 const get = async (p) => (await (await fetch('/pms' + p, J)).json()).MediaContainer;
 
@@ -13,7 +23,7 @@ const DIRECT = {
 
 export function img(path, w, h, format = 'jpeg') {
   if (!path) return '';
-  return '/pms/photo/:/transcode?' + new URLSearchParams({ width: w, height: h, minSize: 1, upscale: 1, quality: 85, format, url: path });
+  return withToken(BASE + '/photo/:/transcode?' + new URLSearchParams({ width: w, height: h, minSize: 1, upscale: 1, quality: 85, format, url: path }));
 }
 
 export async function load() {
