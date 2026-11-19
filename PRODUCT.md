@@ -56,6 +56,7 @@ The interaction model is the familiar streaming-app one (profile picker, a hero 
 - Never changes: Tizen application id `SamSucks01.samsucks`, package `SamSucks01`, widget id, and the `ss.` storage prefix. The installed app upgrades in place and keeps its session.
 - The SamSUCKS mascot is dropped. Identity is a wordmark plus a small symbol for the app icon and splash.
 - Voice is plain and warm: short, direct labels; a little personality only in empty and error states. No insults, no jokes at anyone's expense.
+- The look is the familiar streaming-app layout executed at top craft, not a themed concept. The user chose this over four concept worlds after the household found them too technical. Mood: a calm evening in front of the screen. Craft bar: the best-regarded TV apps, such as the Apple TV app and Infuse.
 - Nothing borrowed from Netflix: name, logo, typeface, the red-on-black signature, profile icons, sounds. No Plex mark in the product name.
 - Upstream credit ("based on SamSUCKS by rfaile313") lives in About, not in the chrome.
 
