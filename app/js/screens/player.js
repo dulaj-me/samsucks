@@ -131,6 +131,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let subTimer = 0;
   let lastText = 0;
   let upnextTimer = 0;
+  let ending = false; // the file is done; only Back and Stop apply until the next screen
   let nextItem = null;
   let cueTrack = null;
   let cueTimer = 0;
@@ -505,6 +506,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   }
 
   async function doneAndNext() {
+    ending = true;
     started = false;
     clearInterval(timelineTimer);
     player.close();
@@ -634,8 +636,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   }
 
   async function finished() {
-    // Keys must not reach the closed player while the next episode is looked up.
+    ending = true;
     started = false;
+    // A seek still waiting to commit would reopen the closed player and end it twice.
+    clearTimeout(seekTimer);
+    seekTarget = null;
     position = duration;
     report('stopped');
     clearInterval(timelineTimer);
@@ -649,6 +654,9 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   }
 
   function showUpNext() {
+    clearInterval(upnextTimer);
+    hideOsd();
+    panel.classList.add('hidden');
     upnext.innerHTML = '';
     const art = h('div', 'tile-frame upnext-art', upnext);
     loadImage(h('img', 'tile-img', art), session.server.image(nextItem.thumb || nextItem.art, UPNEXT_ART_W, UPNEXT_ART_H));
@@ -692,6 +700,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   function playNext() {
     clearInterval(upnextTimer);
+    if (!alive) return;
     router.replace(PlayerScreen(nextItem, { offset: 0 }));
   }
 
@@ -735,6 +744,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     },
     onKey(action) {
       if (!upnext.classList.contains('hidden')) return upnextKey(action);
+      if (ending) {
+        if (action === 'back' || action === 'stop') exit();
+        return true;
+      }
       if (!panel.classList.contains('hidden')) return panelKey(action);
       if (zone === 'buttons' && el.classList.contains('osd-on')) {
         switch (action) {

@@ -88,7 +88,7 @@
   border-radius: 14px; background: var(--cream); color: var(--bg);
   font: 600 30px var(--body); box-shadow: 0 12px 40px rgba(var(--black-rgb), 0.5);
 }
-.osd-on .skip { bottom: 260px; }
+.osd-on .skip { bottom: 300px; } /* above the seek-time label, which rides the bar at 242-294px */
 /* OK goes to the focused button, not to Skip. */
 .osd-on.osd-buttons .skip { opacity: 0.5; }
 
