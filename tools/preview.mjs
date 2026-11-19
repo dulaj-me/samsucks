@@ -72,6 +72,12 @@ const isText = type => /json|xml|text|mpegurl/i.test(type || '');
 
 function proxy(req, res, rest) {
   const target = new URL(rest, upstream);
+  // "//host/x" or "/\host/x" would resolve to another host and carry the token there.
+  if (target.origin !== upstream.origin) {
+    res.statusCode = 400;
+    res.end('bad path');
+    return;
+  }
   // delete() re-encodes the whole query, so only touch it when there's something to remove.
   if (target.searchParams.has('X-Plex-Token')) target.searchParams.delete('X-Plex-Token');
   const headers = {};
@@ -102,12 +108,26 @@ function proxy(req, res, rest) {
   req.pipe(up);
 }
 
+// Only the preview's own pages may use the token: blocks DNS rebinding and cross-site requests.
+const selves = [`localhost:${port}`, `127.0.0.1:${port}`];
+
 createServer((req, res) => {
-  const url = new URL(req.url, 'http://x');
-  if (url.pathname === '/pms' || url.pathname.startsWith('/pms/')) {
-    proxy(req, res, req.url.slice(4) || '/');
-  } else {
-    serveStatic(req, res, url.pathname);
+  const origin = req.headers.origin;
+  if (!selves.includes(req.headers.host) || (origin && !selves.some(s => origin === 'http://' + s))) {
+    res.statusCode = 403;
+    res.end('forbidden');
+    return;
+  }
+  try {
+    const url = new URL(req.url, 'http://x');
+    if (url.pathname === '/pms' || url.pathname.startsWith('/pms/')) {
+      proxy(req, res, req.url.slice(4) || '/');
+    } else {
+      serveStatic(req, res, url.pathname);
+    }
+  } catch (e) {
+    if (!res.headersSent) res.statusCode = 400;
+    res.end('bad request');
   }
 }).listen(port, '127.0.0.1', () => {
   console.log(`preview on http://localhost:${port}  (Plex via /pms, env from ${path.relative(process.cwd(), envFile) || envFile})`);
