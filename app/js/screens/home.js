@@ -83,6 +83,14 @@ export function HomeScreen() {
   const heroLogo = h('img', 'hero-logo', logoBox);
   const heroTitle = h('h1', 'hero-title', logoBox);
   const heroMeta = h('div', 'hero-meta', info);
+  // A fixed set of nodes, filled in place: a focus change creates nothing.
+  const metaFacts = [];
+  const metaDots = [];
+  for (let i = 0; i < 4; i++) {
+    if (i) metaDots.push(h('i', 'hero-dot', heroMeta));
+    metaFacts.push(h('span', '', heroMeta));
+  }
+  const metaBadges = [0, 1, 2].map(() => h('span', 'badge', heroMeta));
   const heroEp = h('div', 'hero-ep', info);
   const epTitle = h('span', 'hero-ep-title', heroEp);
   const epCode = h('span', 'hero-ep-code', heroEp);
@@ -119,12 +127,11 @@ export function HomeScreen() {
   }
 
   function setMeta(item, extra) {
-    heroMeta.innerHTML = '';
-    facts(item).forEach((t, i) => {
-      if (i) h('i', 'hero-dot', heroMeta);
-      h('span', '', heroMeta).textContent = t;
-    });
-    (extra || []).forEach(t => { h('span', 'badge', heroMeta).textContent = t; });
+    const f = facts(item);
+    const b = extra || [];
+    metaFacts.forEach((el, i) => { show(el, i < f.length); setText(el, f[i]); });
+    metaDots.forEach((el, i) => show(el, i + 1 < f.length));
+    metaBadges.forEach((el, i) => { show(el, i < b.length); setText(el, b[i]); });
   }
 
   function showBadges(item) {
