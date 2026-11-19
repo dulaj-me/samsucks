@@ -26,3 +26,4 @@
 .search-rows { position: absolute; top: 230px; left: 624px; right: 0; bottom: 0; overflow: hidden; }
 .search-recent { position: absolute; top: 230px; left: 624px; width: 760px; }
 .search-recent-list { margin: 12px 0 0 96px; }
+.search-recent-list span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

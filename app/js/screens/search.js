@@ -44,7 +44,10 @@ export function SearchScreen() {
   let zone = 'keys'; // 'input' | 'keys' | 'results' | 'recent'
   let rows = [];
   let rowIndex = 0;
-  let recents = store.get(recentStoreKey(), []);
+  const saved = store.get(recentStoreKey());
+  let recents = Array.isArray(saved) ? saved.filter(s => typeof s === 'string') : [];
+  let rowsQuery = ''; // the query the visible results belong to
+  let inputFrom = 'keys'; // Down from the bar returns here
   let recentOpts = null; // null: rebuild the list the next time it shows
   let recentIndex = 0;
   let timer = 0;
@@ -62,6 +65,7 @@ export function SearchScreen() {
       const hubs = await session.server.search(q);
       if (gen !== generation) return;
       setRows(hubs);
+      rowsQuery = q;
       setText(status, hubs.length ? '' : 'Nothing found for “' + q + '”');
       if (gen === jump && rows.length) setZone('results');
     } catch (e) {
@@ -78,16 +82,20 @@ export function SearchScreen() {
     const q = input.value.trim();
     if (q === query) return;
     // Nothing to fetch below the minimum, so recents come back without the debounce.
-    if (q.length < MIN_QUERY) run(q);
-    else timer = setTimeout(() => run(q), DEBOUNCE_MS);
+    if (q.length < MIN_QUERY) { run(q); return; }
+    // Recents give way at once, not after the debounce, so focus never sits on a hidden list.
+    renderRecents();
+    render();
+    timer = setTimeout(() => run(q), DEBOUNCE_MS);
   }
 
-  // Run now and move focus to the results once they arrive.
+  // Run now and move focus to the results once they arrive, including a search already in flight.
   function submit() {
     clearTimeout(timer);
     const q = input.value.trim();
-    if (q !== query) { run(q); jump = generation; }
+    if (q !== query) run(q);
     else if (rows.length) setZone('results');
+    jump = generation;
   }
 
   function type(id) {
@@ -103,7 +111,7 @@ export function SearchScreen() {
   }
 
   function remember() {
-    const q = query && query.trim();
+    const q = rowsQuery.trim();
     if (!q || q.length < MIN_QUERY) return;
     const lower = q.toLowerCase();
     setRecents([q].concat(recents.filter(r => r.toLowerCase() !== lower)));
@@ -216,7 +224,10 @@ export function SearchScreen() {
   function inputKey(action) {
     const typing = document.activeElement === input;
     switch (action) {
-      case 'down': input.blur(); setZone('keys'); return true;
+      case 'down':
+        input.blur();
+        setZone(inputFrom === 'results' && rows.length ? 'results' : inputFrom === 'recent' && recentsShown() ? 'recent' : 'keys');
+        return true;
       case 'enter': if (typing) { input.blur(); submit(); } else input.focus(); return true;
       case 'back': if (typing) { input.blur(); return true; } return false;
     }
@@ -227,7 +238,7 @@ export function SearchScreen() {
     switch (action) {
       case 'left': keyboard.move(-1, 0); return true;
       case 'right': if (!keyboard.move(1, 0)) enterRight(); return true;
-      case 'up': if (!keyboard.move(0, -1)) setZone('input'); return true;
+      case 'up': if (!keyboard.move(0, -1)) { inputFrom = 'keys'; setZone('input'); } return true;
       case 'down': keyboard.move(0, 1); return true;
       case 'enter': case 'hold': keyboard.press(); return true;
     }
@@ -239,10 +250,16 @@ export function SearchScreen() {
     switch (action) {
       case 'left': if (!row.move(-1)) setZone('keys'); return true;
       case 'right': row.move(1); return true;
-      case 'up': if (rowIndex === 0) setZone('input'); else { rowIndex--; render(); } return true;
+      case 'up': if (rowIndex === 0) { inputFrom = 'results'; setZone('input'); } else { rowIndex--; render(); } return true;
       case 'down': if (rowIndex < rows.length - 1) { rowIndex++; render(); } return true;
       case 'enter': row.select(); return true;
-      case 'hold': if (row.current()) openItemMenu(menu, row.current(), { changed: it => refreshItem(row, it) }); return true;
+      // The menu's Play bypasses onSelect, so the search is saved here.
+      case 'hold':
+        if (row.current()) {
+          remember();
+          openItemMenu(menu, row.current(), { changed: it => refreshItem(row, it) });
+        }
+        return true;
       case 'play': case 'playpause': if (row.current()) { remember(); playItem(row.current()); } return true;
       case 'back': setZone('keys'); return true;
     }
@@ -252,7 +269,7 @@ export function SearchScreen() {
   function recentsKey(action) {
     switch (action) {
       case 'left': setZone('keys'); return true;
-      case 'up': if (recentIndex === 0) setZone('input'); else { recentIndex--; render(); } return true;
+      case 'up': if (recentIndex === 0) { inputFrom = 'recent'; setZone('input'); } else { recentIndex--; render(); } return true;
       case 'down': if (recentIndex < recentOpts.length - 1) { recentIndex++; render(); } return true;
       case 'enter': pickRecent(recents[recentIndex]); return true;
       case 'hold': recentMenu(); return true;
