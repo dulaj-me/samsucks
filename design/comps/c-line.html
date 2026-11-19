@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · C · Line</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --enamel: #0B1630;
+  --enamel-2: #12204A;
+  --porcelain: #F3F0E8;
+  --mute: #9AA3BC;
+  --yours: #F4B223;
+  --movies: #E5402F;
+  --tv: #3E86FF;
+  --green: #22B35A;
+  --sans: 'Fira Sans', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--enamel); color: var(--porcelain); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+
+.top { position: absolute; left: 96px; right: 96px; top: 44px; height: 56px; display: flex; align-items: center; }
+.brand { display: flex; align-items: center; gap: 14px; margin-right: 64px; font: 600 34px/1 var(--sans); letter-spacing: 0.01em; }
+.brand svg { width: 64px; height: 24px; }
+.legend { display: flex; align-items: center; gap: 36px; }
+.li { display: flex; align-items: center; gap: 12px; font: 500 25px/1 var(--sans); color: var(--mute); }
+.li i { width: 30px; height: 8px; border-radius: 4px; }
+.li.on { color: var(--porcelain); font-weight: 600; }
+.li svg { width: 26px; height: 26px; }
+.who { margin-left: auto; width: 50px; height: 50px; border-radius: 25px; border: 4px solid var(--yours); display: flex; align-items: center; justify-content: center; font: 600 22px/1 var(--sans); }
+
+.art { position: absolute; left: 640px; top: 120px; width: 1280px; height: 600px; object-fit: cover;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40%), linear-gradient(to top, transparent 0, #000 40%);
+  -webkit-mask-composite: source-in; }
+
+.info { position: absolute; left: 96px; top: 168px; width: 900px; }
+.title { font: 700 84px/1 var(--sans); letter-spacing: -0.015em; }
+.meta { margin-top: 18px; font: 500 26px/1.3 var(--sans); color: var(--mute); }
+.meta b { color: var(--porcelain); font-weight: 600; }
+.sum { margin-top: 14px; width: 820px; font: 400 24px/36px var(--sans); color: #C9CEDC; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* The season as a line: watched stations filled, the current one an interchange. */
+.route { position: relative; margin-top: 34px; height: 92px; }
+.route .ln { position: absolute; left: 0; top: 18px; height: 8px; border-radius: 4px; background: var(--tv); }
+.route .ln.ahead { background: rgba(62, 134, 255, 0.35); }
+.st { position: absolute; top: 12px; width: 20px; height: 20px; margin-left: -10px; border-radius: 10px; background: var(--enamel); border: 4px solid var(--tv); }
+.st.done { background: var(--tv); }
+.st.now { top: 4px; width: 36px; height: 36px; margin-left: -18px; border-radius: 18px; border: 6px solid var(--porcelain); background: var(--enamel); }
+.st span { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); font: 500 18px/1 var(--sans); color: var(--mute); white-space: nowrap; }
+.st.now span { top: 44px; color: var(--porcelain); font-weight: 600; }
+
+.row { position: absolute; left: 0; width: 1920px; }
+.row.off { opacity: 0.45; }
+.rh { margin-left: 96px; height: 40px; display: flex; align-items: center; gap: 14px; font: 600 28px/1 var(--sans); }
+.rh i { width: 20px; height: 20px; border-radius: 10px; border: 5px solid currentColor; }
+.tile { position: absolute; top: 56px; }
+.f { position: relative; width: 384px; height: 216px; overflow: hidden; border-radius: 12px; background: var(--enamel-2); }
+.poster .f { width: 216px; height: 324px; }
+.f img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rail { position: absolute; left: 96px; right: 0; height: 8px; border-radius: 4px 0 0 4px; }
+.tick { position: absolute; width: 8px; height: 18px; margin-left: -4px; border-radius: 2px; }
+.prog { position: absolute; height: 8px; border-radius: 4px; background: var(--porcelain); }
+.ring { position: absolute; left: 86px; top: 46px; width: 404px; height: 236px; border: 5px solid var(--porcelain); border-radius: 20px; }
+.xchg { position: absolute; width: 32px; height: 32px; margin-left: -16px; border-radius: 16px; border: 6px solid var(--porcelain); background: var(--enamel); }
+</style>
+</head>
+<body>
+<img class="art" id="art" alt="">
+<div class="top">
+  <div class="brand"><svg viewBox="0 0 64 24"><rect x="0" y="9" width="64" height="6" rx="3" fill="#F4B223"/><circle cx="40" cy="12" r="9" fill="#0B1630" stroke="#F3F0E8" stroke-width="4"/></svg>Kinescope</div>
+  <div class="legend" id="legend"></div>
+  <div class="who">D</div>
+</div>
+<div class="info">
+  <div class="title" id="title"></div>
+  <div class="meta" id="meta"></div>
+  <div class="route" id="route"></div>
+  <p class="sum" id="sum"></p>
+</div>
+<div id="rows"></div>
+<script type="module">
+import * as D from './data.js';
+const $ = id => document.getElementById(id);
+const { sections, rows } = await D.load();
+const state = { rows, row: 0, col: 0 };
+const LINE = { movie: 'var(--movies)', show: 'var(--tv)' };
+const SEARCH = '<svg viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="2.4" cx="10.5" cy="10.5" r="6.5"/><path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M15.5 15.5L20 20"/></svg>';
+const GEAR = '<svg viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="2.2" cx="12" cy="12" r="3.2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7L12 21.2l-1.6-2.4-2.8.7-.7-2.8-2.4-1.6L5.7 12 4.5 9.4l2.4-1.6.7-2.8 2.8.7z"/></svg>';
+
+const home = D.h('div', 'li on', $('legend'));
+D.h('i', '', home).style.background = 'var(--yours)';
+D.h('span', '', home, 'Home');
+sections.forEach(s => { const e = D.h('div', 'li', $('legend')); D.h('i', '', e).style.background = LINE[s.type]; D.h('span', '', e, s.title); });
+D.h('div', 'li', $('legend')).innerHTML = SEARCH;
+D.h('div', 'li', $('legend')).innerHTML = GEAR;
+
+const rowColor = r => /continue|ondeck/i.test(r.hubIdentifier) ? 'var(--yours)' : /movie/i.test(r.hubIdentifier) ? 'var(--movies)' : 'var(--tv)';
+
+async function route(it) {
+  const box = $('route');
+  box.innerHTML = '';
+  if (it.type !== 'episode') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const eps = (await (await fetch('/pms/library/metadata/' + it.parentRatingKey + '/children', { headers: { Accept: 'application/json' } })).json()).MediaContainer.Metadata || [];
+  const W = 760, n = eps.length, gap = n > 1 ? W / (n - 1) : 0;
+  const cur = eps.findIndex(e => e.ratingKey === it.ratingKey);
+  const done = D.h('i', 'ln', box); done.style.width = Math.max(0, cur * gap) + 'px';
+  const ahead = D.h('i', 'ln ahead', box); ahead.style.left = cur * gap + 'px'; ahead.style.width = (W - cur * gap) + 'px';
+  eps.forEach((e, i) => {
+    const s = D.h('div', 'st' + (i === cur ? ' now' : e.viewCount ? ' done' : ''), box);
+    s.style.left = i * gap + 'px';
+    if (i === cur || i === 0 || i === n - 1) D.h('span', '', s, 'E' + e.index);
+  });
+}
+
+function hero(it) {
+  $('art').src = D.img(D.heroArt(it), 1280, 720);
+  $('title').textContent = D.showTitle(it);
+  const bits = it.type === 'episode'
+    ? ['<b>Season ' + it.parentIndex + '</b>', it.title, D.left(it) || D.runtime(it.duration)]
+    : [D.year(it), it.contentRating, D.left(it) || D.runtime(it.duration)];
+  $('meta').innerHTML = bits.filter(Boolean).join('  ·  ');
+  $('sum').textContent = it.summary || '';
+  route(it);
+}
+
+function render() {
+  const box = $('rows');
+  box.innerHTML = '';
+  let y = 676;
+  state.rows.slice(state.row, state.row + 2).forEach((r, ri) => {
+    const wide = /continue|ondeck/i.test(r.hubIdentifier);
+    const color = rowColor(r);
+    const row = D.h('section', 'row' + (ri ? ' off' : ''), box);
+    row.style.top = y + 'px';
+    const rh = D.h('div', 'rh', row);
+    D.h('i', '', rh).style.color = color;
+    D.h('span', '', rh, r.title);
+    const w = wide ? 384 : 216, hgt = wide ? 216 : 324, step = w + 28;
+    const railY = 56 + hgt + 22;
+    const rail = D.h('i', 'rail', row); rail.style.top = railY + 'px'; rail.style.background = color;
+    const start = ri === 0 ? state.col : 0;
+    r.Metadata.slice(start, start + 9).forEach((it, i) => {
+      const x = 96 + i * step;
+      const t = D.h('div', 'tile' + (wide ? '' : ' poster'), row);
+      t.style.left = x + 'px';
+      const f = D.h('div', 'f', t);
+      D.h('img', '', f).src = D.img(wide ? D.wideArt(it) : D.posterArt(it), w, hgt);
+      const p = D.progress(it);
+      if (p) { const pr = D.h('i', 'prog', row); pr.style.left = x + 'px'; pr.style.top = railY + 'px'; pr.style.width = (w * p) + 'px'; }
+      if (!(ri === 0 && i === 0)) { const tk = D.h('i', 'tick', row); tk.style.left = (x + w / 2) + 'px'; tk.style.top = (railY - 5) + 'px'; tk.style.background = 'var(--porcelain)'; }
+    });
+    if (ri === 0) {
+      const g = D.h('div', 'ring', row);
+      if (!wide) { g.style.width = '236px'; g.style.height = '344px'; }
+      const x = D.h('div', 'xchg', row); x.style.left = (96 + w / 2) + 'px'; x.style.top = (railY - 12) + 'px';
+    }
+    y += railY + 52;
+  });
+  hero(state.rows[state.row].Metadata[state.col]);
+}
+render();
+D.dpad(state, render);
+</script>
+</body>
+</html>

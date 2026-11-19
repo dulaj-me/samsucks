@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · Player</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="evening.css">
+<style>
+/* Stands in for the AVPlay video plane under the transparent web layer. */
+.video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; }
+/* Static scrims, shipped as small stretched images in the app. */
+.scrim-top { position: absolute; left: 0; top: 0; width: 1920px; height: 260px; background: linear-gradient(rgba(12, 11, 11,0.72), transparent); }
+.scrim-bottom { position: absolute; left: 0; bottom: 0; width: 1920px; height: 420px; background: linear-gradient(transparent, rgba(12, 11, 11,0.9)); }
+.title { position: absolute; left: 96px; top: 64px; }
+.title img { display: block; max-width: 320px; max-height: 96px; object-fit: contain; object-position: left center; }
+.title div { margin-top: 14px; font: 560 25px/1.2 var(--sans); color: var(--soft); }
+.scrub { position: absolute; left: 96px; right: 96px; top: 872px; height: 8px; border-radius: 4px; background: rgba(245, 243, 239, 0.24); }
+.scrub .buf { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 4px; background: rgba(245, 243, 239, 0.34); transform-origin: 0 0; }
+.scrub .played { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 4px; background: var(--text); transform-origin: 0 0; }
+.scrub .knob { position: absolute; left: 0; top: -10px; width: 28px; height: 28px; margin-left: -14px; border-radius: 14px; background: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.times { position: absolute; left: 96px; right: 96px; top: 900px; display: flex; justify-content: space-between; font: 560 23px/1 var(--sans); color: var(--soft); font-variant-numeric: tabular-nums; }
+.ctrls { position: absolute; left: 96px; right: 96px; top: 948px; display: flex; align-items: center; gap: 14px; }
+.ctrls .mid { display: flex; gap: 14px; }
+.ctrls .right { margin-left: auto; display: flex; gap: 14px; }
+.skip { position: absolute; right: 96px; top: 760px; }
+.next { position: absolute; right: 96px; bottom: 96px; width: 520px; padding: 20px; border-radius: var(--r-panel); background: rgba(21, 20, 19, 0.94); box-shadow: 0 20px 48px rgba(0,0,0,0.5); }
+.next .f { width: 480px; height: 270px; }
+.next h3 { margin-top: 18px; font: 620 27px/1.2 var(--sans); }
+.next p { margin-top: 6px; font: 500 21px/1.3 var(--sans); color: var(--mute); }
+.next .row { margin-top: 18px; display: flex; gap: 12px; }
+.next .btn { height: 60px; font-size: 23px; position: relative; overflow: hidden; }
+.next .btn .cd { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 0; background: rgba(21, 20, 19, 0.12); transform-origin: 0 0; transform: scaleX(0.62); }
+.sheet h3 { margin-top: 30px; font: 600 22px/1 var(--sans); color: var(--mute); }
+.sheet .opts { margin-top: 12px; }
+</style>
+</head>
+<body>
+<script type="module">
+import * as D from './data.js';
+import { icon } from './chrome.js';
+const q = new URLSearchParams(location.search);
+const state = q.get('state') || '';
+const get = async p => (await (await fetch('/pms' + p, { headers: { Accept: 'application/json' } })).json()).MediaContainer;
+const { rows } = await D.load();
+const ep = rows.find(r => /continue/.test(r.hubIdentifier)).Metadata.find(m => m.type === 'episode');
+const full = (await get('/library/metadata/' + ep.ratingKey)).Metadata[0];
+const show = (await get('/library/metadata/' + ep.grandparentRatingKey)).Metadata[0];
+
+D.h('img', 'video', document.body).src = D.img(full.thumb, 1920, 1080);
+const osd = state !== 'next';
+if (osd || state === 'tracks') {
+  D.h('div', 'scrim-top', document.body);
+  D.h('div', 'scrim-bottom', document.body);
+  const t = D.h('div', 'title', document.body);
+  const logo = D.clearLogo(show);
+  if (logo) D.h('img', '', t).src = D.img(logo, 320, 96, 'png');
+  D.h('div', '', t, D.epCode(ep) + '  ·  ' + ep.title);
+
+  const pos = state === 'tracks' ? 0.42 : ep.viewOffset / ep.duration;
+  const s = D.h('div', 'scrub', document.body);
+  D.h('div', 'buf', s).style.transform = 'scaleX(' + Math.min(1, pos + 0.09).toFixed(4) + ')';
+  D.h('div', 'played', s).style.transform = 'scaleX(' + pos.toFixed(4) + ')';
+  D.h('div', 'knob', s).style.transform = 'translateX(' + Math.round(pos * 1728) + 'px)';
+  const fmt = ms => { const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), x = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+  const tm = D.h('div', 'times', document.body);
+  D.h('span', '', tm, fmt(ep.duration * pos));
+  D.h('span', '', tm, '-' + fmt(ep.duration * (1 - pos)));
+
+  const c = D.h('div', 'ctrls', document.body);
+  const mid = D.h('div', 'mid', c);
+  D.h('div', 'btn', mid).innerHTML = icon.restart + '10s';
+  D.h('div', 'btn round' + (state === '' ? ' focus' : ''), mid).innerHTML = icon.pause;
+  D.h('div', 'btn', mid).innerHTML = '10s' + icon.restart.replace('<svg ', '<svg style="transform:scaleX(-1)" ');
+  const right = D.h('div', 'right', c);
+  D.h('div', 'btn' + (state === 'tracks' ? ' focus' : ''), right).innerHTML = icon.subs + 'Audio and subtitles';
+  D.h('div', 'btn', right).innerHTML = icon.next + 'Next episode';
+}
+
+if (state === 'intro') {
+  document.querySelector('.btn.focus')?.classList.remove('focus');
+  D.h('div', 'btn focus skip', document.body).innerHTML = icon.next + 'Skip intro';
+}
+
+if (state === 'next') {
+  const eps = (await get('/library/metadata/' + ep.parentRatingKey + '/children')).Metadata || [];
+  const nx = eps[eps.findIndex(e => e.ratingKey === ep.ratingKey) + 1] || eps[0];
+  const card = D.h('div', 'next', document.body);
+  const f = D.h('div', 'f', card);
+  D.h('img', '', f).src = D.img(nx.thumb, 480, 270);
+  D.h('h3', '', card, nx.index + '. ' + nx.title);
+  D.h('p', '', card, D.epCode(nx) + '  ·  ' + D.runtime(nx.duration));
+  const r = D.h('div', 'row', card);
+  const go = D.h('div', 'btn focus', r);
+  go.innerHTML = '<i class="cd"></i>' + icon.play + 'Play in 6s';
+  D.h('div', 'btn', r, 'Watch credits');
+}
+
+if (state === 'tracks') {
+  D.h('div', 'scrim', document.body);
+  const sh = D.h('div', 'sheet', document.body);
+  D.h('h2', '', sh, 'Audio and subtitles');
+  const streams = (full.Media[0].Part[0].Stream || []);
+  D.h('h3', '', sh, 'Audio');
+  const ao = D.h('div', 'opts', sh);
+  streams.filter(x => x.streamType === 2).slice(0, 3).forEach((x, i) => {
+    const o = D.h('div', 'opt', ao); D.h('span', '', o, x.displayTitle || x.language);
+    if (x.selected || i === 0) D.h('span', 'tick', o).innerHTML = icon.check;
+  });
+  D.h('h3', '', sh, 'Subtitles');
+  const so = D.h('div', 'opts', sh);
+  const subs = [{ displayTitle: 'Off' }].concat(streams.filter(x => x.streamType === 3)).slice(0, 5);
+  subs.forEach((x, i) => {
+    const o = D.h('div', 'opt' + (i === 1 ? ' focus' : ''), so); D.h('span', '', o, x.displayTitle || x.language);
+    if (i === 0) D.h('span', 'tick', o).innerHTML = icon.check;
+  });
+}
+</script>
+</body>
+</html>

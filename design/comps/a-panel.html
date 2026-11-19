@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · A · Front Panel</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&family=Doto:wght@500..900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --glass: #08080A;
+  --plate: #121214;
+  --seam: #26262A;
+  --window: #030304;
+  --engrave: #77736B;
+  --text: #BDB7AC;
+  --lit: #FFB547;
+  --lit-dim: rgba(255, 181, 71, 0.62);
+  --ghost: rgba(255, 181, 71, 0.13);
+  --m: 24px;
+  --panel: 'Archivo', sans-serif;
+  --vfd: 'Doto', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--glass); color: var(--text); font-family: var(--panel); -webkit-font-smoothing: antialiased; }
+
+/* Faceplate: the nav is the input selector. */
+.plate { position: absolute; top: 0; left: 0; width: 1920px; height: 120px; background: var(--plate); border-bottom: 1px solid var(--seam); }
+.plate::after { content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 1px; background: #000; }
+.brand { position: absolute; left: 96px; top: 46px; font: 600 26px/1 var(--panel); font-stretch: 125%; letter-spacing: 0.34em; color: #9C978E; }
+.inputs { position: absolute; left: 504px; top: 0; height: 120px; display: flex; align-items: center; }
+.input { position: relative; height: 48px; padding: 0 24px 0 44px; display: flex; align-items: center; font: 600 20px/1 var(--panel); font-stretch: 112%; letter-spacing: 0.18em; color: var(--engrave); }
+.input::before { content: ''; position: absolute; left: 20px; top: 20px; width: 8px; height: 8px; border-radius: 2px; background: #1E1E20; }
+.input.on { color: var(--lit); }
+.input.on::before { background: var(--lit); }
+.input.sep { margin-left: 24px; }
+.source { position: absolute; right: 168px; top: 44px; font: 700 26px/1 var(--vfd); letter-spacing: 0.06em; color: var(--lit-dim); }
+.who { position: absolute; right: 96px; top: 36px; width: 48px; height: 48px; border-radius: 24px; border: 2px solid var(--engrave); display: flex; align-items: center; justify-content: center; }
+.who svg { width: 24px; height: 24px; color: var(--engrave); }
+
+/* The picture behind the display window. */
+.art { position: absolute; left: 720px; top: 121px; width: 1200px; height: 675px; object-fit: cover;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 38%), linear-gradient(to top, transparent 0, #000 34%);
+  -webkit-mask-composite: source-in; opacity: 0.92; }
+
+/* Display window: the readout for the focused title. */
+.window { position: absolute; left: 96px; top: 168px; width: 864px; height: 336px; background: var(--window); border: 1px solid #1C1C1F; border-radius: 4px; padding: 30px 36px; }
+.w-top { display: flex; justify-content: space-between; font: 700 24px/1 var(--vfd); letter-spacing: 0.08em; color: var(--lit-dim); }
+.w-title { margin-top: 22px; font: 800 74px/1 var(--vfd); letter-spacing: 0.02em; color: var(--lit); text-transform: uppercase; white-space: nowrap; overflow: hidden; }
+.w-sub { margin-top: 14px; height: 32px; font: 700 32px/1 var(--vfd); color: var(--lit-dim); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.meter { position: absolute; left: 36px; right: 36px; bottom: 82px; display: flex; align-items: center; gap: 12px; }
+.segs { display: flex; gap: 4px; }
+.segs i { width: 14px; height: 12px; border-radius: 1px; background: var(--ghost); }
+.segs i.l { background: var(--lit); }
+.meter b { font: 700 24px/1 var(--vfd); color: var(--lit-dim); letter-spacing: 0.04em; white-space: nowrap; }
+.legends { position: absolute; left: 36px; right: 36px; bottom: 30px; display: flex; gap: 28px; }
+.lg { font: 700 18px/1 var(--panel); font-stretch: 100%; letter-spacing: 0.16em; color: var(--ghost); }
+.lg.l { color: var(--lit); }
+.lg.direct { margin-left: auto; padding: 5px 10px 4px; border: 1.5px solid currentColor; border-radius: 3px; margin-top: -6px; }
+
+.summary { position: absolute; left: 96px; top: 528px; width: 864px; font: 400 24px/36px var(--panel); color: var(--text);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Rows */
+.row { position: absolute; left: 0; width: 1920px; }
+.row.dim { opacity: 0.42; }
+.row-h { margin-left: 96px; height: 36px; display: flex; align-items: baseline; gap: 16px; }
+.row-h span { font: 600 20px/1 var(--panel); font-stretch: 112%; letter-spacing: 0.18em; color: #8E897F; text-transform: uppercase; }
+.row-h b { font: 700 22px/1 var(--vfd); color: var(--lit-dim); }
+.track { position: relative; height: 260px; margin-top: 12px; }
+.tile { position: absolute; top: 0; }
+.tile .f { position: relative; width: 384px; height: 216px; border-radius: 2px; overflow: hidden; background: #151517; }
+.tile.poster .f { width: 216px; height: 324px; }
+.tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tile .segs { margin-top: 10px; }
+.tile .segs i { width: 9px; height: 6px; }
+.badge { position: absolute; top: 10px; right: 10px; min-width: 36px; height: 32px; padding: 0 8px; border-radius: 3px; background: rgba(3,3,4,0.86); font: 800 24px/32px var(--vfd); color: var(--lit); text-align: center; }
+.ring { position: absolute; left: 88px; top: -8px; width: 400px; height: 232px; border: 3px solid var(--lit); border-radius: 5px; pointer-events: none; }
+.tag { position: absolute; left: 1700px; top: 1040px; font: 500 14px/1 var(--panel); color: #3A3A3E; letter-spacing: 0.1em; }
+</style>
+</head>
+<body>
+<div class="plate">
+  <div class="brand">KINESCOPE</div>
+  <div class="inputs" id="inputs"></div>
+  <div class="source" id="source">PLEX</div>
+  <div class="who"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20.5c1.4-3.8 4.2-5.5 7.5-5.5s6.1 1.7 7.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+</div>
+<img class="art" id="art" alt="">
+<div class="window">
+  <div class="w-top"><span id="lib"></span><span id="code"></span></div>
+  <div class="w-title" id="title"></div>
+  <div class="w-sub" id="sub"></div>
+  <div class="meter"><div class="segs" id="meter"></div><b id="left"></b></div>
+  <div class="legends" id="legends"></div>
+</div>
+<p class="summary" id="summary"></p>
+<div id="rows"></div>
+<script type="module">
+import * as D from './data.js';
+const $ = id => document.getElementById(id);
+const { sections, rows } = await D.load();
+const state = { rows, row: 0, col: 0 };
+
+const nav = [{ t: 'HOME', on: true }].concat(sections.map(s => ({ t: s.title.toUpperCase() })), [{ t: 'SEARCH', sep: true }, { t: 'SETTINGS' }]);
+nav.forEach(n => D.h('div', 'input' + (n.on ? ' on' : '') + (n.sep ? ' sep' : ''), $('inputs'), n.t));
+
+function segs(el, n, frac) {
+  el.innerHTML = '';
+  const lit = Math.round(n * frac);
+  for (let i = 0; i < n; i++) D.h('i', i < lit ? 'l' : '', el);
+}
+
+async function hero(it) {
+  $('art').src = D.img(D.heroArt(it), 1200, 675);
+  $('lib').textContent = (it.librarySectionTitle || '').toUpperCase();
+  $('code').textContent = D.epCode(it);
+  $('title').textContent = D.showTitle(it);
+  $('sub').textContent = it.type === 'episode' ? it.title : [D.year(it), it.contentRating, D.runtime(it.duration)].filter(Boolean).join('  ');
+  const p = D.progress(it);
+  segs($('meter'), 34, p);
+  $('left').textContent = p ? D.left(it).toUpperCase() : D.runtime(it.duration).toUpperCase();
+  $('summary').textContent = it.summary || '';
+  const f = D.formats(it, await D.detail(it)) || {};
+  const L = [['4K', f.uhd], ['HDR', f.hdr], ['DOLBY VISION', f.dv], ['ATMOS', f.atmos], [f.channels || '5.1', !!f.channels], ['DIRECT', f.direct]];
+  $('legends').innerHTML = '';
+  L.forEach(([t, on]) => D.h('span', 'lg' + (on ? ' l' : '') + (t === 'DIRECT' ? ' direct' : ''), $('legends'), t));
+}
+
+function render() {
+  const box = $('rows');
+  box.innerHTML = '';
+  let y = 648;
+  state.rows.slice(state.row, state.row + 2).forEach((r, ri) => {
+    const wide = /continue|ondeck/i.test(r.hubIdentifier);
+    const row = D.h('section', 'row' + (ri ? ' dim' : ''), box);
+    row.style.top = y + 'px';
+    const head = D.h('div', 'row-h', row);
+    D.h('span', '', head, r.title);
+    D.h('b', '', head, String(r.Metadata.length).padStart(2, '0'));
+    const tr = D.h('div', 'track', row);
+    const w = wide ? 384 : 216, step = w + 24;
+    const start = ri === 0 ? state.col : 0;
+    r.Metadata.slice(start, start + 9).forEach((it, i) => {
+      const t = D.h('div', 'tile' + (wide ? '' : ' poster'), tr);
+      t.style.left = (96 + i * step) + 'px';
+      const f = D.h('div', 'f', t);
+      const im = D.h('img', '', f);
+      im.src = D.img(wide ? D.wideArt(it) : D.posterArt(it), w, wide ? 216 : 324);
+      if ((it.type === 'show' || it.type === 'season') && it.leafCount) {
+        const n = it.leafCount - (it.viewedLeafCount || 0);
+        if (n > 0) D.h('div', 'badge', f, String(n));
+      }
+      const p = D.progress(it);
+      if (p) { const s = D.h('div', 'segs', t); segs(s, 29, p); if (!(ri === 0 && i === 0)) s.style.opacity = 0.6; }
+    });
+    if (ri === 0) {
+      const ring = D.h('div', 'ring', tr);
+      if (!wide) { ring.style.width = '232px'; ring.style.height = '340px'; }
+    }
+    y += wide ? 316 : 424;
+  });
+  hero(state.rows[state.row].Metadata[state.col]);
+}
+render();
+D.dpad(state, render);
+</script>
+</body>
+</html>
