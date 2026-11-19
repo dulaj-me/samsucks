@@ -160,6 +160,8 @@ curl 'localhost:8790/send?keys=down,right,right,enter'       # press buttons
 tools/tveval.sh 'document.title'                              # run JS on the TV, print the result
 tools/tveval.sh '__bench(["right","right","left","left"], 250)'   # frame stats while replaying keys
 tools/tveval.sh "__css('.hero-art{display:none}')"           # A/B test a CSS change live
+tools/bench.sh                    # fixed scenarios, 3 runs each; compare with docs/perf-baseline.md
+tools/bench.sh info cold          # TV model and user agent; reload-to-Home-rows time
 ```
 
 With `DEV_SKIP_LOGIN=1` and `PLEX_SERVER_URL` in `.env`, dev builds skip sign-in and
@@ -176,6 +178,12 @@ it drops connections when Chrome requests every module at once, and the app hang
 splash screen. Use arrows and Enter (hold for the long-press menu), Backspace or Esc for
 Back, and Space for Play/Pause. Playback uses a plain `<video>` element instead of AVPlay,
 with no track picker, so check anything player-related on the TV.
+
+To skip sign-in and see your real libraries, add `PLEX_SERVER_URL` and `PLEX_TOKEN` to
+`.env` and run `node tools/preview.mjs` instead. It serves `app/` as a dev build and
+proxies Plex through `/pms`, adding the token on the way out, so the browser never sees
+it. Each checkout gets its own port; `PORT=` and `ENV_FILE=` override the port and the
+`.env` path. Playing something reports progress to your server, like any other client.
 </details>
 
 <details>
@@ -188,7 +196,7 @@ app/            the whole TV app; deploy.sh copies it to build/app and packages 
   js/plex/      plex.tv sign-in and Plex Media Server API
   js/platform/  Tizen keys and device info, AVPlay / <video> player
 scripts/        setup.sh (one-time) and deploy.sh (build + install)
-tools/          dev server, TV eval, network remote
+tools/          dev server, TV eval, network remote, preview proxy, TV benchmarks
 ```
 
 There's no bundler. The TV's browser (Chromium 69+ on Tizen 5.5+) runs ES modules

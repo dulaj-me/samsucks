@@ -1,0 +1,14 @@
+.search-bar {
+  position: absolute; top: 64px; left: 96px; right: 96px; height: 96px; padding: 0 36px;
+  border-radius: 48px; background: rgba(var(--cream-rgb), 0.08);
+  display: flex; align-items: center;
+}
+.search.in-input .search-bar { box-shadow: 0 0 0 4px var(--coral); }
+.search-icon svg { width: 40px; height: 40px; display: block; color: var(--dim); }
+.search-input {
+  flex: 1; margin-left: 22px; border: 0; outline: 0; background: transparent;
+  color: var(--cream); font: 500 38px var(--body);
+}
+.search-input::placeholder { color: rgba(var(--cream-rgb), 0.4); }
+.search-status { position: absolute; top: 196px; left: 96px; font: 500 26px var(--body); color: var(--dim); }
+.search-rows { position: absolute; top: 230px; left: 0; width: 1920px; bottom: 0; overflow: hidden; }

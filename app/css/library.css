@@ -1,0 +1,12 @@
+/* A fixed box, so a focus change repaints only this text and lays out nothing else. */
+.lib-focus {
+  position: absolute; top: 146px; left: 96px; width: 960px;
+  font: 500 26px var(--body); color: var(--cream);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 4px lower: the ★ in the focus line comes from a fallback font that pushes its baseline down. */
+.lib-head { position: absolute; top: 150px; right: 96px; display: flex; align-items: baseline; white-space: nowrap; }
+.lib-count { font: 500 26px var(--body); color: var(--dim); }
+.lib-sort { margin-left: 32px; font: 500 24px var(--body); color: var(--dim); }
+.lib-hint { margin-left: 32px; font: 500 22px var(--body); color: var(--dim); }
+.key-yellow { display: inline-block; width: 18px; height: 18px; border-radius: 4px; background: var(--key-yellow); vertical-align: -2px; }

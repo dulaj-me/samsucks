@@ -20,8 +20,15 @@ export function playItem(item, opts) {
   router.push(PlayerScreen(item, opts || {}));
 }
 
+// Libraries replace each other above Home, so Back from any of them lands on Home.
 export function openLibrary(section) {
-  router.push(LibraryScreen(section));
+  const top = router.top();
+  if (top && top.name === 'library') router.replace(LibraryScreen(section));
+  else router.push(LibraryScreen(section));
+}
+
+export function goHome() {
+  router.popToRoot();
 }
 
 export function openSearch() {

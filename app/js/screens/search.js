@@ -2,6 +2,8 @@
 // keyboard; results update as you type.
 import { h, setText, setTransform } from '../util/dom.js';
 import { Row } from '../ui/row.js';
+import { Menu } from '../ui/menu.js';
+import { openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
 import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
@@ -24,6 +26,7 @@ export function SearchScreen() {
   const status = h('div', 'search-status', el);
   const clip = h('div', 'search-rows', el);
   const track = h('div', 'rows-track', clip);
+  const menu = new Menu(el);
 
   let rows = [];
   let rowIndex = -1; // -1 = input
@@ -65,6 +68,17 @@ export function SearchScreen() {
     render();
   }
 
+  // Swap in the item's new watched state, keeping the results and focus where they are.
+  async function refreshItem(row, it) {
+    try {
+      const full = await session.server.metadata(it.ratingKey);
+      if (!full || rows.indexOf(row) < 0) return;
+      row.setItems(row.items.map(x => (x === it ? full : x)));
+    } catch (e) {
+      error('search refresh failed', e);
+    }
+  }
+
   function render() {
     rows.forEach((r, i) => r.setActive(i === rowIndex));
     el.classList.toggle('in-input', rowIndex < 0);
@@ -101,6 +115,7 @@ export function SearchScreen() {
     },
     onHide() { input.blur(); },
     onKey(action) {
+      if (menu.isOpen) return menu.onKey(action);
       if (rowIndex < 0) {
         if (action === 'down' && rows.length) { input.blur(); rowIndex = 0; render(); return true; }
         if (action === 'enter') { input.focus(); return true; }
@@ -114,6 +129,7 @@ export function SearchScreen() {
         case 'up': if (rowIndex === 0) focusInput(); else { rowIndex--; render(); } return true;
         case 'down': if (rowIndex < rows.length - 1) { rowIndex++; render(); } return true;
         case 'enter': row.select(); return true;
+        case 'hold': openItemMenu(menu, row.current(), { changed: it => refreshItem(row, it) }); return true;
         case 'play': case 'playpause': if (row.current()) playItem(row.current()); return true;
         case 'back': focusInput(); return true;
       }

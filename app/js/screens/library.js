@@ -1,8 +1,11 @@
-// A whole library as a virtualized poster grid, loaded page by page.
+// A whole library as a virtualized poster grid, loaded page by page, under the nav.
 // Yellow cycles the sort; CH▲/CH▼ jump by letter (title sort) or by page.
 import { h, setText } from '../util/dom.js';
 import { Grid } from '../ui/grid.js';
 import { useAmbience } from '../ui/backdrop.js';
+import { TopNav } from '../ui/topnav.js';
+import { Menu } from '../ui/menu.js';
+import { openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
 import { prefetch } from '../ui/images.js';
 import { isFast } from '../input.js';
@@ -21,12 +24,13 @@ const SORTS = [
 export function LibraryScreen(section) {
   const el = h('div', 'screen library');
   const ambience = useAmbience();
-  const head = h('header', 'lib-head', el);
-  h('h1', 'lib-title', head).textContent = section.title;
+  // The nav's current entry names the library, so the line below it is about the focus.
+  const topnav = new TopNav(el, section.key);
+  const focusInfo = h('div', 'lib-focus', el);
+  const head = h('div', 'lib-head', el);
   const count = h('div', 'lib-count', head);
   const sortEl = h('div', 'lib-sort', head);
-  const focusInfo = h('div', 'lib-focus', el);
-  const hint = h('div', 'lib-hint', el);
+  const hint = h('div', 'lib-hint', head);
   hint.innerHTML = '<i class="key-yellow"></i> Sort &nbsp;&nbsp; CH ▲▼ Jump';
 
   let sortIndex = 0;
@@ -34,6 +38,7 @@ export function LibraryScreen(section) {
   let items = [];
   let letters = [];          // [{ title: 'A', start: 0 }]
   let generation = 0;
+  let zone = 'grid';
 
   const type = section.type === 'show' ? 2 : 1;
 
@@ -58,6 +63,7 @@ export function LibraryScreen(section) {
     },
   });
   el.appendChild(grid.el);
+  const menu = new Menu(el);
 
   async function loadPage(p) {
     if (pages.has(p)) return;
@@ -121,19 +127,51 @@ export function LibraryScreen(section) {
     }
   }
 
+  // Swap in the item's new watched state without reloading the page it's on.
+  async function refreshItem(it) {
+    const gen = generation;
+    try {
+      const full = await session.server.metadata(it.ratingKey);
+      const i = items.indexOf(it);
+      if (gen !== generation || !full || i < 0) return;
+      items[i] = full;
+      grid.refresh();
+    } catch (e) {
+      error('library refresh failed', section.title, e);
+    }
+  }
+
+  function setZone(z) {
+    zone = z;
+    topnav.setActive(z === 'nav');
+    grid.setActive(z === 'grid');
+  }
+
   return {
     el,
     name: 'library',
-    onShow() { ambience.restore(); },
+    destroy() { generation++; },
+    onShow() {
+      ambience.restore();
+      topnav.render();
+    },
     onKey(action) {
+      if (menu.isOpen) return menu.onKey(action);
+      if (zone === 'nav') {
+        if (topnav.onKey(action)) return true;
+        if (action === 'down') { setZone('grid'); return true; }
+        if (action === 'back') return false;
+        return true;
+      }
       switch (action) {
         case 'left': grid.move(-1, 0); return true;
         case 'right': grid.move(1, 0); return true;
-        case 'up': grid.move(0, -1); return true;
+        case 'up': if (!grid.move(0, -1)) setZone('nav'); return true;
         case 'down': grid.move(0, 1); return true;
         case 'pageup': jump(-1); return true;
         case 'pagedown': jump(1); return true;
         case 'enter': grid.select(); return true;
+        case 'hold': openItemMenu(menu, grid.current(), { changed: refreshItem }); return true;
         case 'play': case 'playpause': if (grid.current()) playItem(grid.current()); return true;
         case 'yellow': sortIndex = (sortIndex + 1) % SORTS.length; reload(); return true;
         case 'back':
