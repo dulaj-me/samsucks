@@ -56,6 +56,7 @@ export function LibraryScreen(section) {
     return c;
   }
   const genreChip = chip(openGenres);
+  genreChip.label.className = 'lib-genre';
   const unwatchedChip = chip(() => { unwatched = !unwatched; filtersChanged(); });
   setText(unwatchedChip.label, 'Unwatched');
   unwatchedChip.icon = h('span', '', unwatchedChip.el);
@@ -107,17 +108,22 @@ export function LibraryScreen(section) {
       else grid.refresh();
       if (p === 0 && res.items[0]) grid.onFocus(grid.current());
     } catch (e) {
+      if (gen !== generation) return;
       pages.delete(p);
       error('library page failed', section.title, p, e);
+      if (p === 0) showEmpty("Couldn't load this library.");
     }
   }
 
   function showTotal(total) {
     setText(count, total + (isShow ? ' show' : ' movie') + (total === 1 ? '' : 's'));
-    isEmpty = !total;
-    show(empty, isEmpty);
-    if (!isEmpty) return;
-    setText(empty, genre || unwatched ? 'Nothing matches these filters. Press Back to clear them.' : 'This library is empty.');
+    if (!total) showEmpty(genre || unwatched ? 'Nothing matches these filters. Press Back to clear them.' : 'This library is empty.');
+  }
+
+  function showEmpty(text) {
+    isEmpty = true;
+    setText(empty, text);
+    show(empty, true);
     setText(focusInfo, '');
     if (zone === 'grid') setZone('bar');
   }
@@ -160,6 +166,7 @@ export function LibraryScreen(section) {
     items = [];
     isEmpty = false;
     show(empty, false);
+    setText(count, '');
     grid.total = 0;
     grid.index = 0;
     grid.refresh();

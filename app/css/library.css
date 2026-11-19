@@ -1,6 +1,6 @@
 /* A fixed box, so a focus change repaints only this text and lays out nothing else. */
 .lib-focus {
-  position: absolute; top: 146px; left: 96px; width: 760px;
+  position: absolute; top: 146px; left: 96px; width: 700px;
   font: 500 26px var(--body); color: var(--cream);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -10,6 +10,8 @@
  */
 .lib-head { position: absolute; top: 139px; right: 96px; display: flex; align-items: baseline; white-space: nowrap; }
 .lib-count { margin-right: 20px; }
+/* Capped so a 5-digit count plus a long genre ("Action & Adventure") stays clear of .lib-focus. */
+.lib-genre { display: inline-block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
 .lib-head .pill:last-child { margin-right: 0; }
 .lib-empty { position: absolute; top: 236px; left: 96px; }
 .lib-count, .lib-empty { font: 500 26px var(--body); color: var(--dim); }

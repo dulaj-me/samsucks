@@ -35,6 +35,7 @@ export class Menu {
       return Object.assign({ el }, it);
     });
     this.index = Math.max(0, items.findIndex(it => it.current));
+    this.scroll = 0;
     this.isOpen = true;
     // Open at the focused choice instead of sliding there from the last list's scroll.
     toggleClass(this.track, 'now', true);
