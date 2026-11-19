@@ -57,6 +57,31 @@ html.playing .ambience { display: none; }
 }
 .hero-img.on { opacity: 1; }
 .hero-fade { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+/*
+ * The art dissolves into its own ambience: clear to 22% from the left, solid from 64%;
+ * clear to 34% from the bottom, solid from 76%. A static mask, painted once.
+ * html.hero-raster swaps in the same alpha as a small stretched image, for an A/B on the TV.
+ */
+.hero-dissolve {
+  -webkit-mask-image: linear-gradient(to right, transparent 22%, #000 64%), linear-gradient(to top, transparent 34%, #000 76%);
+  -webkit-mask-composite: source-in;
+}
+html.hero-raster .hero-dissolve {
+  -webkit-mask-image: url(../img/hero-mask.png);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-composite: source-over;
+}
+/* Its own layer, so text changing under it never repaints the gradient. */
+.top-veil {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 220px;
+  background: linear-gradient(var(--veil), rgba(var(--veil-rgb), 0)); will-change: transform;
+}
+
+/* A format fact (4K, HDR, ATMOS) after the meta line's facts. */
+.badge {
+  margin-left: 12px; padding: 5px 9px 4px; border: 1.5px solid var(--line); border-radius: var(--r-chip);
+  font: var(--f-badge); letter-spacing: 0.04em; color: var(--soft);
+}
 
 /* ---------- top bar / nav ---------- */
 

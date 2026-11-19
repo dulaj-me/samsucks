@@ -1,22 +1,44 @@
-.home-art {
-  left: 576px; top: 0; width: 1344px; height: 756px;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 42%), linear-gradient(to top, transparent 0%, #000 45%);
-  -webkit-mask-composite: source-in;
-}
-.home-art .hero-fade { background: linear-gradient(180deg, rgba(var(--bg-rgb), 0.55) 0%, transparent 22%), linear-gradient(90deg, rgba(var(--bg-rgb), 0.5) 0%, transparent 40%); }
+.home-art { left: 0; top: 0; width: 1920px; height: 1080px; }
 
-.hero-info { position: absolute; left: 96px; top: 190px; width: 880px; }
-.hero-logo { display: block; max-width: 560px; max-height: 170px; object-fit: contain; object-position: left bottom; }
+.hero-info { position: absolute; left: 96px; top: 184px; width: 820px; }
+.hero-logo-box { height: 196px; display: flex; align-items: flex-end; }
+.hero-logo { display: block; max-width: 600px; max-height: 196px; object-fit: contain; object-position: left bottom; }
 .hero-title {
-  font: 700 96px/0.95 var(--display); letter-spacing: 0.005em;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 820px; font: var(--f-display); font-stretch: 104%; letter-spacing: -0.025em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance;
 }
-.hero-meta { margin-top: 18px; font: 500 26px var(--body); color: var(--dim); white-space: nowrap; }
+.hero-meta {
+  height: 25px; margin-top: 28px; display: flex; align-items: center;
+  font: var(--f-meta); line-height: 1; color: var(--soft); white-space: nowrap;
+}
+.hero-dot { width: 5px; height: 5px; margin: 0 12px; border-radius: 3px; background: var(--mute); flex-shrink: 0; }
+.hero-ep {
+  height: 32px; margin-top: 18px; display: flex; align-items: center;
+  font: 600 27px/1.2 var(--sans); color: var(--text); white-space: nowrap;
+}
+.hero-ep > * { margin-right: 18px; flex-shrink: 0; }
+.hero-ep-title { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hero-ep-title + .hero-ep-code { margin-left: -6px; }
+.hero-ep-code { font-weight: 520; color: var(--mute); }
+.hero-ep-track { position: relative; width: 160px; height: 6px; border-radius: var(--r-bar); background: var(--rail); overflow: hidden; }
+.hero-ep-track b { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: var(--r-bar); background: var(--text); transform-origin: 0 0; }
+.hero-ep-left { font: 560 24px/1 var(--sans); color: var(--soft); }
 .hero-summary {
-  margin-top: 16px; font: 400 25px/1.45 var(--body); color: rgba(var(--cream-rgb), 0.8);
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  max-height: 109px;
+  width: 760px; margin-top: 12px; font: var(--f-body); color: var(--soft);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-height: 72px;
 }
-.home.in-nav .hero-info { opacity: 0.5; }
+
 .home-rows { position: absolute; left: 0; width: 1920px; bottom: 0; overflow: hidden; }
-.home-empty { position: absolute; left: 96px; top: 660px; font: 500 28px var(--body); color: var(--dim); }
+.home-empty { position: absolute; left: 96px; top: 680px; width: 1200px; font: var(--f-message); }
+
+/* Ghost shapes at the geometry of the hero and the first row. */
+.home-skeleton .skel { position: absolute; left: 96px; height: 20px; border-radius: 10px; background: var(--ghost); }
+.home-skeleton .skel-title { top: 308px; height: 72px; border-radius: var(--r-tile); }
+.home-skeleton .skel-meta { top: 408px; }
+.home-skeleton .skel-sum1 { top: 466px; }
+.home-skeleton .skel-sum2 { top: 502px; }
+.home-skeleton .skel-head { top: 622px; height: 28px; border-radius: 14px; }
+.skel-tile { position: absolute; top: 680px; }
+.home-skeleton .skel-tile .skel { left: 0; }
+.home-skeleton .skel-frame { top: 0; height: 243px; border-radius: var(--r-tile); }
+.home-skeleton .skel-cap { top: 261px; }
