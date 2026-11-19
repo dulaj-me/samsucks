@@ -22,10 +22,10 @@
 .person .face { width: 152px; height: 152px; margin: 0 8px; border-radius: 76px; overflow: hidden; background: var(--ghost); }
 .person img { width: 100%; height: 100%; object-fit: cover; }
 .person b { display: block; margin-top: 14px; font: 600 21px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.person small { display: block; margin-top: 4px; font: 500 18px/1.2 var(--sans); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.seasons { position: absolute; left: 96px; top: 0; display: flex; gap: 12px; }
+.person small { display: block; margin-top: 4px; font: 500 20px/1.2 var(--sans); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seasons { position: absolute; left: 82px; top: 0; display: flex; gap: 4px; }
 .eps { position: absolute; left: 0; top: 84px; width: 1920px; height: 400px; }
-.ep-sum { margin-top: 8px; width: 432px; font: 440 19px/1.4 var(--sans); color: var(--mute); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ep-sum { margin-top: 8px; width: 432px; font: 440 20px/1.4 var(--sans); color: var(--mute); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .shifted .info, .shifted .actions { opacity: 0; }
 .shifted .below { top: 236px; }
 .compact { position: absolute; left: 96px; top: 64px; height: 120px; display: flex; align-items: center; gap: 28px; }
@@ -110,7 +110,7 @@ if (kind === 'movie') {
   const seasons = (await get('/library/metadata/' + full.ratingKey + '/children')).Metadata || [];
   const cur = seasons.find(s => s.index === resume.parentIndex) || seasons[seasons.length - 1];
   const sb = D.h('div', 'seasons', below);
-  seasons.forEach(s => D.h('div', 'chip' + (s === cur ? ' set' : ''), sb, s.title));
+  seasons.forEach(s => D.h('div', 'ni' + (s === cur ? ' on' : ''), sb, s.title));
   const eps = (await get('/library/metadata/' + cur.ratingKey + '/children')).Metadata || [];
   const box = D.h('div', 'eps', below);
   const at = Math.max(0, eps.findIndex(e => e.ratingKey === resume.ratingKey));

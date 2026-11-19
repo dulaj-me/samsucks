@@ -21,7 +21,7 @@
 .scrub .knob { position: absolute; top: -10px; width: 28px; height: 28px; margin-left: -14px; border-radius: 14px; background: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .times { position: absolute; left: 96px; right: 96px; top: 900px; display: flex; justify-content: space-between; font: 560 23px/1 var(--sans); color: var(--soft); font-variant-numeric: tabular-nums; }
 .ctrls { position: absolute; left: 96px; right: 96px; top: 948px; display: flex; align-items: center; gap: 14px; }
-.ctrls .mid { position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; }
+.ctrls .mid { display: flex; gap: 14px; }
 .ctrls .right { margin-left: auto; display: flex; gap: 14px; }
 .skip { position: absolute; right: 96px; top: 760px; }
 .next { position: absolute; right: 96px; bottom: 96px; width: 520px; padding: 20px; border-radius: var(--r-panel); background: rgba(18, 19, 24, 0.94); box-shadow: 0 20px 48px rgba(0,0,0,0.5); }
@@ -69,9 +69,9 @@ if (osd || state === 'tracks') {
 
   const c = D.h('div', 'ctrls', document.body);
   const mid = D.h('div', 'mid', c);
-  D.h('div', 'btn round', mid).innerHTML = icon.back10;
+  D.h('div', 'btn', mid).innerHTML = icon.restart + '10s';
   D.h('div', 'btn round' + (state === '' ? ' focus' : ''), mid).innerHTML = icon.pause;
-  D.h('div', 'btn round', mid).innerHTML = icon.fwd10;
+  D.h('div', 'btn', mid).innerHTML = '10s' + icon.restart.replace('<svg ', '<svg style="transform:scaleX(-1)" ');
   const right = D.h('div', 'right', c);
   D.h('div', 'btn' + (state === 'tracks' ? ' focus' : ''), right).innerHTML = icon.subs + 'Audio and subtitles';
   D.h('div', 'btn', right).innerHTML = icon.next + 'Next episode';
