@@ -1,0 +1,35 @@
+@font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url(../fonts/inter-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url(../fonts/inter-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url(../fonts/inter-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url(../fonts/inter-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(../fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(../fonts/barlow-condensed-latin-700-normal.woff2) format('woff2'); }
+
+/*
+ * Every color the stylesheets use. Base colors are r, g, b triplets so any alpha can be
+ * derived with rgba(var(--x-rgb), a), and a palette swap happens here only.
+ */
+:root {
+  --bg-rgb: 11, 13, 18;
+  --cream-rgb: 255, 247, 230;
+  --coral-rgb: 255, 76, 66;
+  --black-rgb: 0, 0, 0;
+  --white-rgb: 255, 255, 255;
+
+  --bg: rgb(var(--bg-rgb));
+  --raised: #181B23;
+  --coral: rgb(var(--coral-rgb));
+  --cream: rgb(var(--cream-rgb));
+  --dim: rgba(var(--cream-rgb), 0.62);
+  --faint: rgba(var(--cream-rgb), 0.10);
+  --black: rgb(var(--black-rgb));
+  --white: rgb(var(--white-rgb));
+  --key-yellow: #F5C518;
+  --hud: #9f9;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --display: 'Barlow Condensed', 'SamsungOneUI', sans-serif;
+  --body: 'Inter', 'SamsungOneUI', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }

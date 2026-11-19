@@ -56,3 +56,4 @@ Home rows ready at cold start: not recorded yet.
 | p95 frame time | no higher than baseline plus 4 ms |
 | worst frame | no higher than the larger of 1.5x baseline and 50 ms |
 | home rows ready at cold start | no higher than baseline plus 100 ms |
+| `tools/perf-lint.sh` | zero violations |

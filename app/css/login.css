@@ -1,0 +1,17 @@
+.login-art { position: absolute; left: 140px; top: 230px; }
+.login-art img { width: 560px; height: 560px; display: block; }
+.login-panel { position: absolute; left: 840px; top: 170px; width: 940px; }
+.login-title { font: 700 96px/1 var(--display); }
+.login-steps { margin-top: 28px; padding-left: 36px; font: 500 30px/1.7 var(--body); color: var(--dim); }
+.login-steps b { color: var(--cream); }
+.login-code { margin: 14px 0 36px; font: 700 160px/1 var(--display); letter-spacing: 0.16em; color: var(--coral); height: 160px; }
+.login-qr { display: flex; align-items: center; }
+.login-qr-box { width: 200px; height: 200px; padding: 14px; border-radius: 16px; background: var(--white); }
+.login-qr-box svg { width: 100%; height: 100%; display: block; }
+.login-qr-label { margin-left: 28px; font: 500 26px var(--body); color: var(--dim); }
+.login-status { margin-top: 34px; font: 500 26px var(--body); color: var(--dim); min-height: 32px; }
+
+/* Server picker, shown after sign-in when the account has several servers. */
+.picker-title { position: absolute; left: 160px; top: 110px; font: 700 80px/1 var(--display); }
+.picker-list { position: absolute; left: 160px; top: 260px; width: 1100px; }
+.picker .login-status { position: absolute; left: 160px; bottom: 120px; }
