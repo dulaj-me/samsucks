@@ -1,16 +1,51 @@
 // Poster / landscape tiles. A tile node is created once and re-filled as it is
 // recycled; fill() only touches the DOM for fields that changed.
-import { h, setText, show, setTransform, toggleClass } from '../util/dom.js';
+import { h, setText, show, setTransform } from '../util/dom.js';
 import { load } from './images.js';
 import { session } from '../session.js';
-import { progress, episodeLabel } from '../util/format.js';
+import { progress, episodeLabel, episodeCode, timeLeft, duration } from '../util/format.js';
+import * as icons from './icons.js';
 
+// gap: space between tiles in a row.
 export const KINDS = {
-  poster: { w: 220, h: 330 },
-  wide: { w: 400, h: 225 },
-  grid: { w: 216, h: 324 },
-  episode: { w: 384, h: 216 },
+  wide: { w: 432, h: 243, gap: 36 },
+  poster: { w: 240, h: 360, gap: 32 },
+  grid: { w: 220, h: 330, gap: 30 },
+  episode: { w: 432, h: 243, gap: 36 },
+  'search-poster': { w: 200, h: 300, gap: 28 },
+  'search-wide': { w: 356, h: 200, gap: 28 },
 };
+
+export const LIFT = 1.07;
+
+// The focused tile scales about its centre. The lift covers the scaled rect; the ring is
+// that rect grown by 8px a side (a 4px border at a 4px gap). Offsets are from the tile's
+// top-left at rest; caption is how far the caption drops to clear the scaled frame.
+export function focusGeometry({ w, h }) {
+  const ox = (LIFT - 1) / 2 * w;
+  const oy = (LIFT - 1) / 2 * h;
+  return {
+    lift: { x: -Math.round(ox), y: -Math.round(oy), w: Math.round(w * LIFT), h: Math.round(h * LIFT) },
+    ring: { x: -Math.round(ox + 8), y: -Math.round(oy + 8), w: Math.round(w * LIFT + 16), h: Math.round(h * LIFT + 16) },
+    caption: Math.round(oy),
+  };
+}
+
+// The lift (static shadow) and ring of a list's focused tile, on one layer that moves
+// or fades as a whole. Sits under the tiles.
+export function createFocusBox(parent, size, x, y) {
+  const g = focusGeometry(size);
+  const box = h('div', 'focus-box', parent);
+  const place = (el, r) => {
+    el.style.left = (x + r.x) + 'px';
+    el.style.top = (y + r.y) + 'px';
+    el.style.width = r.w + 'px';
+    el.style.height = r.h + 'px';
+  };
+  place(h('div', 'lift', box), g.lift);
+  place(h('div', 'ring', box), g.ring);
+  return box;
+}
 
 export function createTile(kind, { caption = false } = {}) {
   const size = KINDS[kind];
@@ -21,22 +56,24 @@ export function createTile(kind, { caption = false } = {}) {
   const img = h('img', 'tile-img', frame);
   const ph = h('div', 'tile-ph', frame);
   img.alt = '';
-  const badge = h('div', 'tile-badge', frame);
+  const count = h('div', 'tile-count', frame);
+  const seen = h('div', 'tile-seen', frame);
+  seen.innerHTML = icons.check;
   const bar = h('div', 'tile-bar', frame);
   const fill = h('i', '', bar);
   let cap = null;
   let sub = null;
   if (caption) {
-    cap = h('div', 'tile-cap', el);
-    cap.style.width = size.w + 'px';
-    sub = h('div', 'tile-sub', el);
-    sub.style.width = size.w + 'px';
+    const text = h('div', 'tile-text', el);
+    text.style.width = size.w + 'px';
+    cap = h('div', 'tile-cap', text);
+    sub = h('div', 'tile-sub', text);
   }
-  return { el, img, ph, badge, bar, fill, cap, sub, kind, size, item: null };
+  return { el, img, ph, count, seen, bar, fill, cap, sub, kind, size, item: null };
 }
 
 function artFor(item, kind) {
-  if (kind === 'wide' || kind === 'episode') {
+  if (kind === 'wide' || kind === 'episode' || kind === 'search-wide') {
     if (item.type === 'episode') return item.thumb || item.art;
     return item.art || item.thumb;
   }
@@ -51,10 +88,12 @@ function titleFor(item, kind) {
 }
 
 function subFor(item, kind) {
-  if (item.type === 'episode') {
-    return kind === 'episode' ? episodeLabel(item).replace(' · ', '') + '  ' + item.title
-      : episodeLabel(item) + '  ' + item.title;
+  if (kind === 'wide') {
+    if (item.type === 'episode') return [episodeCode(item), timeLeft(item)].filter(Boolean).join('  ·  ');
+    return timeLeft(item) || [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
   }
+  if (kind === 'episode') return episodeLabel(item) + (item.duration ? '  ·  ' + Math.round(item.duration / 60000) + 'm' : '');
+  if (item.type === 'episode') return episodeLabel(item) + '  ' + item.title;
   if (item.type === 'season') return item.leafCount ? item.leafCount + ' episodes' : '';
   return item.year || '';
 }
@@ -66,7 +105,8 @@ export function fillTile(tile, item) {
     load(tile.img, '');
     setText(tile.ph, '');
     show(tile.bar, false);
-    show(tile.badge, false);
+    show(tile.count, false);
+    show(tile.seen, false);
     if (tile.cap) { setText(tile.cap, ''); setText(tile.sub, ''); }
     return;
   }
@@ -81,20 +121,21 @@ export function fillTile(tile, item) {
   show(tile.bar, p > 0.01);
   if (p > 0.01) setTransform(tile.fill, 'scaleX(' + p.toFixed(3) + ')');
 
-  // Unwatched episode count on shows/seasons, check on watched items.
-  let badge = '';
+  // Unwatched episode count on shows and seasons; a check on watched items without progress.
+  let left = 0;
+  let watched = false;
   if ((item.type === 'show' || item.type === 'season') && item.leafCount) {
-    const left = item.leafCount - (item.viewedLeafCount || 0);
-    badge = left > 0 ? String(left) : '✓';
-  } else if (item.viewCount && !item.viewOffset && item.type !== 'show') {
-    badge = '✓';
+    left = item.leafCount - (item.viewedLeafCount || 0);
+    watched = left <= 0;
+  } else {
+    watched = item.type !== 'show' && !!item.viewCount && !item.viewOffset;
   }
-  show(tile.badge, !!badge);
-  setText(tile.badge, badge);
-  toggleClass(tile.badge, 'done', badge === '✓');
+  show(tile.count, left > 0);
+  if (left > 0) setText(tile.count, left);
+  show(tile.seen, watched);
 
   if (tile.cap) {
-    setText(tile.cap, kind === 'episode' ? item.title : titleFor(item, kind));
-    setText(tile.sub, kind === 'episode' ? episodeLabel(item) + (item.duration ? '  ·  ' + Math.round(item.duration / 60000) + 'm' : '') : subFor(item, kind));
+    setText(tile.cap, titleFor(item, kind));
+    setText(tile.sub, subFor(item, kind));
   }
 }

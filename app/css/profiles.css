@@ -1,16 +1,5 @@
 /* Profile picker and PIN pad, built from the server picker's classes. Layout only. */
 
-/* Avatar: the initial sits under the picture, which is removed if it fails to load. */
-.avatar {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; overflow: hidden; background: var(--faint);
-}
-.avatar-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-
-/* The profile entry: the fixed slot at the right of the nav, styled as a nav entry. */
-.profile-entry { flex-shrink: 0; margin-right: 0; padding-left: 12px; }
-.profile-entry .avatar { margin-right: 14px; }
-
 .profile-opt { flex-direction: row; align-items: center; justify-content: flex-start; }
 .profile-opt .avatar { margin-right: 28px; }
 .profile-text { display: flex; flex-direction: column; }
