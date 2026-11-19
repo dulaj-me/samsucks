@@ -1,11 +1,12 @@
-// Account, server and diagnostics.
+// Profile, account, server and diagnostics.
 import { DEV, VERSION } from '../config.js';
 import { h, toggleClass } from '../util/dom.js';
-import { session, signOut, useServer } from '../session.js';
+import { session, signOut, useServer, profileToken, hasProfiles } from '../session.js';
 import { getServers, connect } from '../plex/auth.js';
 import { setHud, hudEnabled } from '../ui/hud.js';
 import * as router from '../router.js';
 import { ServerPicker } from './login.js';
+import { ProfilesScreen } from './profiles.js';
 import { error } from '../util/log.js';
 import { useAmbience, setLegacyGradients, legacyGradients } from '../ui/backdrop.js';
 
@@ -22,9 +23,17 @@ export function SettingsScreen() {
 
   function build() {
     list.innerHTML = '';
+    const who = session.user ? session.user.title : '—';
+    // Signing out leaves the whole Plex account, not just the profile.
+    const account = hasProfiles()
+      ? [
+        { label: 'Profile', value: who, run: () => router.push(ProfilesScreen()), action: 'Switch' },
+        { label: 'Plex account', value: 'Sign out', run: doSignOut },
+      ]
+      : [{ label: 'Signed in as', value: who, run: doSignOut, action: 'Sign out' }];
     items = [
       { label: 'Server', value: session.server ? session.server.name : '—', run: switchServer },
-      { label: 'Signed in as', value: session.user ? session.user.title : '—', run: doSignOut, action: 'Sign out' },
+      ...account,
       { label: 'Performance overlay', value: hudEnabled() ? 'On' : 'Off', run: () => { setHud(!hudEnabled()); build(); } },
       // For before/after recordings: brings back the full-screen gradients that took ~2s per repaint.
       { label: 'Demo: original slow renderer', value: legacyGradients() ? 'On' : 'Off', run: () => { setLegacyGradients(!legacyGradients()); build(); } },
@@ -43,7 +52,7 @@ export function SettingsScreen() {
 
   async function switchServer() {
     try {
-      const servers = await getServers(session.token);
+      const servers = await getServers(profileToken());
       if (servers.length === 1) {
         const uri = await connect(servers[0]);
         useServer(servers[0], uri);

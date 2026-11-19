@@ -3,6 +3,7 @@ import * as router from './router.js';
 import { DetailScreen } from './screens/detail.js';
 import { LibraryScreen } from './screens/library.js';
 import { PlayerScreen } from './screens/player.js';
+import { ProfilesScreen } from './screens/profiles.js';
 import { SearchScreen } from './screens/search.js';
 import { SettingsScreen } from './screens/settings.js';
 
@@ -37,4 +38,8 @@ export function openSearch() {
 
 export function openSettings() {
   router.push(SettingsScreen());
+}
+
+export function openProfiles() {
+  router.push(ProfilesScreen());
 }

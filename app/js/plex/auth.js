@@ -1,8 +1,16 @@
-// plex.tv sign-in (PIN / plex.tv/link) and server discovery.
+// plex.tv sign-in (PIN / plex.tv/link), Plex Home profiles and server discovery.
 import { request, clientId, PRODUCT, query } from './client.js';
+// A namespace import: the preview adds DEV_PLEX_TV (its plex.tv fixtures), but the
+// config.js that deploy.sh writes for dev builds has no such export.
+import * as config from '../config.js';
 import { log, warn } from '../util/log.js';
 
-const TV = 'https://plex.tv/api/v2';
+const TV = (config.DEV_PLEX_TV || 'https://plex.tv') + '/api/v2';
+
+// The dev LAN shortcut has no plex.tv account, except in the preview, whose fixtures stand in.
+export function hasPlexTv(token) {
+  return !!token && (token !== 'lan-dev' || !!config.DEV_PLEX_TV);
+}
 
 export async function createPin() {
   // Non-strong PINs are the 4-character codes plex.tv/link accepts.
@@ -25,6 +33,19 @@ export function authAppUrl(code) {
 
 export async function getUser(token) {
   return request(TV + '/user', { token });
+}
+
+// Undocumented and drifting: v2 answers { users: [...] }, older shapes were a bare list.
+export async function getHomeUsers(token) {
+  const res = await request(TV + '/home/users', { token });
+  const users = Array.isArray(res) ? res : res.users;
+  return Array.isArray(users) ? users : [];
+}
+
+// Returns the profile's user object, whose authToken is the profile token.
+// A wrong or missing PIN is a 403 (error code 1041).
+export function switchHomeUser(token, uuid, pin) {
+  return request(TV + '/home/users/' + encodeURIComponent(uuid) + '/switch', { method: 'POST', token, params: { pin } });
 }
 
 export async function getServers(token) {

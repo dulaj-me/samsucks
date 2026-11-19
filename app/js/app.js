@@ -1,17 +1,27 @@
-// Boot: restore the session and go straight to Home when we can; otherwise sign in.
+// Boot: restore the session and go straight to Home, as the last profile, when we can;
+// otherwise sign in.
 import { DEV, DEV_HOST, DEV_PLEX_URL, VERSION } from './config.js';
 import * as router from './router.js';
 import { isTizen, registerKeys } from './platform/tizen.js';
-import { session, reconnect, signOut } from './session.js';
+import { session, reconnect, signOut, refreshUsers } from './session.js';
 import { HomeScreen } from './screens/home.js';
 import { LoginScreen } from './screens/login.js';
+import { ProfilesScreen } from './screens/profiles.js';
 import { initHud } from './ui/hud.js';
 import { log, warn } from './util/log.js';
 import * as nav from './nav.js';
 import * as store from './util/store.js';
 
+// The home-user list waits until Home has loaded: its TLS handshake with plex.tv costs
+// the TV's CPU.
+const USERS_DELAY = 3000;
+
+let usersTimer = 0;
+
 function goHome() {
   router.reset(HomeScreen());
+  clearTimeout(usersTimer);
+  usersTimer = setTimeout(() => refreshUsers().catch(e => warn('home users refresh failed', e.message)), USERS_DELAY);
 }
 
 function goLogin() {
@@ -22,15 +32,27 @@ async function verify() {
   // Home already painted from cache; make sure the saved connection still works.
   try {
     await session.server.get('/identity');
+    return;
   } catch (e) {
-    if (e.status === 401) { signOut(); goLogin(); return; }
-    warn('saved server unreachable, re-resolving', e.message);
-    try {
-      await reconnect();
-      goHome();
-    } catch (err) {
-      if (err.status === 401) { signOut(); goLogin(); }
-    }
+    warn('saved server failed, re-resolving', e.message);
+  }
+  // Re-resolving also derives a fresh server token from the profile token.
+  try {
+    await reconnect();
+    goHome();
+  } catch (err) {
+    if (err.status === 401) profileRejected();
+  }
+}
+
+// A rejected profile token means picking the profile again, with the account token. When
+// the profile is the account's own, the account token is the one plex.tv rejected.
+function profileRejected() {
+  if (session.user && session.user.token) {
+    router.reset(ProfilesScreen({ rejected: true }));
+  } else {
+    signOut();
+    goLogin();
   }
 }
 
