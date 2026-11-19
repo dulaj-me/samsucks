@@ -58,8 +58,17 @@ export function LibraryScreen(section) {
 
   // Remembered per profile, server and library. A value is { key, title } or null.
   const storeKey = [session.user && session.user.uuid, session.server.id, section.key].join('/');
-  const f = Object.assign({ sort: SORTS[0].id, unwatched: false }, (store.get('libFilters') || {})[storeKey]);
+  const savedFilters = () => {
+    const s = store.get('libFilters');
+    return s && typeof s === 'object' && !Array.isArray(s) ? s : {};
+  };
+  const f = Object.assign({ sort: SORTS[0].id, unwatched: false }, savedFilters()[storeKey]);
+  if (!SORTS.some(s => s.id === f.sort)) f.sort = SORTS[0].id;
   let lists = null;          // category id -> [{ key, title }] once loaded
+  let listsLoading = null;   // the lists request, started once page 0 has settled
+  let menuWaits = false;     // the Filter menu shows "Loading…" until the lists arrive
+  let alive = true;
+  let visible = true;
   let pages = new Map();     // page -> 'loading' | true
   let items = [];
   let letters = [];          // [{ title: 'A', start: 0 }]
@@ -98,7 +107,8 @@ export function LibraryScreen(section) {
       }
       if (!item) { setText(focusInfo, ''); return; }
       setText(focusInfo, item.title + '   ' + metaLine(item));
-      ambience.set(item.UltraBlurColors);
+      // The backdrop is shared: a late answer must not tint the screen on top.
+      if (visible) ambience.set(item.UltraBlurColors);
     },
     onSelect: item => openItem(item),
   });
@@ -136,6 +146,13 @@ export function LibraryScreen(section) {
       error('library page failed', section.title, p, e);
       if (p === 0) showEmpty("Couldn't load this library.");
     }
+    // The four filter lists wait for the first page, so they never hold up its posters.
+    if (p === 0) ensureLists();
+  }
+
+  function ensureLists() {
+    if (!listsLoading) listsLoading = loadLists();
+    return listsLoading;
   }
 
   function showTotal(total) {
@@ -174,9 +191,13 @@ export function LibraryScreen(section) {
           error('library filter list failed', section.title, c.id, e);
           return [];
         })));
+    if (!alive) return;
     lists = {};
     CATEGORIES.forEach((c, i) => { lists[c.id] = all[i]; });
-    if (CATEGORIES.some(c => lists[c.id].length)) return;
+    if (menuWaits && menu.isOpen) openFilters();
+    menuWaits = false;
+    // A failed list looks empty too; a remembered value keeps the chip so it can be cleared.
+    if (CATEGORIES.some(c => lists[c.id].length || f[c.id])) return;
     const focused = bar[barIndex];
     head.removeChild(filterChip.el);
     bar = bar.filter(c => c !== filterChip);
@@ -199,7 +220,7 @@ export function LibraryScreen(section) {
   }
 
   function filtersChanged() {
-    const saved = store.get('libFilters') || {};
+    const saved = savedFilters();
     saved[storeKey] = f;
     store.set('libFilters', saved);
     renderChips();
@@ -223,14 +244,19 @@ export function LibraryScreen(section) {
   }
 
   function openFilters() {
-    if (!lists) return;
     inPicker = false;
-    const entries = CATEGORIES.filter(c => lists[c.id].length).map(c => ({
+    if (!lists) {
+      menuWaits = true;
+      menu.open({ title: 'Filter', sub: section.title, items: [{ label: 'Loading…', run() {} }] });
+      ensureLists();
+      return;
+    }
+    const entries = CATEGORIES.filter(c => lists[c.id].length || f[c.id]).map(c => ({
       label: c.title + ': ' + (f[c.id] ? f[c.id].title : 'All'),
       run: () => openPicker(c),
     }));
     if (CATEGORIES.some(c => f[c.id])) {
-      entries.push({ label: 'Clear filters', run: () => { for (const c of CATEGORIES) f[c.id] = null; filtersChanged(); } });
+      entries.push({ label: 'Clear filters', run: () => { clearCategories(); filtersChanged(); } });
     }
     menu.open({ title: 'Filter', sub: section.title, items: entries });
   }
@@ -249,6 +275,7 @@ export function LibraryScreen(section) {
   }
 
   function openSorts() {
+    menuWaits = false;
     menu.open({
       title: 'Sort by', sub: section.title,
       items: SORTS.map((s, i) => ({ label: s.label, current: i === sortIndex(), run: () => setSort(i) })),
@@ -263,7 +290,6 @@ export function LibraryScreen(section) {
 
   renderChips();
   reload();
-  loadLists();
 
   function jump(dir) {
     if (letters.length) {
@@ -297,6 +323,7 @@ export function LibraryScreen(section) {
   // Under Unwatched, a title marked watched leaves at once. Focus keeps its place and lands
   // on the title that moved up into it.
   function removeItem(it) {
+    if (!alive) return;
     if (!f.unwatched) { refreshItem(it); return; }
     const i = indexOf(it);
     if (i < 0) return;
@@ -309,7 +336,9 @@ export function LibraryScreen(section) {
     const total = grid.total - 1;
     showTotal(total);
     grid.setTotal(total);
-    if (total) grid.focusIndex(Math.min(grid.index, total - 1));
+    // If focus moved past the removed title while the scrobble was on its way, it shifts with its title.
+    const j = grid.index > i ? grid.index - 1 : grid.index;
+    if (total) grid.focusIndex(Math.min(j, total - 1));
     loadLetters();
   }
 
@@ -320,8 +349,12 @@ export function LibraryScreen(section) {
     renderBar();
   }
 
-  function clearFilters() {
+  function clearCategories() {
     for (const c of CATEGORIES) f[c.id] = null;
+  }
+
+  function clearFilters() {
+    clearCategories();
     f.unwatched = false;
     filtersChanged();
   }
@@ -348,11 +381,13 @@ export function LibraryScreen(section) {
   return {
     el,
     name: 'library',
-    destroy() { generation++; },
+    destroy() { alive = false; generation++; },
     onShow() {
+      visible = true;
       ambience.restore();
       topnav.render();
     },
+    onHide() { visible = false; },
     onKey(action) {
       if (menu.isOpen) {
         // Back from one category's values returns to the list of categories.
