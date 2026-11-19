@@ -10,13 +10,13 @@
 /* Stands in for the AVPlay video plane under the transparent web layer. */
 .video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; }
 /* Static scrims, shipped as small stretched images in the app. */
-.scrim-top { position: absolute; left: 0; top: 0; width: 1920px; height: 260px; background: linear-gradient(rgba(10,11,14,0.72), transparent); }
-.scrim-bottom { position: absolute; left: 0; bottom: 0; width: 1920px; height: 420px; background: linear-gradient(transparent, rgba(10,11,14,0.9)); }
+.scrim-top { position: absolute; left: 0; top: 0; width: 1920px; height: 260px; background: linear-gradient(rgba(12, 11, 11,0.72), transparent); }
+.scrim-bottom { position: absolute; left: 0; bottom: 0; width: 1920px; height: 420px; background: linear-gradient(transparent, rgba(12, 11, 11,0.9)); }
 .title { position: absolute; left: 96px; top: 64px; }
 .title img { display: block; max-width: 320px; max-height: 96px; object-fit: contain; object-position: left center; }
 .title div { margin-top: 14px; font: 560 25px/1.2 var(--sans); color: var(--soft); }
-.scrub { position: absolute; left: 96px; right: 96px; top: 872px; height: 8px; border-radius: 4px; background: rgba(245, 243, 239, 0.22); }
-.scrub .buf { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: rgba(245, 243, 239, 0.34); }
+.scrub { position: absolute; left: 96px; right: 96px; top: 872px; height: 8px; border-radius: 4px; background: rgba(245, 243, 239, 0.24); }
+.scrub .buf { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 4px; background: rgba(245, 243, 239, 0.34); transform-origin: 0 0; }
 .scrub .played { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 4px; background: var(--text); transform-origin: 0 0; }
 .scrub .knob { position: absolute; left: 0; top: -10px; width: 28px; height: 28px; margin-left: -14px; border-radius: 14px; background: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .times { position: absolute; left: 96px; right: 96px; top: 900px; display: flex; justify-content: space-between; font: 560 23px/1 var(--sans); color: var(--soft); font-variant-numeric: tabular-nums; }
@@ -24,7 +24,7 @@
 .ctrls .mid { display: flex; gap: 14px; }
 .ctrls .right { margin-left: auto; display: flex; gap: 14px; }
 .skip { position: absolute; right: 96px; top: 760px; }
-.next { position: absolute; right: 96px; bottom: 96px; width: 520px; padding: 20px; border-radius: var(--r-panel); background: rgba(18, 19, 24, 0.94); box-shadow: 0 20px 48px rgba(0,0,0,0.5); }
+.next { position: absolute; right: 96px; bottom: 96px; width: 520px; padding: 20px; border-radius: var(--r-panel); background: rgba(21, 20, 19, 0.94); box-shadow: 0 20px 48px rgba(0,0,0,0.5); }
 .next .f { width: 480px; height: 270px; }
 .next h3 { margin-top: 18px; font: 620 27px/1.2 var(--sans); }
 .next p { margin-top: 6px; font: 500 21px/1.3 var(--sans); color: var(--mute); }
@@ -59,7 +59,7 @@ if (osd || state === 'tracks') {
 
   const pos = state === 'tracks' ? 0.42 : ep.viewOffset / ep.duration;
   const s = D.h('div', 'scrub', document.body);
-  D.h('div', 'buf', s).style.width = Math.min(100, pos * 100 + 9) + '%';
+  D.h('div', 'buf', s).style.transform = 'scaleX(' + Math.min(1, pos + 0.09).toFixed(4) + ')';
   D.h('div', 'played', s).style.transform = 'scaleX(' + pos.toFixed(4) + ')';
   D.h('div', 'knob', s).style.transform = 'translateX(' + Math.round(pos * 1728) + 'px)';
   const fmt = ms => { const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), x = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };

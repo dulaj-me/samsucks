@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-19T21:10:54+00:00",
+  "title": "Design System: Kinescope",
+  "extensions": {
+    "colorMeta": {
+      "text": {
+        "role": "primary",
+        "displayName": "Lamplight",
+        "canonical": "#F5F3EF",
+        "oklch": "oklch(96.5% 0.006 84.6)",
+        "tonalRamp": [
+          "#0C0B09",
+          "#262522",
+          "#43423F",
+          "#63615E",
+          "#84827E",
+          "#A7A5A1",
+          "#CBC9C5",
+          "#F0EEEA"
+        ]
+      },
+      "on-text": {
+        "role": "primary",
+        "displayName": "Ember Ink on Lamplight",
+        "canonical": "#151413",
+        "oklch": "oklch(19.2% 0.003 67.7)",
+        "tonalRamp": [
+          "#0C0B0A",
+          "#262524",
+          "#434240",
+          "#626160",
+          "#838281",
+          "#A6A5A3",
+          "#CAC9C7",
+          "#F0EEED"
+        ]
+      },
+      "on-text-dim": {
+        "role": "primary",
+        "displayName": "Ember Ink, secondary",
+        "canonical": "rgba(21, 20, 19, 0.62)",
+        "onInk": "#9C9B98",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Hearth Black",
+        "canonical": "#0C0B0B",
+        "oklch": "oklch(15.1% 0.002 17.3)",
+        "tonalRamp": [
+          "#0C0B0B",
+          "#262525",
+          "#434242",
+          "#626161",
+          "#838282",
+          "#A6A4A4",
+          "#CAC9C9",
+          "#EFEEEE"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Ember Sheet",
+        "canonical": "#151413",
+        "oklch": "oklch(19.2% 0.003 67.7)",
+        "tonalRamp": [
+          "#0C0B0A",
+          "#262524",
+          "#434240",
+          "#626160",
+          "#838281",
+          "#A6A5A3",
+          "#CAC9C7",
+          "#F0EEED"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Lamplight 78",
+        "canonical": "rgba(245, 243, 239, 0.78)",
+        "onInk": "#C2C0BD",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "mute": {
+        "role": "neutral",
+        "displayName": "Lamplight 68",
+        "canonical": "rgba(245, 243, 239, 0.68)",
+        "onInk": "#AAA9A6",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Lamplight 42",
+        "canonical": "rgba(245, 243, 239, 0.42)",
+        "onInk": "#6E6C6B",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Lamplight 24",
+        "canonical": "rgba(245, 243, 239, 0.24)",
+        "onInk": "#444342",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "hair": {
+        "role": "neutral",
+        "displayName": "Lamplight 16",
+        "canonical": "rgba(245, 243, 239, 0.16)",
+        "onInk": "#31302F",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Lamplight 14",
+        "canonical": "rgba(245, 243, 239, 0.14)",
+        "onInk": "#2D2B2B",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Lamplight 8",
+        "canonical": "rgba(245, 243, 239, 0.08)",
+        "onInk": "#1F1E1D",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "ghost": {
+        "role": "neutral",
+        "displayName": "Lamplight 7",
+        "canonical": "rgba(245, 243, 239, 0.07)",
+        "onInk": "#1C1B1B",
+        "tonalRamp": [
+          "#1C1B1B",
+          "#2D2B2B",
+          "#444342",
+          "#6E6C6B",
+          "#8C8B88",
+          "#AAA9A6",
+          "#C2C0BD",
+          "#F5F3EF"
+        ]
+      },
+      "veil": {
+        "role": "neutral",
+        "displayName": "Evening Veil 72",
+        "canonical": "rgba(12, 11, 11, 0.72)",
+        "onInk": "#0B0B0D",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#242528",
+          "#414246",
+          "#606165",
+          "#818286",
+          "#A3A5A9",
+          "#C7C9CE",
+          "#EDEEF3"
+        ]
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Evening Veil 55",
+        "canonical": "rgba(12, 11, 11, 0.55)",
+        "onInk": "#0B0B0D",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#242528",
+          "#414246",
+          "#606165",
+          "#818286",
+          "#A3A5A9",
+          "#C7C9CE",
+          "#EDEEF3"
+        ]
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Evening Veil 50",
+        "canonical": "rgba(12, 11, 11, 0.5)",
+        "onInk": "#0B0B0C",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#242528",
+          "#414246",
+          "#606165",
+          "#818286",
+          "#A3A5A9",
+          "#C7C9CE",
+          "#EDEEF3"
+        ]
+      },
+      "count": {
+        "role": "neutral",
+        "displayName": "Count Pill",
+        "canonical": "rgba(12, 11, 11, 0.76)",
+        "onInk": "#0C0B0B",
+        "tonalRamp": [
+          "#0C0B0B",
+          "#262525",
+          "#434242",
+          "#626161",
+          "#838282",
+          "#A6A4A4",
+          "#CAC9C9",
+          "#EFEEEE"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Soft Coral",
+        "canonical": "#FF8A7A",
+        "oklch": "oklch(75.8% 0.145 29.0)",
+        "tonalRamp": [
+          "#210000",
+          "#500000",
+          "#7D0E09",
+          "#A3372D",
+          "#CA5B4D",
+          "#F27E6F",
+          "#FFAFA2",
+          "#FFE5DF"
+        ]
+      },
+      "avatar-copper": {
+        "role": "secondary",
+        "displayName": "Copper",
+        "canonical": "#C9825B",
+        "oklch": "oklch(67.2% 0.103 49.1)",
+        "tonalRamp": [
+          "#210000",
+          "#490C00",
+          "#6B2D00",
+          "#8F4D26",
+          "#B46F48",
+          "#DA916A",
+          "#FFB58D",
+          "#FFE7D5"
+        ]
+      },
+      "avatar-ink": {
+        "role": "secondary",
+        "displayName": "Copper Ink",
+        "canonical": "#2A160C",
+        "oklch": "oklch(22.5% 0.037 46.8)",
+        "tonalRamp": [
+          "#170601",
+          "#341F15",
+          "#533C31",
+          "#745B4F",
+          "#967C70",
+          "#BA9E92",
+          "#DFC2B5",
+          "#FFE8DA"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero and detail title when a title has no clear logo. Width 104%, balanced wrap."
+      },
+      "page": {
+        "displayName": "Page",
+        "purpose": "Screen titles without a hero: Settings, Who’s watching?, Enter PIN, Sign in."
+      },
+      "row": {
+        "displayName": "Row",
+        "purpose": "Row headings, Cast, Credits, Recent searches."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Facts line under a title, soft, with 5 px mute dots."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Summaries and message hints, soft."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Line under a tile; soft at rest, full white on the focused tile. 22px on grid posters."
+      },
+      "caption-sub": {
+        "displayName": "Caption sub",
+        "purpose": "Second line under a caption, mute."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Helper lines, mute."
+      },
+      "badge": {
+        "displayName": "Badge",
+        "purpose": "Tracked uppercase format badges (4K, DOLBY VISION, HDR, ATMOS). The 19 px floor."
+      },
+      "nav": {
+        "displayName": "Nav entry",
+        "purpose": "Nav line entries and season pills."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Button labels."
+      },
+      "chip": {
+        "displayName": "Chip",
+        "purpose": "Filter chips; the value is 640 at rest, 700 when set."
+      },
+      "option": {
+        "displayName": "Sheet option",
+        "purpose": "Side sheet options and settings groups."
+      },
+      "setting": {
+        "displayName": "Settings row",
+        "purpose": "Settings row labels; values 520 mute."
+      },
+      "message": {
+        "displayName": "Message",
+        "purpose": "Empty and error headlines."
+      },
+      "brand": {
+        "displayName": "Wordmark",
+        "purpose": "The live \"kinescope\" wordmark in the nav (32px) and About (56px). Width 108%."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 20px 44px rgba(0, 0, 0, 0.55)",
+        "purpose": "Under the focused tile and profile face, on its own element. Never animated."
+      },
+      {
+        "name": "sheet-edge",
+        "value": "-40px 0 80px rgba(0, 0, 0, 0.45)",
+        "purpose": "Left edge of the side sheet."
+      },
+      {
+        "name": "float",
+        "value": "0 12px 32px rgba(0, 0, 0, 0.45)",
+        "purpose": "The toast."
+      },
+      {
+        "name": "card",
+        "value": "0 20px 48px rgba(0, 0, 0, 0.5)",
+        "purpose": "The player up-next card."
+      },
+      {
+        "name": "knob",
+        "value": "0 4px 12px rgba(0, 0, 0, 0.4)",
+        "purpose": "The scrub knob."
+      },
+      {
+        "name": "avatar-focus",
+        "value": "0 0 0 4px #0C0B0B, 0 0 0 8px #F5F3EF",
+        "purpose": "Focus ring on avatars and profile faces: 4 px ink gap, 4 px Lamplight ring. Static."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "purpose": "Every move: tracks, lift, sheet slide, highlight."
+      },
+      {
+        "name": "t-art",
+        "value": "600ms",
+        "purpose": "Hero art crossfade and ambience crossfade (two 2x2 canvases), opacity, ease."
+      },
+      {
+        "name": "t-slide",
+        "value": "260ms",
+        "purpose": "Row, rows, grid and nav tracks, the grid ring, the sheet slide and highlight. Transform."
+      },
+      {
+        "name": "t-focus",
+        "value": "200ms",
+        "purpose": "Focus lift (scale 1.07), lift opacity, caption shift, row dim, sheet fade."
+      },
+      {
+        "name": "t-held",
+        "value": "110ms",
+        "purpose": "Replaces t-slide and t-focus while a key is held."
+      },
+      {
+        "name": "sheet-in",
+        "value": "translateX(80px) to 0 over 260ms --ease; opacity 0 to 1 over 200ms ease",
+        "purpose": "Side sheet open and close."
+      },
+      {
+        "name": "screen-fade",
+        "value": "opacity, duration set by the V2 bench",
+        "purpose": "Screen change. Dropped if it misses the bench thresholds."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tv",
+        "value": "1920x1080 fixed canvas; safe margins 96 px x, 54 px y"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Pill action at 68 px. Faint at rest, full Lamplight fill when focused; round variant for a lone glyph.",
+      "html": "<div class=\"ds-btn-stage\"><button class=\"ds-btn is-focus\"><svg viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M7 4.6v14.8a1 1 0 0 0 1.5.86l12.3-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6z\"/></svg>Resume S4 E2 <small>8m left</small></button><button class=\"ds-btn\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5\"/></svg>From the start</button><button class=\"ds-btn\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>Watched</button><button class=\"ds-btn ds-btn-round\" aria-label=\"Play\"><svg viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M7 4.6v14.8a1 1 0 0 0 1.5.86l12.3-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6z\"/></svg></button></div>",
+      "css": ".ds-btn-stage{background:#0C0B0B;padding:32px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-family:'Mona Sans','SamsungOneUI',sans-serif;color:#F5F3EF;} .ds-btn{display:inline-flex;align-items:center;gap:14px;height:68px;padding:0 32px;border:0;border-radius:34px;background:rgba(245,243,239,0.14);color:#F5F3EF;font:620 26px/1 'Mona Sans','SamsungOneUI',sans-serif;white-space:nowrap;} .ds-btn svg{width:28px;height:28px;} .ds-btn small{font:520 22px/1 'Mona Sans',sans-serif;color:rgba(245,243,239,0.68);} .ds-btn-round{width:68px;padding:0;justify-content:center;} .ds-btn:focus-visible,.ds-btn.is-focus{outline:none;background:#F5F3EF;color:#151413;} .ds-btn:focus-visible small,.ds-btn.is-focus small{color:rgba(21,20,19,0.62);}"
+    },
+    {
+      "name": "Filter chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Library filter bar. Unset: ghost with a hair outline, mute label, soft value. Set: faint, full-white label, 700 value. Focus: white fill.",
+      "html": "<div class=\"ds-chip-stage\"><span class=\"ds-chip is-focus\" tabindex=\"0\">Genre <b>All</b><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 9.5l6 6 6-6\"/></svg></span><span class=\"ds-chip ds-chip-set\" tabindex=\"0\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>Unwatched</span><span class=\"ds-chip\" tabindex=\"0\">Sort <b>Recently added</b><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 9.5l6 6 6-6\"/></svg></span></div>",
+      "css": ".ds-chip-stage{background:#0C0B0B;padding:32px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-family:'Mona Sans','SamsungOneUI',sans-serif;color:#F5F3EF;} .ds-chip{display:inline-flex;align-items:center;gap:10px;height:56px;padding:0 24px;border-radius:28px;background:rgba(245,243,239,0.07);border:1.5px solid rgba(245,243,239,0.16);font:560 23px/1 'Mona Sans','SamsungOneUI',sans-serif;color:rgba(245,243,239,0.68);white-space:nowrap;} .ds-chip b{font-weight:640;color:rgba(245,243,239,0.78);} .ds-chip svg{width:20px;height:20px;} .ds-chip-set{background:rgba(245,243,239,0.14);border-color:transparent;color:#F5F3EF;} .ds-chip-set b{font-weight:700;color:#F5F3EF;} .ds-chip:focus-visible,.ds-chip.is-focus{outline:none;background:#F5F3EF;border-color:#F5F3EF;color:#151413;} .ds-chip:focus-visible b,.ds-chip.is-focus b{color:#151413;}"
+    },
+    {
+      "name": "Nav line",
+      "kind": "nav",
+      "refersTo": "nav-entry",
+      "description": "Lockup, Home and one entry per library, then search, settings and the avatar. Current: faint pill and full-white text. Focus: white fill.",
+      "html": "<div class=\"ds-nav\"><div class=\"ds-nav-brand\"><svg viewBox=\"0 0 34 34\"><rect x=\"2\" y=\"5\" width=\"30\" height=\"21\" rx=\"6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\"/><path d=\"M11 31h12\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"17\" cy=\"15.5\" r=\"3.5\" fill=\"currentColor\"/></svg>kinescope</div><div class=\"ds-nav-entries\"><span class=\"ds-ni ds-ni-on\" tabindex=\"0\">Home</span><span class=\"ds-ni is-focus\" tabindex=\"0\">Movies</span><span class=\"ds-ni\" tabindex=\"0\">TV Shows</span></div><div class=\"ds-nav-icons\"><span class=\"ds-ni ds-ni-icon\" tabindex=\"0\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/><path d=\"M15.5 15.5L20 20\"/></svg></span><span class=\"ds-ni ds-ni-icon\" tabindex=\"0\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"3.2\"/><path d=\"M12 2.8l1.6 2.4 2.8-.7.7 2.8 2.4 1.6-1.2 2.6 1.2 2.6-2.4 1.6-.7 2.8-2.8-.7L12 21.2l-1.6-2.4-2.8.7-.7-2.8-2.4-1.6L5.7 12 4.5 9.4l2.4-1.6.7-2.8 2.8.7z\"/></svg></span><span class=\"ds-avatar\" tabindex=\"0\">A</span></div></div>",
+      "css": ".ds-nav{display:flex;align-items:center;height:56px;padding:32px;background:#0C0B0B;color:#F5F3EF;font-family:'Mona Sans','SamsungOneUI',sans-serif;} .ds-nav-brand{display:flex;align-items:center;gap:12px;margin-right:48px;font:650 32px/1 'Mona Sans',sans-serif;font-stretch:108%;letter-spacing:-0.01em;} .ds-nav-brand svg{width:34px;height:34px;} .ds-nav-entries,.ds-nav-icons{display:flex;align-items:center;gap:4px;} .ds-nav-icons{margin-left:auto;} .ds-ni{display:flex;align-items:center;height:52px;padding:0 22px;border-radius:26px;font:560 25px/1 'Mona Sans',sans-serif;color:rgba(245,243,239,0.68);} .ds-ni-on{background:rgba(245,243,239,0.14);color:#F5F3EF;} .ds-ni-icon{width:52px;padding:0;justify-content:center;color:rgba(245,243,239,0.78);} .ds-ni-icon svg{width:27px;height:27px;} .ds-ni:focus-visible,.ds-ni.is-focus{outline:none;background:#F5F3EF;color:#151413;} .ds-avatar{width:52px;height:52px;margin-left:16px;border-radius:26px;display:flex;align-items:center;justify-content:center;background:#C9825B;color:#2A160C;font:650 22px/1 'Mona Sans',sans-serif;box-shadow:0 0 0 2px rgba(245,243,239,0.9);} .ds-avatar:focus-visible{outline:none;box-shadow:0 0 0 4px #0C0B0B,0 0 0 8px #F5F3EF;}"
+    },
+    {
+      "name": "Focused tile",
+      "kind": "card",
+      "refersTo": "tile-wide",
+      "description": "Wide Continue Watching tile. Focus scales the frame 1.07 over a static lift shadow; the 4 px ring sits 4 px outside it and never moves. Progress fill is scaleX.",
+      "html": "<div class=\"ds-tile-stage\"><div class=\"ds-lift\"></div><div class=\"ds-ring\"></div><div class=\"ds-tile ds-tile-focus\"><div class=\"ds-frame\"><div class=\"ds-art\"></div><div class=\"ds-bar\"><i style=\"transform:scaleX(0.83)\"></i></div></div><div class=\"ds-cap\">Ted Lasso<small>S4 E2 · 8m left</small></div></div><div class=\"ds-tile ds-tile-next\"><div class=\"ds-frame\"><div class=\"ds-art ds-art-2\"></div><div class=\"ds-bar\"><i style=\"transform:scaleX(0.15)\"></i></div></div><div class=\"ds-cap\">The Expanse<small>S3 E7 · 39m left</small></div></div></div>",
+      "css": ".ds-tile-stage{position:relative;width:1000px;height:400px;background:#2a1c18;font-family:'Mona Sans','SamsungOneUI',sans-serif; color:#F5F3EF;} .ds-tile{position:absolute;top:48px;width:432px;} .ds-tile-focus{left:48px;} .ds-tile-next{left:532px;} .ds-frame{position:relative;width:432px;height:243px;overflow:hidden;border-radius:14px;background:rgba(245,243,239,0.08);transition:transform 200ms cubic-bezier(0.2,0.8,0.2,1);} .ds-tile-focus .ds-frame{transform:scale(1.07);} .ds-art{position:absolute;inset:0;background:#6b4a3a;} .ds-art-2{background:#2e3a44;} .ds-bar{position:absolute;left:16px;right:16px;bottom:14px;height:5px;border-radius:3px;background:rgba(10,11,14,0.55);overflow:hidden;} .ds-bar i{display:block;height:100%;border-radius:3px;background:#F5F3EF;transform-origin:0 0;} .ds-cap{margin-top:16px;font:600 23px/1.2 'Mona Sans',sans-serif;color:rgba(245,243,239,0.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .ds-tile-focus .ds-cap{color:#F5F3EF;} .ds-cap small{display:block;margin-top:5px;font:500 22px/1.2 'Mona Sans',sans-serif;color:rgba(245,243,239,0.68);} .ds-lift{position:absolute;left:33px;top:39px;width:462px;height:260px;border-radius:15px;box-shadow:0 20px 44px rgba(0,0,0,0.55);} .ds-ring{position:absolute;left:25px;top:31px;width:478px;height:276px;border:4px solid #F5F3EF;border-radius:23px;box-sizing:border-box;}"
+    },
+    {
+      "name": "Side sheet options",
+      "kind": "custom",
+      "refersTo": "sheet-option",
+      "description": "Actions menu and pickers. 72 px options at a 78 px pitch; focus is a white fill; the current choice carries a check.",
+      "html": "<div class=\"ds-sheet\"><h2>Genre</h2><div class=\"ds-sheet-sub\">Movies</div><div class=\"ds-opts\"><div class=\"ds-opt\" tabindex=\"0\"><span>All genres</span><span class=\"ds-tick\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg></span></div><div class=\"ds-opt\" tabindex=\"0\"><span>Action</span></div><div class=\"ds-opt is-focus\" tabindex=\"0\"><span>Comedy</span></div><div class=\"ds-opt\" tabindex=\"0\"><span>Drama</span></div></div></div>",
+      "css": ".ds-sheet{width:640px;padding:64px;background:rgba(21,20,19,0.97);box-shadow:-40px 0 80px rgba(0,0,0,0.45);color:#F5F3EF;font-family:'Mona Sans','SamsungOneUI',sans-serif;} .ds-sheet h2{margin:0;font:650 34px/1.2 'Mona Sans',sans-serif;} .ds-sheet-sub{margin-top:8px;font:500 22px/1.3 'Mona Sans',sans-serif;color:rgba(245,243,239,0.68);} .ds-opts{margin-top:36px;} .ds-opt{display:flex;align-items:center;gap:18px;height:72px;padding:0 24px;margin-bottom:6px;border-radius:16px;font:540 26px/1 'Mona Sans',sans-serif;color:rgba(245,243,239,0.78);} .ds-tick{margin-left:auto;display:flex;} .ds-tick svg{width:28px;height:28px;} .ds-opt:focus-visible,.ds-opt.is-focus{outline:none;background:#F5F3EF;color:#151413;}"
+    },
+    {
+      "name": "Settings rows",
+      "kind": "custom",
+      "refersTo": "setting-row",
+      "description": "88 px ghost rows (108 with a sub-line). Focus: white fill; value and sub-line go on-text-dim.",
+      "html": "<div class=\"ds-set-stage\"><div class=\"ds-setting is-focus\" tabindex=\"0\"><span>Autoplay next episode<small>The next episode starts after a short countdown.</small></span><span>On</span></div><div class=\"ds-setting\" tabindex=\"0\"><span>Performance overlay</span><span>Off</span></div></div>",
+      "css": ".ds-set-stage{background:#0C0B0B;padding:32px;width:880px;font-family:'Mona Sans','SamsungOneUI',sans-serif; color:#F5F3EF;} .ds-setting{display:flex;align-items:center;justify-content:space-between;min-height:88px;padding:0 32px;margin-bottom:12px;border-radius:18px;background:rgba(245,243,239,0.07);font:600 27px/1 'Mona Sans',sans-serif;} .ds-setting small{display:block;margin-top:8px;font:500 21px/1.2 'Mona Sans',sans-serif;color:rgba(245,243,239,0.68);} .ds-setting span:last-child{font-weight:520;color:rgba(245,243,239,0.68);} .ds-setting:focus-visible,.ds-setting.is-focus{outline:none;background:#F5F3EF;color:#151413;} .ds-setting.is-focus span:last-child,.ds-setting.is-focus small,.ds-setting:focus-visible span:last-child,.ds-setting:focus-visible small{color:rgba(21,20,19,0.62);}"
+    },
+    {
+      "name": "Keys",
+      "kind": "button",
+      "refersTo": "search-key",
+      "description": "Search keyboard keys (80 px, radius 14) and PIN keys (136x96, radius 22). Ghost at rest, white fill on focus.",
+      "html": "<div class=\"ds-key-stage\"><div class=\"ds-keys\"><span class=\"ds-key\" tabindex=\"0\">a</span><span class=\"ds-key\" tabindex=\"0\">b</span><span class=\"ds-key\" tabindex=\"0\">c</span><span class=\"ds-key\" tabindex=\"0\">d</span><span class=\"ds-key is-focus\" tabindex=\"0\">e</span><span class=\"ds-key\" tabindex=\"0\">f</span><span class=\"ds-key ds-key-wide\" tabindex=\"0\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 5h10.5a1.5 1.5 0 0 1 1.5 1.5v11a1.5 1.5 0 0 1-1.5 1.5H9l-6-7z\"/><path d=\"M12 9.5l5 5M17 9.5l-5 5\"/></svg></span><span class=\"ds-key ds-key-wide\" tabindex=\"0\">Clear</span></div><div class=\"ds-pin\"><span class=\"ds-pkey\" tabindex=\"0\">7</span><span class=\"ds-pkey is-focus\" tabindex=\"0\">8</span><span class=\"ds-pkey\" tabindex=\"0\">9</span><span class=\"ds-pkey ds-pkey-blank\"></span><span class=\"ds-pkey\" tabindex=\"0\">0</span><span class=\"ds-pkey\" tabindex=\"0\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 5h10.5a1.5 1.5 0 0 1 1.5 1.5v11a1.5 1.5 0 0 1-1.5 1.5H9l-6-7z\"/><path d=\"M12 9.5l5 5M17 9.5l-5 5\"/></svg></span></div></div>",
+      "css": ".ds-key-stage{background:#0C0B0B;padding:32px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-family:'Mona Sans','SamsungOneUI',sans-serif;color:#F5F3EF;} .ds-keys{display:grid;grid-template-columns:repeat(6,80px);grid-auto-rows:80px;gap:10px;} .ds-key{display:flex;align-items:center;justify-content:center;border-radius:14px;background:rgba(245,243,239,0.07);font:600 34px/1 'Mona Sans',sans-serif;color:rgba(245,243,239,0.78);} .ds-key-wide{grid-column:span 2;font-size:26px;} .ds-key svg{width:34px;height:34px;} .ds-pin{display:grid;grid-template-columns:repeat(3,136px);gap:16px;margin-left:48px;} .ds-pkey{height:96px;border-radius:22px;background:rgba(245,243,239,0.07);display:flex;align-items:center;justify-content:center;font:600 38px/1 'Mona Sans',sans-serif;color:#F5F3EF;} .ds-pkey svg{width:38px;height:38px;} .ds-pkey-blank{background:none;} .ds-key:focus-visible,.ds-key.is-focus,.ds-pkey:focus-visible,.ds-pkey.is-focus{outline:none;background:#F5F3EF;color:#151413;}"
+    },
+    {
+      "name": "Hero meta and format badges",
+      "kind": "custom",
+      "refersTo": "format-badge",
+      "description": "Facts in soft with 5 px mute dots, then quiet outlined badges. The episode line follows: title full white, code mute, a 160 px scaleX track, time left soft.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-meta\"><span>2026</span><i></i><span>TV-MA</span><i></i><span>47m</span><b>4K</b><b>DOLBY VISION</b><b>ATMOS</b></div><div class=\"ds-ep\"><span>Curiouser and Curiouser!</span><span class=\"ds-code\">S4 E2</span><span class=\"ds-track\"><span style=\"transform:scaleX(0.83)\"></span></span><span class=\"ds-left\">8m left</span></div></div>",
+      "css": ".ds-hero{background:#2a1c18;padding:32px;color:#F5F3EF;font-family:'Mona Sans','SamsungOneUI',sans-serif;} .ds-meta{display:flex;align-items:center;gap:12px;font:520 25px/1 'Mona Sans',sans-serif;color:rgba(245,243,239,0.78);white-space:nowrap;} .ds-meta i{width:5px;height:5px;border-radius:3px;background:rgba(245,243,239,0.68);} .ds-meta b{padding:5px 9px 4px;border-radius:6px;border:1.5px solid rgba(245,243,239,0.42);font:640 19px/1 'Mona Sans',sans-serif;letter-spacing:0.04em;color:rgba(245,243,239,0.78);} .ds-ep{margin-top:18px;display:flex;align-items:center;gap:18px;font:600 27px/1.2 'Mona Sans',sans-serif;white-space:nowrap;} .ds-code{margin-left:-6px;font-weight:520;color:rgba(245,243,239,0.68);} .ds-track{position:relative;width:160px;height:6px;border-radius:3px;background:rgba(245,243,239,0.24);overflow:hidden;} .ds-track span{position:absolute;inset:0;border-radius:3px;background:#F5F3EF;transform-origin:0 0;} .ds-left{font:560 24px/1 'Mona Sans',sans-serif;color:rgba(245,243,239,0.78);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Picture Lights the Room",
+    "overview": "Kinescope is an evening in front of the screen. The focused title's own artwork fills the canvas and dissolves into a wash of its own colours, so moving focus changes the mood of the room. Everything the app adds sits on top of that picture in one warm off-white and a few steps of its transparency. There is no accent hue in the chrome: focus, progress and the current section are all the same lamplight white, and the only saturated colour on screen comes from the library itself.\n\nThe layout is the streaming standard executed with care: a nav line at the top, a hero that follows focus, horizontal rows below, a poster grid for whole libraries, a side sheet for choices. It is dense enough to scan from the couch and calm enough to sit with. Focus is a physical event: the tile lifts 7 percent on a soft static shadow and a white ring hugs it with a 4 px gap. Controls take a full white fill when focused. Both were judged on the household's QN90C on 2026-11-19 and passed (\"looks good overall\").\n\nThe household chose this world over four concept worlds they found too technical. It refuses the black page of thumbnails with a bright ring and a red accent, and borrows nothing from Netflix (name, logo, typeface, the red-on-black signature, profile icons, sounds).",
+    "keyCharacteristics": [
+      "Full-screen title art dissolving into a 2x2 ambience of its own UltraBlur colours, dimmed and slightly desaturated.",
+      "One typeface, Mona Sans, in warm off-white with four transparency steps for hierarchy.",
+      "No accent hue in chrome. White is the only signal colour.",
+      "Focus by lift and a hugging ring on art; by a full white fill on controls.",
+      "14 px tile corners, pill-shaped controls.",
+      "Motion only in transform and opacity, on a fixed 1920x1080 canvas."
+    ],
+    "rules": [
+      {
+        "name": "The No Accent Rule",
+        "body": "Chrome carries no hue. Focus, progress, the current section and selection are all Lamplight; colour on screen comes from the artwork and its ambience. A red, coral or brand-coloured ring is a regression.",
+        "section": "colors"
+      },
+      {
+        "name": "The Room Colour Rule",
+        "body": "The ambience is Plex's four UltraBlur corner colours painted into a 2x2 WebGL canvas that the compositor stretches to 1920x1080. Each channel becomes `(v + (avg - v) x 0.3) x 0.42`: 30 percent toward its own grey, then dimmed to 42 percent. Fallback corners are `1b1f2b`, `0f1118`, `2a1414`, `0b0d12`. Sign-in and splash use the fixed warm set `6e4a33`, `2c2b33`, `3e2c22`, `1c1d26`. Pushed screens restore the colours the screen under them last set.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Mona Sans for every string. Hierarchy comes from weight, size and the four Lamplight steps, never from a second face or an accent colour.",
+        "section": "typography"
+      },
+      {
+        "name": "The Couch Floor Rule",
+        "body": "Nothing on screen is smaller than 19 px, and 19 px is only for the tracked uppercase format badges. Every other string is 20 px or larger; second lines under tile captions are 22 px. Legibility is judged on the QN90C from 2.5 to 3.5 m, not on a monitor.",
+        "section": "typography"
+      },
+      {
+        "name": "The Safe Frame Rule",
+        "body": "96 px left and right, 54 px top and bottom. No heading, caption or label in the bottom 54 px (below y 1026). Art may run to the edge; words may not.",
+        "section": "layout"
+      },
+      {
+        "name": "The Headroom Rule",
+        "body": "Every clipped list keeps at least `(1.07 - 1) / 2 x tile height + 12` px between its clip edge and its first row's tile top, so the lifted tile and its ring are never cut. That is 21 px for wide and episode tiles, 24 for grid posters, 25 for Home posters, 23 for search posters. The library ships 40.",
+        "section": "layout"
+      },
+      {
+        "name": "The No Peek Rule",
+        "body": "Row pitch is chosen so the next row stays below the fold. A heading half on screen at the bottom edge is a defect.",
+        "section": "layout"
+      },
+      {
+        "name": "The Static Shadow Rule",
+        "body": "A shadow is painted once and never animates. The lift's shadow sits on a separate element that appears or fades by opacity; depth on focus comes from scale.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Dissolve Rule",
+        "body": "The hero dissolves into its own ambience through a static mask. The shipping app A/B-tested hero masks on the TV at 1344x756 at no cost. V1 benches the full-screen size; if it costs frames, the fallback is a stretched raster alpha, not a gradient overlay.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Selected Rule",
+        "body": "Selected never relies on a fill step alone. A current or set item brings full-white text, usually on a `faint` pill: the current nav entry, the current season, the current settings group, a set chip (whose value also goes to 700 weight). In a sheet, the current choice carries a check at the right edge. Focus always wins over selected.",
+        "section": "components"
+      },
+      {
+        "name": "The One Mover Rule",
+        "body": "In one key press exactly one thing travels: the track or the highlight, never both. In rows the ring is still and the content slides under it.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do let the focused title's art and its ambience set the colour of the screen; keep chrome in Lamplight and its transparency steps.",
+      "Do show focus on art by scale 1.07, the static lift shadow and a 4 px Lamplight ring at a 4 px gap; on controls by a full white fill with `on-text` (#151413) text.",
+      "Do keep the row ring fixed at x 96 and slide the content under it.",
+      "Do mark selected or current items with full-white text (on a `faint` pill) or a check, never with a fill step alone.",
+      "Do keep 96 px side margins, the nav at y 56, and every heading, caption and label above y 1026.",
+      "Do leave `(1.07 - 1) / 2 x tile height + 12` px of headroom above the first row of any clipped list.",
+      "Do use row pitch 464 for wide rows and 500 for poster rows on Home, so the next row stays below the fold.",
+      "Do build skeletons at the exact geometry of the content they stand for.",
+      "Do keep voice plain and warm; allow a little personality in empty and error lines only."
+    ],
+    "donts": [
+      "Don't add an accent hue to the chrome: no coral, no red, no brand colour on rings, progress, badges or the current section.",
+      "Don't borrow from Netflix: its name, logo, typeface, red-on-black signature, profile icons or sounds.",
+      "Don't put a Plex mark in the product name or the SamSUCKS mascot anywhere.",
+      "Don't show permanent key-hint text; hints appear in context and fade.",
+      "Don't let the next row's heading peek at the bottom edge.",
+      "Don't use a second typeface or a system display face.",
+      "Don't blur, frost or glow anything, and don't animate a shadow.",
+      "Don't paint ambience or scrims with full-screen CSS gradients.",
+      "Don't show the upstream credit in the chrome; it lives in About."
+    ]
+  }
+}

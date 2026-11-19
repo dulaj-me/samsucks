@@ -53,7 +53,7 @@ const DIM = 0.42, GRAY = 0.3;
 export function ambience(canvas, u) {
   const c = canvas.getContext('2d');
   const img = c.createImageData(2, 2);
-  const px = u ? [u.topLeft, u.topRight, u.bottomLeft, u.bottomRight] : ['1b1f2b', '0f1118', '1d1416', '0b0d12'];
+  const px = u ? [u.topLeft, u.topRight, u.bottomLeft, u.bottomRight] : ['1b1f2b', '0f1118', '2a1414', '0b0d12'];
   px.forEach((hex, i) => {
     const n = parseInt(hex, 16);
     const rgb = [n >> 16 & 255, n >> 8 & 255, n & 255];

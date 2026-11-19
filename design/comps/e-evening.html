@@ -12,7 +12,7 @@
   --text: #F5F3EF;
   --soft: rgba(245, 243, 239, 0.78);
   --mute: rgba(245, 243, 239, 0.68);
-  --veil: rgba(10, 11, 14, 0.62);
+  --veil: rgba(12, 11, 11, 0.62);
   --hair: rgba(245, 243, 239, 0.16);
   --sans: 'Mona Sans', sans-serif;
   --r-tile: 14px;
@@ -29,7 +29,7 @@ html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--
 .art { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; object-position: center top;
   -webkit-mask-image: linear-gradient(to right, transparent 22%, #000 64%), linear-gradient(to top, transparent 34%, #000 76%);
   -webkit-mask-composite: source-in; }
-.topveil { position: absolute; left: 0; top: 0; width: 1920px; height: 220px; background: linear-gradient(rgba(10,11,14,0.72), transparent); }
+.topveil { position: absolute; left: 0; top: 0; width: 1920px; height: 220px; background: linear-gradient(rgba(12, 11, 11,0.72), transparent); }
 
 /* Nav */
 .top { position: absolute; left: 96px; right: 96px; top: 56px; height: 56px; display: flex; align-items: center; }
@@ -38,7 +38,7 @@ html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--
 .nav { display: flex; align-items: center; gap: 4px; }
 .ni { height: 52px; padding: 0 22px; border-radius: 26px; display: flex; align-items: center; font: 560 25px/1 var(--sans); color: var(--mute); }
 .ni.on { color: var(--text); background: rgba(245, 243, 239, 0.14); }
-.ni svg { width: 27px; height: 27px; }
+.ni svg { width: 30px; height: 30px; }
 .icons { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 .ni.icon { width: 52px; padding: 0; justify-content: center; color: var(--soft); }
 .ni.icon svg { stroke-width: 2.6; }
@@ -67,11 +67,11 @@ html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--
 .f { position: relative; width: 432px; height: 243px; overflow: hidden; border-radius: var(--r-tile); background: rgba(245,243,239,0.08); }
 .poster .f { width: 240px; height: 360px; }
 .f img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.bar { position: absolute; left: 16px; right: 16px; bottom: 14px; height: 5px; border-radius: 3px; background: rgba(10, 11, 14, 0.55); overflow: hidden; }
+.bar { position: absolute; left: 16px; right: 16px; bottom: 14px; height: 5px; border-radius: 3px; background: rgba(12, 11, 11, 0.55); overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: 3px; background: var(--text); transform-origin: 0 0; }
-.count { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 17px; background: rgba(10,11,14,0.72); font: 650 19px/34px var(--sans); text-align: center; }
+.count { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 17px; background: rgba(12, 11, 11,0.72); font: 650 19px/34px var(--sans); text-align: center; }
 .cap { margin-top: 16px; width: 432px; font: 600 23px/1.2 var(--sans); color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile.focus .cap { color: var(--text); }
+.tile.focus .cap { color: var(--text); transform: translateY(9px); }
 .cap small { display: block; margin-top: 5px; font: 500 22px/1.2 var(--sans); color: var(--mute); }
 
 /* Focus: the anchored tile lifts; the ring hugs it and never moves. */

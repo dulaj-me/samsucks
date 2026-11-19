@@ -125,7 +125,7 @@ if (kind === 'movie') {
     if (p) { const b = D.h('div', 'bar', fr); D.h('i', '', b).style.transform = 'scaleX(' + p.toFixed(3) + ')'; }
     else if (e.viewCount) D.h('div', 'seen', fr).innerHTML = icon.check;
     const c = D.h('div', 'cap', t, e.index + '. ' + e.title); c.style.width = '432px';
-    if (i === 0 && focus === 'episodes') c.style.transform = 'translateY(10px)';
+    if (i === 0 && focus === 'episodes') c.style.transform = 'translateY(9px)';
     D.h('small', '', c, [D.runtime(e.duration), D.left(e)].filter(Boolean).join('  ·  '));
     D.h('div', 'ep-sum', t, e.summary || '');
   });
