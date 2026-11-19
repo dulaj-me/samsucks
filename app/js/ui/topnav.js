@@ -104,6 +104,9 @@ export class TopNav {
     if (!n || n.id === this.current) return;
     if (n.id === 'search') { openSearch(); return; }
     if (n.id === 'settings') { openSettings(); return; }
+    // When this screen shows again, focus sits on its own entry, the one with the dot.
+    this.index = this.currentIndex();
+    this.render();
     if (n.id === 'home') goHome();
     else openLibrary(n.section);
   }
