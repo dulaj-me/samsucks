@@ -122,7 +122,7 @@ if (kind === 'movie') {
     const fr = D.h('div', 'f', t); fr.style.cssText = 'width:432px;height:243px';
     D.h('img', '', fr).src = D.img(e.thumb, 432, 243);
     const p = D.progress(e);
-    if (p) { const b = D.h('div', 'bar', fr); D.h('i', '', b).style.width = (p * 100).toFixed(1) + '%'; }
+    if (p) { const b = D.h('div', 'bar', fr); D.h('i', '', b).style.transform = 'scaleX(' + p.toFixed(3) + ')'; }
     else if (e.viewCount) D.h('div', 'seen', fr).innerHTML = icon.check;
     const c = D.h('div', 'cap', t, e.index + '. ' + e.title); c.style.width = '432px';
     if (i === 0 && focus === 'episodes') c.style.transform = 'translateY(10px)';

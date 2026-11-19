@@ -92,6 +92,8 @@ if (!query) {
   hubs.forEach(hub => {
     const wide = hub.type === 'episode';
     const w = wide ? 356 : 200, hgt = wide ? 200 : 300, step = w + 28;
+    // A heading never sits in the bottom 54px safe area; rows that would are left for scrolling.
+    if (84 + y + 40 > 1026) return;
     const row = D.h('section', 'rrow', box);
     row.style.top = y + 'px';
     D.h('div', 't-row', row, hub.title);
@@ -102,7 +104,7 @@ if (!query) {
       f.style.cssText = `width:${w}px;height:${hgt}px`;
       D.h('img', '', f).src = D.img(wide ? D.wideArt(it) : D.posterArt(it), w, hgt);
       const p = D.progress(it);
-      if (p) { const b = D.h('div', 'bar', f); D.h('i', '', b).style.width = (p * 100).toFixed(1) + '%'; }
+      if (p) { const b = D.h('div', 'bar', f); D.h('i', '', b).style.transform = 'scaleX(' + p.toFixed(3) + ')'; }
       if (it.type === 'show' && it.leafCount) {
         const n = it.leafCount - (it.viewedLeafCount || 0);
         if (n > 0) D.h('div', 'count', f, String(n));
