@@ -1,6 +1,7 @@
-// Profile, account, server and diagnostics.
+// Settings in five groups: profile and account, server, playback, about, advanced.
 import { DEV, VERSION } from '../config.js';
-import { h, toggleClass } from '../util/dom.js';
+import { h, setText, setTransform, toggleClass } from '../util/dom.js';
+import * as store from '../util/store.js';
 import { session, signOut, useServer, profileToken, hasProfiles } from '../session.js';
 import { getServers, connect } from '../plex/auth.js';
 import { setHud, hudEnabled } from '../ui/hud.js';
@@ -8,59 +9,157 @@ import * as router from '../router.js';
 import { ServerPicker } from './login.js';
 import { openProfiles } from '../nav.js';
 import { error } from '../util/log.js';
-import { useAmbience, setLegacyGradients, legacyGradients } from '../ui/backdrop.js';
+import { useAmbience } from '../ui/backdrop.js';
+
+// Device-wide preferences. The player reads store 'prefs' directly, so a missing key
+// must mean its default there too.
+const PREF_DEFAULTS = { autoplayNext: true };
+
+function prefs() {
+  return Object.assign({}, PREF_DEFAULTS, store.get('prefs'));
+}
+
+function setPref(key, value) {
+  const p = prefs();
+  p[key] = value;
+  store.set('prefs', p);
+}
+
+const onOff = on => (on ? 'On' : 'Off');
 
 export function SettingsScreen() {
   const el = h('div', 'screen settings');
   const ambience = useAmbience();
   h('h1', 'settings-title', el).textContent = 'Settings';
-  const list = h('div', 'settings-list', el);
-  const foot = h('div', 'settings-foot', el);
-  foot.textContent = 'SamSUCKS ' + VERSION + (DEV ? ' (dev)' : '') + ' by rfaile313 · ' + (session.server ? session.server.uri.replace(/X-Plex-Token=.*/, '') : '');
+  const clip = h('div', 'settings-clip', el);
+  const track = h('div', 'settings-track', clip);
 
+  let alive = true;
+  let visible = false;
   let index = 0;
-  let items = [];
+  let maxScroll = 0;
+  let viewMid = 0;
 
-  function build() {
-    list.innerHTML = '';
-    const who = session.user ? session.user.title : '—';
-    // Signing out leaves the whole Plex account, not just the profile.
-    const account = hasProfiles()
-      ? [
-        { label: 'Profile', value: who, run: openProfiles, action: 'Switch' },
-        { label: 'Plex account', value: 'Sign out', run: doSignOut },
-      ]
-      : [{ label: 'Signed in as', value: who, run: doSignOut, action: 'Sign out' }];
-    items = [
-      { label: 'Server', value: session.server ? session.server.name : '—', run: switchServer },
-      ...account,
-      { label: 'Performance overlay', value: hudEnabled() ? 'On' : 'Off', run: () => { setHud(!hudEnabled()); build(); } },
-      // For before/after recordings: brings back the full-screen gradients that took ~2s per repaint.
-      { label: 'Demo: original slow renderer', value: legacyGradients() ? 'On' : 'Off', run: () => { setLegacyGradients(!legacyGradients()); build(); } },
-    ];
-    items.forEach(it => {
-      it.el = h('div', 'setting', list);
+  const who = () => (session.user ? session.user.title : '—');
+  // Signing out leaves the whole Plex account, not just the profile.
+  const account = hasProfiles()
+    ? [
+      { label: 'Profile', value: who, action: 'Switch', run: () => openProfiles() },
+      { label: 'Plex account', value: 'Sign out', run: doSignOut },
+    ]
+    : [{ label: 'Signed in as', value: who, action: 'Sign out', run: doSignOut }];
+
+  const groups = [
+    ['Profile and account', account],
+    ['Server', [
+      { label: 'Server', value: () => (session.server ? session.server.name : '—'), action: 'Switch', run: switchServer },
+    ]],
+    ['Playback', [
+      { label: 'Autoplay next episode', value: () => onOff(prefs().autoplayNext), run: () => setPref('autoplayNext', !prefs().autoplayNext) },
+    ]],
+    ['About', [
+      { label: 'Version', value: VERSION + (DEV ? ' (dev)' : '') },
+      { label: 'Based on', value: 'SamSUCKS by rfaile313' },
+      { label: 'License', value: 'GNU GPL v3.0, no warranty' },
+      { label: 'Inter font', value: 'SIL Open Font License 1.1' },
+      { label: 'Barlow Condensed font', value: 'SIL Open Font License 1.1' },
+      { label: 'QR codes', value: 'qrcode-generator by Kazuhiko Arase, MIT License' },
+    ]],
+    ['Advanced', [
+      { label: 'Performance overlay', value: () => onOff(hudEnabled()), run: () => setHud(!hudEnabled()) },
+      { label: 'Server address', value: () => (session.server ? session.server.uri.replace(/X-Plex-Token=.*/, '') : '—') },
+    ]],
+  ];
+
+  const items = [];
+  for (const [title, rows] of groups) {
+    h('div', 'row-title settings-head', track).textContent = title;
+    for (const it of rows) {
+      it.el = h('div', 'setting', track);
       h('span', 'setting-label', it.el).textContent = it.label;
-      h('span', 'setting-value', it.el).textContent = it.value + (it.action ? '  ·  ' + it.action : '');
-    });
-    render();
+      it.valueEl = h('span', 'setting-value', it.el);
+      refresh(it);
+      items.push(it);
+    }
+  }
+  toggleClass(items[0].el, 'focus', true);
+
+  // status, while set, stands in for the value: loading and error text for the row's action.
+  function refresh(it) {
+    const value = typeof it.value === 'function' ? it.value() : it.value;
+    setText(it.valueEl, it.status || (value + (it.action ? '  ·  ' + it.action : '')));
   }
 
-  function render() {
-    items.forEach((it, i) => toggleClass(it.el, 'focus', i === index));
+  function setStatus(it, text) {
+    it.status = text;
+    refresh(it);
   }
 
-  async function switchServer() {
+  // Read once per show, so a key press only writes a class and a transform.
+  function measure() {
+    viewMid = clip.offsetHeight / 2;
+    maxScroll = Math.max(0, track.offsetHeight - clip.offsetHeight);
+    for (const it of items) it.mid = it.el.offsetTop + it.el.offsetHeight / 2;
+  }
+
+  // The focused row sits mid-view while the list can scroll. The jump is instant: a
+  // sliding list under an instantly moved highlight reads as the screen jumping.
+  function place() {
+    const y = Math.round(Math.max(0, Math.min(maxScroll, items[index].mid - viewMid)));
+    setTransform(track, 'translateY(' + -y + 'px)');
+  }
+
+  function move(delta) {
+    const next = Math.max(0, Math.min(items.length - 1, index + delta));
+    if (next === index) return;
+    toggleClass(items[index].el, 'focus', false);
+    index = next;
+    toggleClass(items[index].el, 'focus', true);
+    place();
+  }
+
+  function activate(it) {
+    if (!it.run) return;
+    it.run(it);
+    refresh(it);
+  }
+
+  async function switchServer(it) {
+    if (it.busy) return;
+    it.busy = true;
+    setStatus(it, 'Looking for servers…');
     try {
-      const servers = await getServers(profileToken());
-      if (servers.length === 1) {
-        const uri = await connect(servers[0]);
-        if (useServer(servers[0], uri)) restart();
+      let servers;
+      try {
+        servers = await getServers(profileToken());
+      } catch (e) {
+        error('server list failed', e);
+        if (alive) setStatus(it, "Couldn't reach plex.tv");
         return;
       }
-      router.push(ServerPicker({ servers, onDone: restart }));
-    } catch (e) {
-      error('server list failed', e);
+      if (!alive) return;
+      if (!visible) { setStatus(it, null); return; }
+      if (!servers.length) { setStatus(it, 'No servers on this account'); return; }
+      if (servers.length > 1) {
+        setStatus(it, null);
+        router.push(ServerPicker({ servers, onDone: restart }));
+        return;
+      }
+      setStatus(it, 'Connecting to ' + servers[0].name + '…');
+      let uri;
+      try {
+        uri = await connect(servers[0]);
+      } catch (e) {
+        error('server connect failed', e);
+        if (alive) setStatus(it, e.message);
+        return;
+      }
+      if (!alive) return;
+      if (!visible) { setStatus(it, null); return; }
+      if (useServer(servers[0], uri)) restart();
+      else setStatus(it, 'Profile changed, try again');
+    } finally {
+      it.busy = false;
     }
   }
 
@@ -74,17 +173,23 @@ export function SettingsScreen() {
     window.dispatchEvent(new Event('samsucks:restart'));
   }
 
-  build();
-
   return {
     el,
     name: 'settings',
-    onShow() { ambience.restore(); },
+    onShow() {
+      visible = true;
+      ambience.restore();
+      items.forEach(refresh);
+      measure();
+      place();
+    },
+    onHide() { visible = false; },
     onKey(action) {
-      if (action === 'up') { index = Math.max(0, index - 1); render(); return true; }
-      if (action === 'down') { index = Math.min(items.length - 1, index + 1); render(); return true; }
-      if (action === 'enter') { items[index].run(); return true; }
+      if (action === 'up') { move(-1); return true; }
+      if (action === 'down') { move(1); return true; }
+      if (action === 'enter') { activate(items[index]); return true; }
       return false;
     },
+    destroy() { alive = false; },
   };
 }
