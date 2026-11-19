@@ -1,0 +1,120 @@
+/* Evening: shared tokens and components for the Phase D comps. DESIGN.md is written from this. */
+:root {
+  --ink: #0A0B0E;
+  --sheet: #121318;
+  --text: #F5F3EF;
+  --soft: rgba(245, 243, 239, 0.78);
+  --mute: rgba(245, 243, 239, 0.58);
+  --faint: rgba(245, 243, 239, 0.14);
+  --ghost: rgba(245, 243, 239, 0.07);
+  --hair: rgba(245, 243, 239, 0.16);
+  --veil: rgba(10, 11, 14, 0.62);
+  --on-text: #121318;
+  --danger: #FF8A7A;
+
+  --sans: 'Mona Sans', 'SamsungOneUI', sans-serif;
+
+  --r-tile: 14px;
+  --r-panel: 20px;
+  --r-chip: 6px;
+  --lift: 0 20px 44px rgba(0, 0, 0, 0.55);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-slide: 260ms;
+  --t-focus: 200ms;
+  --t-art: 600ms;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--ink); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+
+/* ---------- type scale ---------- */
+.t-display { font: 700 96px/0.98 var(--sans); font-stretch: 104%; letter-spacing: -0.025em; }
+.t-page { font: 680 56px/1.05 var(--sans); letter-spacing: -0.02em; }
+.t-row { font: 620 29px/40px var(--sans); }
+.t-meta { font: 520 25px/1.2 var(--sans); color: var(--soft); }
+.t-body { font: 440 24px/36px var(--sans); color: var(--soft); }
+.t-cap { font: 600 23px/1.2 var(--sans); }
+.t-small { font: 500 20px/1.2 var(--sans); color: var(--mute); }
+
+/* ---------- backdrop ---------- */
+#amb { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+.art { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; object-position: center top;
+  -webkit-mask-image: linear-gradient(to right, transparent 22%, #000 64%), linear-gradient(to top, transparent 34%, #000 76%);
+  -webkit-mask-composite: source-in; }
+.topveil { position: absolute; left: 0; top: 0; width: 1920px; height: 220px; background: linear-gradient(rgba(10,11,14,0.6), transparent); }
+
+/* ---------- nav ---------- */
+.top { position: absolute; left: 96px; right: 96px; top: 48px; height: 56px; display: flex; align-items: center; z-index: 5; }
+.brand { font: 650 32px/1 var(--sans); font-stretch: 108%; letter-spacing: -0.01em; margin-right: 48px; display: flex; align-items: center; gap: 12px; }
+.brand svg { width: 34px; height: 34px; }
+.nav { display: flex; align-items: center; gap: 4px; }
+.ni { height: 52px; padding: 0 22px; border-radius: 26px; display: flex; align-items: center; font: 560 25px/1 var(--sans); color: var(--mute); }
+.ni.on { color: var(--text); background: var(--faint); }
+.ni.focus { color: var(--on-text); background: var(--text); }
+.ni svg { width: 27px; height: 27px; }
+.icons { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.ni.icon { width: 52px; padding: 0; justify-content: center; }
+.avatar { width: 52px; height: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center; font: 650 22px/1 var(--sans); color: #2A160C; background: #C9825B; flex-shrink: 0; }
+.top .avatar { margin-left: 16px; box-shadow: 0 0 0 2px rgba(245, 243, 239, 0.9); }
+.top .avatar.focus { box-shadow: 0 0 0 4px var(--ink), 0 0 0 8px var(--text); }
+
+/* ---------- tiles ---------- */
+.tile { position: absolute; }
+.f { position: relative; overflow: hidden; border-radius: var(--r-tile); background: var(--ghost); }
+.f img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bar { position: absolute; left: 16px; right: 16px; bottom: 14px; height: 5px; border-radius: 3px; background: rgba(10, 11, 14, 0.55); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; background: var(--text); }
+.count { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 17px; background: rgba(10,11,14,0.72); font: 650 19px/34px var(--sans); text-align: center; }
+.seen { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 17px; background: rgba(10,11,14,0.72); display: flex; align-items: center; justify-content: center; }
+.seen svg { width: 20px; height: 20px; }
+.cap { margin-top: 16px; font: 600 23px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap small { display: block; margin-top: 5px; font: 500 20px/1.2 var(--sans); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.focus .f { transform: scale(1.07); }
+.lift { position: absolute; box-shadow: var(--lift); }
+.ring { position: absolute; border: 4px solid var(--text); }
+.skel { background: var(--ghost); border-radius: var(--r-tile); }
+.skel-line { height: 20px; border-radius: 10px; background: var(--ghost); }
+
+/* ---------- badges ---------- */
+.b { display: inline-block; padding: 5px 9px 4px; border-radius: var(--r-chip); border: 1.5px solid rgba(245, 243, 239, 0.42); font: 640 17px/1 var(--sans); letter-spacing: 0.04em; color: var(--soft); }
+.dot { display: inline-block; width: 5px; height: 5px; border-radius: 3px; background: var(--mute); }
+.meta { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+
+/* ---------- buttons and chips ---------- */
+.btn { display: inline-flex; align-items: center; gap: 14px; height: 68px; padding: 0 32px; border-radius: 34px; background: var(--faint); font: 620 26px/1 var(--sans); color: var(--text); white-space: nowrap; }
+.btn svg { width: 28px; height: 28px; }
+.btn.round { width: 68px; padding: 0; justify-content: center; }
+.btn.focus { background: var(--text); color: var(--on-text); }
+.btn small { font: 520 22px/1 var(--sans); color: var(--mute); }
+.btn.focus small { color: rgba(18, 19, 24, 0.62); }
+.chip { display: inline-flex; align-items: center; gap: 10px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--ghost); border: 1.5px solid var(--hair); font: 560 23px/1 var(--sans); color: var(--soft); white-space: nowrap; }
+.chip b { font-weight: 640; color: var(--text); }
+.chip svg { width: 20px; height: 20px; }
+.chip.set { background: var(--faint); border-color: transparent; }
+.chip.focus { background: var(--text); border-color: var(--text); color: var(--on-text); }
+.chip.focus b { color: var(--on-text); }
+
+/* ---------- side sheet (actions menu, pickers) ---------- */
+.sheet { position: absolute; right: 0; top: 0; width: 640px; height: 1080px; padding: 96px 64px; background: rgba(18, 19, 24, 0.97); box-shadow: -40px 0 80px rgba(0,0,0,0.45); z-index: 20; }
+.scrim { position: absolute; inset: 0; background: rgba(10, 11, 14, 0.5); z-index: 19; }
+.sheet h2 { font: 650 34px/1.2 var(--sans); }
+.sheet .sub { margin-top: 8px; font: 500 22px/1.3 var(--sans); color: var(--mute); }
+.opts { margin-top: 36px; }
+.opt { display: flex; align-items: center; gap: 18px; height: 72px; padding: 0 24px; margin-bottom: 6px; border-radius: 16px; font: 540 26px/1 var(--sans); color: var(--soft); }
+.opt svg { width: 28px; height: 28px; flex-shrink: 0; }
+.opt .tick { margin-left: auto; }
+.opt.focus { background: var(--text); color: var(--on-text); }
+
+/* ---------- settings rows ---------- */
+.setting { display: flex; align-items: center; justify-content: space-between; height: 88px; padding: 0 32px; margin-bottom: 12px; border-radius: 18px; background: var(--ghost); font: 600 27px/1 var(--sans); }
+.setting span:last-child { font-weight: 520; color: var(--mute); }
+.setting.focus { background: var(--text); color: var(--on-text); }
+.setting.focus span:last-child { color: rgba(18, 19, 24, 0.62); }
+
+/* ---------- messages ---------- */
+.msg { font: 600 32px/1.3 var(--sans); }
+.msg + p { margin-top: 10px; font: 440 24px/1.5 var(--sans); color: var(--soft); }
+
+/* ---------- toast ---------- */
+.toast { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); height: 64px; padding: 0 28px; border-radius: 32px; background: rgba(18, 19, 24, 0.94); box-shadow: 0 12px 32px rgba(0,0,0,0.45); display: flex; align-items: center; gap: 14px; font: 560 24px/1 var(--sans); z-index: 30; }
+.toast svg { width: 26px; height: 26px; }

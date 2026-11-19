@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · Detail</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="evening.css">
+<style>
+.info { position: absolute; left: 96px; top: 120px; width: 860px; }
+.logo-box { height: 220px; display: flex; align-items: flex-end; }
+.logo { display: block; max-width: 640px; max-height: 220px; object-fit: contain; object-position: left bottom; }
+.info .meta { margin-top: 30px; }
+.tagline { margin-top: 22px; font: 600 27px/1.25 var(--sans); }
+.info .t-body { margin-top: 12px; width: 800px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.credits { margin-top: 18px; font: 500 21px/1.5 var(--sans); color: var(--mute); }
+.credits b { color: var(--soft); font-weight: 560; }
+.actions { position: absolute; left: 96px; top: 720px; display: flex; gap: 16px; }
+.below { position: absolute; left: 0; top: 864px; width: 1920px; }
+.below .t-row { margin-left: 96px; }
+.person { position: absolute; top: 60px; width: 168px; text-align: center; }
+.person .face { width: 152px; height: 152px; margin: 0 8px; border-radius: 76px; overflow: hidden; background: var(--ghost); }
+.person img { width: 100%; height: 100%; object-fit: cover; }
+.person b { display: block; margin-top: 14px; font: 600 21px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person small { display: block; margin-top: 4px; font: 500 18px/1.2 var(--sans); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seasons { position: absolute; left: 96px; top: 0; display: flex; gap: 12px; }
+.eps { position: absolute; left: 0; top: 84px; width: 1920px; height: 400px; }
+.ep-sum { margin-top: 8px; width: 432px; font: 440 19px/1.4 var(--sans); color: var(--mute); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shifted .info, .shifted .actions { opacity: 0; }
+.shifted .below { top: 236px; }
+.compact { position: absolute; left: 96px; top: 64px; height: 120px; display: flex; align-items: center; gap: 28px; }
+.compact img { max-width: 360px; max-height: 110px; object-fit: contain; object-position: left center; }
+.compact span { font: 520 25px/1.2 var(--sans); color: var(--soft); }
+.more { position: absolute; left: 0; top: 560px; width: 1920px; }
+.more .t-row { margin-left: 96px; }
+</style>
+</head>
+<body>
+<script type="module">
+import * as D from './data.js';
+import { backdrop, ambience, lift, icon } from './chrome.js';
+const q = new URLSearchParams(location.search);
+const kind = q.get('kind') || 'movie';
+const focus = q.get('focus') || 'play';
+const get = async p => (await (await fetch('/pms' + p, { headers: { Accept: 'application/json' } })).json()).MediaContainer;
+const { rows } = await D.load();
+const { amb, art } = backdrop();
+
+let item;
+if (kind === 'movie') {
+  const hub = rows.find(r => /recentlyreleased/.test(r.hubIdentifier)) || rows.find(r => r.type === 'movie');
+  item = hub.Metadata[Number(q.get('i') || 2)];
+} else {
+  const ep = rows.find(r => /continue/.test(r.hubIdentifier)).Metadata.find(m => m.type === 'episode');
+  item = { ratingKey: ep.grandparentRatingKey, resume: ep };
+}
+const full = (await get('/library/metadata/' + item.ratingKey + '?includeExtras=1')).Metadata[0];
+const resume = item.resume || (full.viewOffset ? full : null);
+ambience(amb, full.UltraBlurColors);
+art.src = D.img(full.art, 1920, 1080);
+if (focus === 'episodes') document.body.classList.add('shifted');
+
+const info = D.h('div', 'info', document.body);
+const lb = D.h('div', 'logo-box', info);
+const logo = D.clearLogo(full);
+if (logo) D.h('img', 'logo', lb).src = D.img(logo, 640, 220, 'png');
+else D.h('div', 't-display', lb, full.title);
+
+const meta = D.h('div', 'meta t-meta', info);
+const facts = kind === 'movie'
+  ? [full.year, full.contentRating, D.runtime(full.duration), (full.Genre || []).slice(0, 3).map(g => g.tag).join(', ')]
+  : [full.year + (full.childCount > 1 ? '' : ''), full.contentRating, full.childCount + (full.childCount === 1 ? ' season' : ' seasons'), (full.Genre || []).slice(0, 2).map(g => g.tag).join(', ')];
+facts.filter(Boolean).forEach((t, i) => { if (i) D.h('i', 'dot', meta); D.h('span', '', meta, t); });
+const f = D.formats(full, full);
+if (f) [[f.uhd ? '4K' : f.res, true], ['DOLBY VISION', f.dv], ['HDR', f.hdr && !f.dv], ['ATMOS', f.atmos], [f.channels, !!f.channels && !f.atmos]].forEach(([t, on]) => on && t && D.h('span', 'b', meta, t));
+
+if (full.tagline) D.h('div', 'tagline', info, full.tagline);
+D.h('p', 't-body', info, full.summary || '');
+const cr = D.h('div', 'credits', info);
+const dir = (full.Director || []).map(d => d.tag).slice(0, 1);
+const cast = (full.Role || []).slice(0, 3).map(r => r.tag);
+cr.innerHTML = (dir.length ? 'Directed by <b>' + dir[0] + '</b><br>' : '') + (cast.length ? 'Starring <b>' + cast.join(', ') + '</b>' : '');
+
+// Actions
+const acts = D.h('div', 'actions', document.body);
+const play = D.h('div', 'btn' + (focus === 'play' ? ' focus' : ''), acts);
+if (resume) {
+  play.innerHTML = icon.play + (kind === 'show' ? 'Resume ' + D.epCode(resume) : 'Resume') + ' <small>' + D.left(resume) + '</small>';
+  D.h('div', 'btn', acts).innerHTML = icon.restart + 'From the start';
+} else {
+  play.innerHTML = icon.play + 'Play';
+}
+const watched = kind === 'show' ? full.viewedLeafCount === full.leafCount : !!full.viewCount;
+D.h('div', 'btn', acts).innerHTML = (watched ? icon.check : icon.circle) + (watched ? 'Watched' : 'Mark watched');
+if ((full.Extras || {}).size) D.h('div', 'btn', acts).innerHTML = icon.film + 'Trailer';
+
+// Below the fold
+const below = D.h('div', 'below', document.body);
+if (kind === 'movie') {
+  D.h('div', 't-row', below, 'Cast');
+  (full.Role || []).slice(0, 10).forEach((r, i) => {
+    const p = D.h('div', 'person', below);
+    p.style.left = (96 + i * 180 - 8) + 'px';
+    const face = D.h('div', 'face', p);
+    if (r.thumb) D.h('img', '', face).src = D.img(r.thumb, 152, 152);
+    D.h('b', '', p, r.tag);
+    D.h('small', '', p, r.role || '');
+  });
+} else {
+  const seasons = (await get('/library/metadata/' + full.ratingKey + '/children')).Metadata || [];
+  const cur = seasons.find(s => s.index === resume.parentIndex) || seasons[seasons.length - 1];
+  const sb = D.h('div', 'seasons', below);
+  seasons.forEach(s => D.h('div', 'chip' + (s === cur ? ' set' : ''), sb, s.title));
+  const eps = (await get('/library/metadata/' + cur.ratingKey + '/children')).Metadata || [];
+  const box = D.h('div', 'eps', below);
+  const at = Math.max(0, eps.findIndex(e => e.ratingKey === resume.ratingKey));
+  eps.slice(at, at + 5).forEach((e, i) => {
+    const x = 96 + i * 468 + (i && focus === 'episodes' ? 16 : 0), y = 0;
+    if (i === 0 && focus === 'episodes') lift(box, x, y, 432, 243);
+    const t = D.h('div', 'tile' + (i === 0 && focus === 'episodes' ? ' focus' : ''), box);
+    t.style.left = x + 'px'; t.style.top = y + 'px';
+    const fr = D.h('div', 'f', t); fr.style.cssText = 'width:432px;height:243px';
+    D.h('img', '', fr).src = D.img(e.thumb, 432, 243);
+    const p = D.progress(e);
+    if (p) { const b = D.h('div', 'bar', fr); D.h('i', '', b).style.width = (p * 100).toFixed(1) + '%'; }
+    else if (e.viewCount) D.h('div', 'seen', fr).innerHTML = icon.check;
+    const c = D.h('div', 'cap', t, e.index + '. ' + e.title); c.style.width = '432px';
+    if (i === 0 && focus === 'episodes') c.style.transform = 'translateY(10px)';
+    D.h('small', '', c, [D.runtime(e.duration), D.left(e)].filter(Boolean).join('  ·  '));
+    D.h('div', 'ep-sum', t, e.summary || '');
+  });
+  if (focus === 'episodes') {
+    const c = D.h('div', 'compact', document.body);
+    if (logo) D.h('img', '', c).src = D.img(logo, 360, 110, 'png');
+    D.h('span', '', c, cur.title + '  ·  ' + eps.length + ' episodes');
+    const rel = ((await get('/library/metadata/' + full.ratingKey + '/related')).Hub || []).find(x => x.Metadata && x.Metadata.length);
+    if (rel) {
+      const m = D.h('div', 'more', below);
+      D.h('div', 't-row', m, 'More like this');
+      rel.Metadata.slice(0, 8).forEach((r, i) => {
+        const t = D.h('div', 'tile', m);
+        t.style.left = (96 + i * 272) + 'px'; t.style.top = '60px';
+        const fr = D.h('div', 'f', t); fr.style.cssText = 'width:240px;height:360px';
+        D.h('img', '', fr).src = D.img(r.thumb, 240, 360);
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>

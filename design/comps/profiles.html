@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kinescope · Profiles</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="evening.css">
+<style>
+.veil { position: absolute; inset: 0; background: rgba(10, 11, 14, 0.35); }
+.head { position: absolute; left: 0; width: 1920px; top: 290px; text-align: center; }
+.people { position: absolute; left: 0; width: 1920px; top: 440px; display: flex; justify-content: center; gap: 72px; }
+.p { width: 220px; text-align: center; }
+.face { position: relative; width: 200px; height: 200px; margin: 0 10px; border-radius: 100px; display: flex; align-items: center; justify-content: center; font: 650 84px/1 var(--sans); color: rgba(20, 12, 8, 0.82); }
+.p.focus .face { transform: scale(1.08); box-shadow: var(--lift), 0 0 0 8px var(--ink), 0 0 0 13px var(--text); }
+.name { margin-top: 30px; font: 600 28px/1.2 var(--sans); color: var(--soft); }
+.p.focus .name { color: var(--text); transform: translateY(8px); }
+.lock { margin-top: 8px; height: 26px; display: flex; justify-content: center; color: var(--mute); }
+.lock svg { width: 24px; height: 24px; }
+.p.add .face { background: var(--ghost); border: 3px solid var(--hair); color: var(--mute); }
+.p.add .face svg { width: 64px; height: 64px; }
+
+/* PIN pad */
+.who { position: absolute; left: 380px; top: 360px; width: 400px; text-align: center; }
+.who .face { margin: 0 auto; }
+.pad { position: absolute; left: 920px; top: 176px; width: 760px; }
+.dots { margin-top: 36px; display: flex; gap: 28px; }
+.dots i { width: 28px; height: 28px; border-radius: 14px; border: 3px solid var(--soft); }
+.dots i.on { background: var(--text); border-color: var(--text); }
+.err { margin-top: 22px; height: 30px; font: 560 24px/30px var(--sans); color: var(--danger); }
+.keys { margin-top: 26px; display: grid; grid-template-columns: repeat(3, 136px); gap: 16px; }
+.key { height: 96px; border-radius: 22px; background: var(--ghost); display: flex; align-items: center; justify-content: center; font: 600 38px/1 var(--sans); color: var(--text); }
+.key svg { width: 38px; height: 38px; }
+.key.focus { background: var(--text); color: var(--on-text); }
+.key.blank { background: none; }
+</style>
+</head>
+<body>
+<script type="module">
+import * as D from './data.js';
+import { backdrop, ambience, icon } from './chrome.js';
+const q = new URLSearchParams(location.search);
+const state = q.get('state') || '';
+const { rows } = await D.load();
+const { amb, art } = backdrop();
+art.remove();
+const last = rows[0] && rows[0].Metadata[0];
+ambience(amb, last && last.UltraBlurColors);
+D.h('div', 'veil', document.body);
+
+// Synthetic household: real names, avatars and PINs come from plex.tv in S1.
+const people = [
+  { name: 'Alex', color: '#D9956B' },
+  { name: 'Sam', color: '#9DB59A', locked: true },
+  { name: 'Guest', color: '#8FA3C8' },
+];
+
+if (state !== 'pin' && state !== 'wrong') {
+  const head = D.h('div', 'head', document.body);
+  D.h('div', 't-page', head, 'Who’s watching?');
+  const row = D.h('div', 'people', document.body);
+  people.forEach((p, i) => {
+    const el = D.h('div', 'p' + (i === 1 ? ' focus' : ''), row);
+    const face = D.h('div', 'face', el, p.name[0]);
+    face.style.background = p.color;
+    D.h('div', 'name', el, p.name);
+    const l = D.h('div', 'lock', el);
+    if (p.locked) l.innerHTML = icon.lock;
+  });
+} else {
+  const p = people[1];
+  const who = D.h('div', 'who', document.body);
+  const face = D.h('div', 'face', who, p.name[0]);
+  face.style.background = p.color;
+  D.h('div', 'name', who, p.name);
+  const pad = D.h('div', 'pad', document.body);
+  D.h('div', 't-page', pad, 'Enter PIN');
+  const dots = D.h('div', 'dots', pad);
+  const filled = state === 'wrong' ? 0 : 2;
+  for (let i = 0; i < 4; i++) D.h('i', i < filled ? 'on' : '', dots);
+  D.h('div', 'err', pad, state === 'wrong' ? 'That PIN didn’t match. Try again.' : '');
+  const keys = D.h('div', 'keys', pad);
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'].forEach(k => {
+    const el = D.h('div', 'key' + (k === '' ? ' blank' : '') + (k === '5' ? ' focus' : ''), keys);
+    if (k === 'del') el.innerHTML = icon.del; else el.textContent = k;
+  });
+}
+</script>
+</body>
+</html>

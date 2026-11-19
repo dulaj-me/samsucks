@@ -5,6 +5,7 @@
 <title>Kinescope · E · Evening</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@100..112,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="evening.css">
 <style>
 :root {
   --ink: #0A0B0E;
@@ -185,8 +186,43 @@ function render() {
   });
   hero(state.rows[state.row].Metadata[state.col]);
 }
-render();
-D.dpad(state, render);
+const view = new URLSearchParams(location.search).get('state') || '';
+if (view === 'loading') {
+  ambience(null);
+  $('art').remove();
+  $('logo').style.display = 'none';
+  $('title').innerHTML = '<div class="skel-line" style="width:420px;height:72px;border-radius:14px"></div>';
+  $('meta').innerHTML = '<div class="skel-line" style="width:360px"></div>';
+  $('ep').innerHTML = ''; $('sum').innerHTML = '<span class="skel-line" style="display:block;width:700px;margin-top:8px"></span><span class="skel-line" style="display:block;width:540px;margin-top:16px"></span>';
+  const box = $('rows');
+  D.h('div', 'skel-line', box).style.cssText = 'width:300px;height:28px;margin:6px 0 0 96px';
+  for (let i = 0; i < 4; i++) {
+    const t = D.h('div', 'tile', box); t.style.left = (96 + i * 468) + 'px'; t.style.top = '64px';
+    D.h('div', 'skel', t).style.cssText = 'width:432px;height:243px';
+    D.h('div', 'skel-line', t).style.cssText = 'width:220px;margin-top:18px';
+  }
+} else {
+  render();
+  D.dpad(state, render);
+}
+if (view === 'nav') {
+  document.querySelectorAll('.ni')[1].classList.add('focus');
+  document.querySelector('.ring').remove(); document.querySelector('.lift').remove();
+  document.querySelector('.tile.focus').classList.remove('focus');
+}
+if (view === 'menu') {
+  const it = state.rows[state.row].Metadata[state.col];
+  D.h('div', 'scrim', document.body);
+  const sh = D.h('div', 'sheet', document.body);
+  D.h('h2', '', sh, D.showTitle(it));
+  D.h('div', 'sub', sh, it.type === 'episode' ? D.epCode(it) + '  ·  ' + it.title : String(D.year(it)));
+  const o = D.h('div', 'opts', sh);
+  const P = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12.3-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6z"/></svg>';
+  const S = d => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+  [[P, 'Resume'], [S('<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/>'), 'Play from the start'], [S('<path d="M5 12.5l4.5 4.5L19 7.5"/>'), 'Mark as watched'],
+   [S('<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/>'), 'Go to show'], [S('<path d="M6 6l12 12M18 6L6 18"/>'), 'Remove from Continue Watching']]
+    .forEach(([ic, t], i) => { const e = D.h('div', 'opt' + (i === 2 ? ' focus' : ''), o); e.innerHTML = ic; D.h('span', '', e, t); });
+}
 </script>
 </body>
 </html>
