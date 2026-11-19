@@ -3,17 +3,17 @@
 # Needs a dev build (./scripts/deploy.sh --dev) and node tools/devserver.mjs running.
 # Every scenario restarts Home first, so runs start from the same state.
 #   tools/bench.sh                  all scenarios, RUNS (default 3) runs each, plus medians
-#   tools/bench.sh home-h detail    only these: home-h home-v home-hold lib-v detail
+#   tools/bench.sh home-h detail    only these: home-h home-v home-hold lib-v lib-hold detail
 #   tools/bench.sh info             TV model, firmware and user agent (the Chromium version)
 #   tools/bench.sh cold             "home rows ready" over COLD_RUNS (default 5) reloads
-# BENCH_LIBRARY=<title> picks the library for lib-v (default: the first one).
+# BENCH_LIBRARY=<title> picks the library for lib-v and lib-hold (default: the first one).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG="$ROOT/build/tv.log"
 SEND="localhost:${PORT:-8790}/send"
 RUNS="${RUNS:-3}"
-ALL="home-h home-v home-hold lib-v detail"
+ALL="home-h home-v home-hold lib-v lib-hold detail"
 
 [ -f "$LOG" ] || { echo "No $LOG. Start node tools/devserver.mjs first." >&2; exit 1; }
 case "$(curl -s "$SEND" || true)" in
@@ -32,6 +32,9 @@ scenario_js() {
     lib-v) echo "$RESET const all = await __ss.session.server.sections();
       __ss.nav.openLibrary(all.find(s => s.title === '${BENCH_LIBRARY:-}') || all[0]); $SLEEP
       return __bench([...Array(10).fill('down'), ...Array(10).fill('up')], 300);" ;;
+    lib-hold) echo "$RESET const all = await __ss.session.server.sections();
+      __ss.nav.openLibrary(all.find(s => s.title === '${BENCH_LIBRARY:-}') || all[0]); $SLEEP
+      return __hold('down', 3000);" ;;
     detail) echo "$RESET return __bench(['enter', 'back', 'enter', 'back', 'enter', 'back'], 1200);" ;;
     *) return 1 ;;
   esac
