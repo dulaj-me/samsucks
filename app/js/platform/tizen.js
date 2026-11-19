@@ -12,6 +12,8 @@ const KEYMAP = {
   417: 'ff', 412: 'rw', 427: 'pageup', 428: 'pagedown', 33: 'pageup', 34: 'pagedown',
   403: 'red', 404: 'green', 405: 'yellow', 406: 'blue', 457: 'info', 10073: 'info',
 };
+// Number keys (remote and keyboard row 48-57, desktop numpad 96-105) act as '0'..'9'.
+for (let d = 0; d <= 9; d++) KEYMAP[48 + d] = KEYMAP[96 + d] = String(d);
 
 export function actionFor(e) {
   return KEYMAP[e.keyCode] || null;
@@ -21,7 +23,7 @@ export function registerKeys() {
   if (!isTizen) return;
   const keys = ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward',
     'MediaRewind', 'ChannelUp', 'ChannelDown', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow',
-    'ColorF3Blue', 'Info'];
+    'ColorF3Blue', 'Info', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
   for (const k of keys) {
     try { tizen.tvinputdevice.registerKey(k); } catch (e) { warn('registerKey failed', k); }
   }

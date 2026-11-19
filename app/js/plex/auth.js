@@ -1,8 +1,18 @@
-// plex.tv sign-in (PIN / plex.tv/link) and server discovery.
+// plex.tv sign-in (PIN / plex.tv/link), Plex Home profiles and server discovery.
 import { request, clientId, PRODUCT, query } from './client.js';
+// A namespace import: the preview adds DEV_PLEX_TV (its plex.tv fixtures), but the
+// config.js that deploy.sh writes for dev builds has no such export.
+import * as config from '../config.js';
 import { log, warn } from '../util/log.js';
 
-const TV = 'https://plex.tv/api/v2';
+// Tied to DEV so a stray value can never send a release build's account token elsewhere.
+const fixtures = config.DEV && config.DEV_PLEX_TV;
+const TV = (fixtures || 'https://plex.tv') + '/api/v2';
+
+// The dev LAN shortcut has no plex.tv account, except in the preview, whose fixtures stand in.
+export function hasPlexTv(token) {
+  return !!token && (token !== 'lan-dev' || !!fixtures);
+}
 
 export async function createPin() {
   // Non-strong PINs are the 4-character codes plex.tv/link accepts.
@@ -27,11 +37,26 @@ export async function getUser(token) {
   return request(TV + '/user', { token });
 }
 
+// Undocumented and drifting: v2 answers { users: [...] }, older shapes were a bare list.
+export async function getHomeUsers(token) {
+  const res = await request(TV + '/home/users', { token });
+  const users = Array.isArray(res) ? res : res.users;
+  return Array.isArray(users) ? users : [];
+}
+
+// Returns the profile's user object, whose authToken is the profile token.
+// A wrong or missing PIN is a 403 (error code 1041).
+export function switchHomeUser(token, uuid, pin) {
+  return request(TV + '/home/users/' + encodeURIComponent(uuid) + '/switch', { method: 'POST', token, params: { pin } });
+}
+
 export async function getServers(token) {
   const resources = await request(TV + '/resources', {
     token, params: { includeHttps: 1, includeRelay: 1, includeIPv6: 0 },
   });
-  return resources.filter(r => (r.provides || '').indexOf('server') !== -1);
+  // forToken lets useServer() refuse a resource listed for a profile that is no longer active.
+  return resources.filter(r => (r.provides || '').indexOf('server') !== -1)
+    .map(r => Object.assign(r, { forToken: token }));
 }
 
 function probe(uri, token, timeout) {
