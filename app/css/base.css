@@ -215,7 +215,7 @@ html.hero-raster .hero-dissolve {
 .row .tile.focus .tile-text { transform: translate(-16px, var(--cap-shift)); }
 
 html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .focus-box, html.fast .nav-track,
-html.fast .tile-frame, html.fast .tile-text {
+html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .menu-hl {
   transition-duration: var(--t-held);
 }
 
@@ -252,6 +252,12 @@ html.fast .tile-frame, html.fast .tile-text {
 .pill.focus { background: var(--focus-bg); border-color: var(--text); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
 .pill svg { width: 20px; height: 20px; margin-left: 10px; vertical-align: -4px; }
 
+/* The side sheet (ui/menu.js), over a scrim that dims the screen. */
+.menu-scrim {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: var(--scrim);
+  opacity: 0; will-change: opacity; transition: opacity var(--t-focus) ease;
+}
+.menu-scrim.open { opacity: 1; }
 .menu {
   position: absolute; right: 0; top: 0; width: 640px; height: 1080px; padding: 96px 64px;
   background: var(--panel); box-shadow: var(--sheet-edge);
@@ -261,13 +267,28 @@ html.fast .tile-frame, html.fast .tile-text {
 .menu.open { opacity: 1; transform: translateX(0); }
 .menu-title { height: 40px; font: 650 34px/40px var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-sub { margin-top: 8px; height: 28px; font: 500 22px/28px var(--sans); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.menu-list { margin-top: 36px; }
+.menu-list { position: relative; margin-top: 36px; overflow: hidden; }
+.menu-list.more-top { -webkit-mask-image: linear-gradient(transparent, #000 48px); }
+.menu-list.more-bottom { -webkit-mask-image: linear-gradient(#000 calc(100% - 48px), transparent); }
+.menu-list.more-top.more-bottom { -webkit-mask-image: linear-gradient(transparent, #000 48px, #000 calc(100% - 48px), transparent); }
+/* The focus highlight: its own layer, under the options. */
+.menu-hl {
+  position: absolute; top: 0; left: 0; width: 512px; height: 72px; border-radius: var(--r-option);
+  background: var(--focus-bg); box-shadow: inset 0 0 0 4px var(--focus-line);
+  will-change: transform; transition: transform var(--t-slide) var(--ease);
+}
+.menu-track { position: relative; will-change: transform; transition: transform var(--t-slide) var(--ease); }
+.menu-list.now .menu-hl, .menu-list.now .menu-track { transition: none; }
 .menu-opt {
   display: flex; align-items: center; height: 72px; padding: 0 24px; margin-bottom: 6px; border-radius: var(--r-option);
   font: var(--f-option); color: var(--soft); white-space: nowrap;
 }
 .menu-opt svg { width: 28px; height: 28px; margin-right: 18px; flex-shrink: 0; }
+.menu-opt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.menu-tick { margin-left: auto; padding-left: 18px; }
+.menu-tick svg { display: block; margin: 0; }
 .menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
+.menu .menu-opt.focus { background: none; box-shadow: none; }
 
 .btn-wide {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: center;

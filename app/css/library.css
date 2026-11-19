@@ -15,9 +15,3 @@
 .lib-head .pill:last-child { margin-right: 0; }
 .lib-empty { position: absolute; top: 236px; left: 96px; }
 .lib-count, .lib-empty { font: 500 26px var(--body); color: var(--dim); }
-
-/* The side Menu (ui/menu.js) on every screen: a fixed clip whose list scrolls by transform. */
-.menu-list { height: 744px; overflow: hidden; }
-.menu-track { position: relative; will-change: transform; transition: transform 220ms var(--ease); }
-.menu-track.now { transition: none; }
-html.fast .menu-track { transition-duration: 110ms; }
