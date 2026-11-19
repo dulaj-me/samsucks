@@ -31,6 +31,7 @@ function goHome() {
 }
 
 function goLogin() {
+  setSticky('');
   router.reset(LoginScreen({ onDone: goHome }));
 }
 
@@ -38,14 +39,16 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // The saved connection, then one re-resolved from plex.tv with a fresh server token. '/'
 // needs auth, unlike /identity, so a dead token shows up here.
-// Resolves 'ok', 'moved' (a new server is in use), 'rejected' or 'lost'.
-async function reach(onLost) {
+// Resolves 'ok', 'moved' (a new server is in use), 'rejected' or 'lost'. Without
+// resolve, only the saved connection is tried: each plex.tv round costs the TV a TLS handshake.
+async function reach(onLost, resolve) {
   try {
     await session.server.get('/');
     return 'ok';
   } catch (e) {
-    warn('server check failed, re-resolving', e.message);
+    warn('server check failed', e.message);
     if (e.status !== 401) onLost();
+    if (!resolve && e.status !== 401) return 'lost';
   }
   if (!hasPlexTv(session.token)) return 'lost';
   try {
@@ -63,36 +66,45 @@ async function verify() {
   if (checking) return;
   checking = true;
   let lost = false;
-  const showLost = () => {
-    if (lost) return;
-    lost = true;
-    setSticky('Can’t reach ' + session.server.name + '. Reconnecting…');
+  const setLost = on => {
+    if (lost === on) return;
+    lost = on;
+    setSticky(on ? 'Can’t reach ' + (session.server ? session.server.name : 'your server') + '. Reconnecting…' : '');
   };
   let wait = RETRY_FIRST;
-  while (session.token && session.server) {
-    const token = profileToken();
-    const result = await reach(showLost);
-    // A switch or sign-out happened meanwhile: the result belongs to the old profile.
-    if (profileToken() !== token) continue;
-    if (result === 'lost') {
-      showLost();
-      await sleep(wait);
-      wait = Math.min(wait * 2, RETRY_LAST);
-      continue;
+  let tries = 0;
+  try {
+    while (session.token && session.server) {
+      const token = profileToken();
+      const result = await reach(() => setLost(true), tries++ % 3 === 0);
+      // A switch or sign-out happened meanwhile: start over for the new state.
+      if (profileToken() !== token) {
+        setLost(false);
+        wait = RETRY_FIRST;
+        tries = 0;
+        continue;
+      }
+      if (result === 'lost') {
+        setLost(true);
+        await sleep(wait);
+        wait = Math.min(wait * 2, RETRY_LAST);
+        continue;
+      }
+      if (result === 'rejected') {
+        await tokenRejected();
+      } else if (lost || result === 'moved') {
+        // A silent token refresh needs no toast, but Home still rebuilds: it is keyed on the
+        // Server instance and has no public reload. Other screens read session.server per request.
+        if (lost) toast('Reconnected to ' + session.server.name + '.');
+        const top = router.top();
+        if (top && top.name === 'home') goHome();
+      }
+      break;
     }
-    if (result === 'rejected') {
-      await tokenRejected();
-    } else if (lost || result === 'moved') {
-      toast('Reconnected to ' + session.server.name + '.');
-      // Home is keyed on the Server instance and has no public reload, so it is rebuilt
-      // from its cache. Other screens read session.server per request and recover on retry.
-      const top = router.top();
-      if (top && top.name === 'home') goHome();
-    }
-    break;
+  } finally {
+    setLost(false);
+    checking = false;
   }
-  if (lost) setSticky('');
-  checking = false;
 }
 
 function serverFailed(server, e) {

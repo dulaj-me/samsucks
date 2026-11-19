@@ -40,6 +40,7 @@ function reveal(screen) {
 }
 
 export function push(screen) {
+  exitUntil = 0; // the exit prompt only counts on the screen that showed it
   const top = stack[stack.length - 1];
   if (top) hide(top);
   stack.push(screen);

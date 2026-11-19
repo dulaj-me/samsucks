@@ -79,11 +79,14 @@ export function signOut() {
 
 // The saved URI can go stale (DHCP, remote vs. home). Re-resolve it from plex.tv.
 export async function reconnect() {
+  const before = session.server;
   const servers = await getServers(profileToken());
   const current = session.server && servers.find(s => s.clientIdentifier === session.server.id);
   const resource = current || servers[0];
   if (!resource) throw new Error('No Plex servers on this account');
   const uri = await connect(resource);
+  // The user picked a server in Settings meanwhile; keep theirs.
+  if (session.server !== before) throw new Error('server changed while reconnecting');
   if (!useServer(resource, uri)) throw new Error('profile changed while reconnecting');
   log('reconnected', resource.name, uri);
   return session.server;
