@@ -3,6 +3,7 @@ import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { Row } from '../ui/row.js';
 import { Menu } from '../ui/menu.js';
+import { isWatched, toggleWatched, openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
 import { metaLine, clock, episodeLabel } from '../util/format.js';
 import { clearLogo } from './home.js';
@@ -12,9 +13,6 @@ import { playItem } from '../nav.js';
 import { error } from '../util/log.js';
 
 const SHIFT = 400; // how far the body slides up to reveal seasons/episodes
-
-const isWatched = it => (it.type === 'show' || it.type === 'season')
-  ? it.viewedLeafCount >= it.leafCount : !!it.viewCount;
 
 export function DetailScreen(initial, { autoplay = false } = {}) {
   const el = h('div', 'screen detail');
@@ -99,7 +97,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       }
     }
     const watched = isWatched(item);
-    add(watched ? icons.check : icons.uncheck, watched ? 'Watched' : 'Mark watched', toggleWatched);
+    add(watched ? icons.check : icons.uncheck, watched ? 'Watched' : 'Mark watched', markItem);
     if (item.type === 'episode' && item.grandparentRatingKey) {
       add(icons.tv, 'Go to show', () => router.push(DetailScreen({ ratingKey: item.grandparentRatingKey, type: 'show', title: item.grandparentTitle })));
     }
@@ -180,29 +178,20 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     }
   }
 
-  async function setWatched(it) {
-    const server = session.server;
-    if (isWatched(it)) await server.unscrobble(it.ratingKey);
-    else await server.scrobble(it.ratingKey);
-    server.invalidate();
-  }
-
-  async function toggleWatched() {
+  async function markItem() {
     try {
-      await setWatched(item);
+      await toggleWatched(item);
       await load();
     } catch (e) {
       error('toggle watched failed', e);
     }
   }
 
-  // A season or episode of this show. Refreshes in place, unlike load(),
-  // so focus stays on the tile or pill that was marked.
-  async function toggleChild(it) {
-    if (!it) return;
+  // After a season or episode of this show was marked. Refreshes in place, unlike
+  // load(), so focus stays on the tile or pill that was marked.
+  async function refreshChildren() {
     const server = session.server;
     try {
-      await setWatched(it);
       const keep = episodes && episodes.row.current();
       const [full, kids] = await Promise.all([server.metadata(item.ratingKey), server.children(item.ratingKey)]);
       if (!alive) return;
@@ -213,19 +202,16 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       renderButtons();
       if (seasons[seasonIndex]) await loadEpisodes(seasons[seasonIndex], keep && keep.ratingKey);
     } catch (e) {
-      error('mark watched failed', e);
+      error('refresh after mark failed', e);
     }
   }
 
+  // OK on an episode already plays it, so the menu here only marks.
   function openMenu(it) {
-    if (!it) return;
-    const watched = isWatched(it);
-    menu.open({
-      title: it.title,
+    openItemMenu(menu, it, {
       sub: it.type === 'episode' ? episodeLabel(it) : item.title,
-      items: [
-        { icon: watched ? icons.uncheck : icons.check, label: watched ? 'Mark as unwatched' : 'Mark as watched', run: () => toggleChild(it) },
-      ],
+      play: false,
+      changed: refreshChildren,
     });
   }
 

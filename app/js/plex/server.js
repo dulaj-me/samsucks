@@ -24,6 +24,11 @@ export class Server {
     return data;
   }
 
+  // PMS takes write parameters in the query string.
+  put(path, params) {
+    return request(this.uri + path, { method: 'PUT', token: this.token, params });
+  }
+
   invalidate() {
     this.cache.clear();
   }
@@ -57,13 +62,15 @@ export class Server {
     return (mc.Hub || []).filter(h => h.size > 0 && SUPPORTED_HUB_TYPES[h.type] && h.Metadata);
   }
 
-  async items(sectionId, start, size, { sort = 'titleSort', type } = {}) {
-    const mc = await this.get('/library/sections/' + sectionId + '/all', {
-      sort, type,
+  // params: sort, type and any filter /all takes (genre, unwatched, year, contentRating).
+  async items(sectionId, start, size, params) {
+    const mc = await this.get('/library/sections/' + sectionId + '/all', Object.assign({
+      sort: 'titleSort',
+      excludeFields: 'summary,tagline',
+    }, params, {
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
-      excludeFields: 'summary,tagline',
-    });
+    }));
     return { total: mc.totalSize != null ? mc.totalSize : mc.size, items: mc.Metadata || [] };
   }
 
@@ -128,10 +135,7 @@ export class Server {
 
   // Selected audio/subtitle streams are stored per part on the server.
   selectStreams(partId, { audioStreamID, subtitleStreamID }) {
-    return request(this.uri + '/library/parts/' + partId, {
-      method: 'PUT', token: this.token,
-      params: { audioStreamID, subtitleStreamID, allParts: 1 },
-    }).catch(() => {});
+    return this.put('/library/parts/' + partId, { audioStreamID, subtitleStreamID, allParts: 1 }).catch(() => {});
   }
 
   stopTranscode(session) {

@@ -1,9 +1,11 @@
 // Home: hero for the focused item, the nav, and Plex's home hubs as rows.
-// The last hub payload is cached so a cold start paints instantly.
+// The last hub payload is cached per server and user so a cold start paints instantly.
 import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import { Row } from '../ui/row.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { TopNav } from '../ui/topnav.js';
+import { Menu } from '../ui/menu.js';
+import { openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
 import { metaLine } from '../util/format.js';
 import { isFast } from '../input.js';
@@ -39,6 +41,8 @@ export function clearLogo(item) {
   return img ? img.url : '';
 }
 
+const userKey = () => (session.user && session.user.uuid) || '';
+
 export function HomeScreen() {
   const el = h('div', 'screen home');
   const ambience = useAmbience();
@@ -56,6 +60,7 @@ export function HomeScreen() {
   rowsClip.style.top = ROWS_TOP + 'px';
   const track = h('div', 'rows-track', rowsClip);
   const empty = h('div', 'home-empty', el);
+  const menu = new Menu(el);
 
   let rows = [];
   let offsets = [];
@@ -65,6 +70,8 @@ export function HomeScreen() {
   let heroTimer = 0;
   let artTimer = 0;
   let reportedPaint = false;
+  let loads = 0;
+  let alive = true;
 
   function setZone(z) {
     zone = z;
@@ -149,20 +156,26 @@ export function HomeScreen() {
 
   async function load() {
     const server = session.server;
+    const user = userKey();
+    const id = ++loads;
     loadedAt = Date.now();
+    // Only the newest load may paint, and only for the server and user it was made for.
+    const stale = () => !alive || id !== loads || session.server !== server || userKey() !== user;
     try {
       const [sections, hubs] = await Promise.all([server.sections(), server.hubs()]);
+      if (stale()) return;
       topnav.setSections(sections);
       setHubs(hubs);
-      store.set('homeCache', { server: server.id, sections, hubs: hubs.map(slimHub) });
+      store.set('homeCache', { server: server.id, user, sections, hubs: hubs.map(slimHub) });
     } catch (e) {
+      if (stale()) return;
       error('home load failed', e);
       if (!rows.length) setText(empty, 'Couldn\'t load from ' + server.name + '. Press OK to retry.');
     }
   }
 
   const cached = store.get('homeCache');
-  if (cached && session.server && cached.server === session.server.id) {
+  if (cached && session.server && cached.server === session.server.id && cached.user === userKey()) {
     topnav.setSections(cached.sections || []);
     setHubs(cached.hubs || []);
   } else {
@@ -180,6 +193,7 @@ export function HomeScreen() {
       if (Date.now() - loadedAt > 5000) load();
     },
     onKey(action) {
+      if (menu.isOpen) return menu.onKey(action);
       if (zone === 'nav') {
         if (topnav.onKey(action)) return true;
         if (action === 'down' && rows.length) { setZone('rows'); renderRows(); return true; }
@@ -202,6 +216,7 @@ export function HomeScreen() {
           if (rowIndex < rows.length - 1) { rowIndex++; renderRows(); onFocusItem(rows[rowIndex].current()); }
           return true;
         case 'enter': row.select(); return true;
+        case 'hold': openItemMenu(menu, row.current(), { changed: () => load() }); return true;
         case 'play': case 'playpause': if (row.current()) playItem(row.current()); return true;
         case 'back':
           // Back from deep in the rows returns to the top first.
@@ -212,6 +227,11 @@ export function HomeScreen() {
           return false;
       }
       return false;
+    },
+    destroy() {
+      alive = false;
+      clearTimeout(heroTimer);
+      clearTimeout(artTimer);
     },
   };
 }

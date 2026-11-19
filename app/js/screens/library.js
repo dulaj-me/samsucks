@@ -4,6 +4,8 @@ import { h, setText } from '../util/dom.js';
 import { Grid } from '../ui/grid.js';
 import { useAmbience } from '../ui/backdrop.js';
 import { TopNav } from '../ui/topnav.js';
+import { Menu } from '../ui/menu.js';
+import { openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
 import { prefetch } from '../ui/images.js';
 import { isFast } from '../input.js';
@@ -61,6 +63,7 @@ export function LibraryScreen(section) {
     },
   });
   el.appendChild(grid.el);
+  const menu = new Menu(el);
 
   async function loadPage(p) {
     if (pages.has(p)) return;
@@ -124,6 +127,20 @@ export function LibraryScreen(section) {
     }
   }
 
+  // Swap in the item's new watched state without reloading the page it's on.
+  async function refreshItem(it) {
+    const gen = generation;
+    try {
+      const full = await session.server.metadata(it.ratingKey);
+      const i = items.indexOf(it);
+      if (gen !== generation || !full || i < 0) return;
+      items[i] = full;
+      grid.refresh();
+    } catch (e) {
+      error('library refresh failed', section.title, e);
+    }
+  }
+
   function setZone(z) {
     zone = z;
     topnav.setActive(z === 'nav');
@@ -138,6 +155,7 @@ export function LibraryScreen(section) {
       topnav.render();
     },
     onKey(action) {
+      if (menu.isOpen) return menu.onKey(action);
       if (zone === 'nav') {
         if (topnav.onKey(action)) return true;
         if (action === 'down') { setZone('grid'); return true; }
@@ -152,6 +170,7 @@ export function LibraryScreen(section) {
         case 'pageup': jump(-1); return true;
         case 'pagedown': jump(1); return true;
         case 'enter': grid.select(); return true;
+        case 'hold': openItemMenu(menu, grid.current(), { changed: refreshItem }); return true;
         case 'play': case 'playpause': if (grid.current()) playItem(grid.current()); return true;
         case 'yellow': sortIndex = (sortIndex + 1) % SORTS.length; reload(); return true;
         case 'back':
