@@ -145,6 +145,8 @@ export function HomeScreen() {
   let rowIndex = 0;
   let zone = 'rows';
   let failed = false;  // Home failed to load and shows Try again
+  let parked = false;  // an empty Home moved focus to the nav, and the user hasn't moved since
+  let loading = false; // the newest load hasn't answered yet
   let loadedAt = 0;
   let heroTimer = 0;
   let artTimer = 0;
@@ -171,12 +173,27 @@ export function HomeScreen() {
     setText(emptyMsg, msg);
     setText(emptyHint, hint);
     show(empty, !!msg);
-    if (msg) show(info, false);
+    if (msg) clearHero();
     failed = !!retryable;
     show(retry, failed);
-    toggleClass(retry, 'focus', failed && zone === 'rows');
-    // Nothing to focus below: the nav is the way out.
-    if (msg && !failed && zone === 'rows') setZone('nav');
+    // Nothing to focus below, so the nav is the way out until rows or Try again come back.
+    let z = zone;
+    if (msg && !failed && z === 'rows') { z = 'nav'; parked = true; }
+    else if (parked && (!msg || failed)) { z = 'rows'; parked = false; }
+    if (z !== zone) setZone(z);
+    else toggleClass(retry, 'focus', failed && zone === 'rows');
+  }
+
+  // Art, tint and title off, with anything still on its way to them.
+  function clearHero() {
+    clearTimeout(heroTimer);
+    clearTimeout(artTimer);
+    clearTimeout(badgeTimer);
+    heroItem = null;
+    show(info, false);
+    hero.set('');
+    if (visible) ambience.set(null);
+    else ambience.remember(null);
   }
 
   function setMeta(item, extra) {
@@ -308,11 +325,12 @@ export function HomeScreen() {
     const kept = rows.indexOf(cur);
     // A row that left hands its place to the one below; past the last row, focus goes up one.
     rowIndex = kept >= 0 ? kept : Math.min(rowIndex, Math.max(0, rows.length - 1));
-    layoutRows();
-    renderRows(true);
     show(skeleton, false);
+    // Before the render: it can hand focus back to the rows.
     if (rows.length) setEmpty('');
     else setEmpty('Nothing here yet', 'Add some media to your Plex server.');
+    layoutRows();
+    renderRows(true);
     // A hero still waiting on a held key would land on a title from before this refresh.
     clearTimeout(heroTimer);
     const item = rows[rowIndex] && heroOf(rows[rowIndex]);
@@ -355,6 +373,7 @@ export function HomeScreen() {
     const user = userKey();
     const id = ++loads;
     loadedAt = Date.now();
+    loading = true;
     // Only the newest load may paint, and only for the server and user it was made for.
     const stale = () => !alive || id !== loads || session.server !== server || userKey() !== user;
     try {
@@ -370,11 +389,24 @@ export function HomeScreen() {
         show(skeleton, false);
         setEmpty('Couldn\'t load Home', 'Check that ' + server.name + ' is on, then try again.', true);
       }
+    } finally {
+      if (id === loads) loading = false;
     }
+  }
+
+  // Try again: the skeleton while it loads, as on first launch. A timed-out load takes 15s, so
+  // OK does nothing until it answers.
+  function retryLoad() {
+    if (loading) return;
+    setEmpty('');
+    buildSkeleton();
+    show(skeleton, true);
+    load();
   }
 
   // First launch on this server and profile: the shapes of Home until the hubs arrive.
   function buildSkeleton() {
+    if (skeleton.firstChild) return;
     const line = (parent, cls, w) => { h('div', 'skel ' + cls, parent).style.width = w + 'px'; };
     line(skeleton, 'skel-title', 420);
     line(skeleton, 'skel-meta', 360);
@@ -415,7 +447,7 @@ export function HomeScreen() {
     onKey(action) {
       if (menu.isOpen) return menu.onKey(action);
       if (zone === 'nav') {
-        if (topnav.onKey(action)) return true;
+        if (topnav.onKey(action)) { parked = false; return true; }
         if (action === 'down' && (rows.length || failed)) { setZone('rows'); renderRows(); return true; }
         if (action === 'back') return false;
         return true;
@@ -423,7 +455,7 @@ export function HomeScreen() {
       const row = rows[rowIndex];
       if (!row) {
         if (action === 'up') { setZone('nav'); return true; }
-        if (action === 'enter') { load(); return true; }
+        if (action === 'enter') { retryLoad(); return true; }
         return false;
       }
       switch (action) {
