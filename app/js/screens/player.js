@@ -33,6 +33,8 @@ const TIMELINE_MS = 10000;
 const UPNEXT_ART_W = 480;
 const UPNEXT_ART_H = 270;
 const PLAY = 1; // the play/pause button's place in the controls
+const NOT_4K = 'Subtitle not shown: it would force a 4K re-encode';
+const NOT_AVAILABLE = 'This subtitle isn\'t available for this file';
 
 function streamsOf(part, type) {
   return (part && part.Stream || []).filter(s => s.streamType === type);
@@ -47,9 +49,26 @@ function isSidecarText(sub) {
   return !!sub && !!sub.key && !!TEXT_SUBS[sub.codec];
 }
 
+// The subtitle deliveries an HLS open tries in order; the first the server accepts wins.
+// Burning in re-encodes the video, which runs below realtime at 4K, so 4K never burns.
+function subtitlePlan(sub, media) {
+  if (!sub || isSidecarText(sub)) return ['none'];
+  const burn = media.videoResolution === '4k' ? [] : ['burn'];
+  return (isEmbeddedText(sub) ? ['segmented'] : []).concat(burn, 'none');
+}
+
+// A server that can't segment a subtitle may still answer success, so look where it put the stream.
+function delivered(mc, subtitles, sub) {
+  if (mc.generalDecisionCode >= 2000) return false;
+  if (subtitles !== 'segmented') return true;
+  const m = (mc.Metadata || [])[0];
+  const p = m && m.Media && m.Media[0] && m.Media[0].Part && m.Media[0].Part[0];
+  return streamsOf(p, 3).some(s => s.location === 'segments-subs' && String(s.id) === String(sub.id));
+}
+
 // An external text file matching an embedded text subtitle (same language, same SDH/forced
-// flags), e.g. one extracted next to the MKV. Plex can't hand embedded subs out on their own,
-// so over HLS the only other way to show them is burning in, which re-encodes the video.
+// flags), e.g. one extracted next to the MKV. Over HLS the app draws it, so the server
+// converts no subtitle.
 function sidecarTwin(part, sub) {
   const same = s => isSidecarText(s) && s.languageCode === sub.languageCode && !!s.forced === !!sub.forced;
   const candidates = streamsOf(part, 3).filter(same);
@@ -82,6 +101,8 @@ function button(parent, icon, label) {
 
 function cleanSubtitle(text) {
   return String(text || '')
+    .replace(/\0/g, '')                 // AVPlay NUL-terminates HLS WebVTT cues
+    .replace(/<br\s*\/?>/gi, '\n')      // HLS WebVTT cues arrive with <br> for line breaks
     .replace(/\{\\[^}]*\}/g, '')        // ASS override tags
     .replace(/<[^>]+>/g, '')            // <i>, <font> ...
     .replace(/\\N/g, '\n');
@@ -137,6 +158,9 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let seekTimer = 0;
   // A committed seek's target until the player is there; what it reports meanwhile is stale.
   let seekLanding = null;
+  // The last committed target. A seek lands on the keyframe before it, so a step from where it
+  // landed could fall short of the next keyframe and land in the same place again.
+  let committed = null;
   // Play/pause was pressed while a seek was pending, so its commit keeps that state.
   let pauseTouched = false;
   let osdTimer = 0;
@@ -151,6 +175,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let cueTrack = null;
   let cueTimer = 0;
   let cueFor = null;
+  // What the open HLS session carries: { audio, subtitles, sub }, sub only if the server delivers it.
+  let carried = null;
+  let noticed = null;       // the subtitle selection the not-shown notice went out for
+  let textPending = false;  // AVPlay listed no text track right after play; one retry on the next time update
   let markers = [];
   let creditsMarker = null;
   let skipFor = null;
@@ -189,6 +217,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   const player = createPlayer(stage, {
     onTime(ms) {
       if (!started || seekLanding != null) return;
+      if (textPending) {
+        textPending = false;
+        if (!showText()) subtitleNotice(NOT_AVAILABLE);
+      }
       position = base + ms;
       if (seekTarget == null) {
         renderProgress(position);
@@ -322,6 +354,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     const server = session.server;
     const t0 = Date.now();
     started = false;
+    carried = null;
+    textPending = false;
+    clearTimeout(subTimer);
+    setText(subs, '');
     toggleClass(spinner, 'on', true);
     let url;
     if (mode === 'direct') {
@@ -329,32 +365,19 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       url = server.url(part.key);
     } else {
       base = atMs;
-      if (isEmbeddedText(subStream)) {
-        const twin = sidecarTwin(part, subStream);
-        if (twin) {
-          log('using external twin of embedded subtitle:', twin.displayTitle);
-          subStream = twin;
-        }
-      }
-      // Burn in only what we can't draw ourselves (image subs, embedded text).
-      const burn = subStream && !isSidecarText(subStream);
-      const build = (withSubs) => server.transcodeUrl(item, {
-        session: playSession, offsetMs: atMs,
-        audioStreamID: audioStream && audioStream.id,
-        subtitleStreamID: withSubs ? subStream.id : undefined,
-      });
+      preferTwin();
       // PMS 1.42+ rejects start.m3u8 unless a decision was made for the session first.
       const decide = async () => (await request(url.replace('/start.m3u8', '/decision'))).MediaContainer || {};
-      url = build(burn);
-      let mc = await decide();
-      // Burning subtitles means re-encoding the video. A server that can only remux refuses
-      // that, so play without the subtitle rather than not at all.
-      if (burn && mc.generalDecisionCode >= 2000) {
-        warn('server cannot burn in subtitles, playing without them:', mc.transcodeDecisionText);
-        url = build(false);
+      let mc, subtitles;
+      for (subtitles of subtitlePlan(subStream, media)) {
+        url = server.transcodeUrl(item, { session: playSession, offsetMs: atMs, subtitles });
         mc = await decide();
+        if (subtitles === 'none' || delivered(mc, subtitles, subStream)) break;
+        warn('server refused subtitles=' + subtitles + ':', mc.transcodeDecisionText || mc.generalDecisionText || '');
       }
       if (mc.generalDecisionCode && mc.generalDecisionCode >= 2000) throw new Error(mc.generalDecisionText || 'Server refused to convert this file');
+      carried = { audio: audioStream, subtitles, sub: subtitles === 'none' ? null : subStream };
+      noticeIfDropped();
     }
     log('play', mode, item.title, media.container + '/' + media.videoCodec + '/' + (audioStream && audioStream.codec), 'at', clock(atMs));
     player.open(url, { uhd: media.videoResolution === '4k' && supports4K() });
@@ -363,15 +386,27 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     if (mode === 'direct') {
       applyTracks();
       if (atMs > 0) await player.seek(atMs);
+    } else {
+      // AVPlay counts from the stream's first frame, which sits up to a keyframe gap before atMs.
+      let real = await server.realStartMs(playSession);
+      for (let i = 0; real === null && i < 2 && alive; i++) {
+        await new Promise(r => setTimeout(r, 150));
+        real = await server.realStartMs(playSession);
+      }
+      if (!alive) return;
+      if (real != null) base = real;
+      else warn('real start unknown, clock may run ahead by a keyframe gap');
     }
     syncSidecar();
     player.play();
     if (stayPaused) player.pause();
+    // AVPlay takes the WebVTT rendition only once playing, and the list can lag behind play().
+    textPending = !!carried && carried.subtitles === 'segmented' && !showText();
     setPaused(stayPaused);
     started = true;
-    position = atMs;
+    position = mode === 'direct' ? atMs : base;
     toggleClass(spinner, 'on', false);
-    log('playing after ' + (Date.now() - t0) + 'ms (' + mode + ')');
+    log('playing after ' + (Date.now() - t0) + 'ms (' + mode + ')' + (mode === 'direct' ? '' : ' from ' + base / 1000 + 's, asked ' + atMs / 1000 + 's'));
     report(stayPaused ? 'paused' : 'playing');
     startTimeline();
   }
@@ -417,6 +452,34 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     cueTimer = setInterval(() => {
       if (cueTrack && started) setText(subs, cueTrack.at(base + player.time()));
     }, 120);
+  }
+
+  // Over HLS only: direct play shows the embedded track itself.
+  function preferTwin() {
+    const twin = isEmbeddedText(subStream) && sidecarTwin(part, subStream);
+    if (!twin) return;
+    log('using external twin of embedded subtitle:', twin.displayTitle);
+    subStream = twin;
+  }
+
+  // A segmented subtitle reaches AVPlay as the HLS text rendition; once selected, its cues
+  // arrive through onSubtitle.
+  function showText() {
+    const t = player.tracks();
+    return t.text.length > 0 && player.selectText(t.text[0]);
+  }
+
+  // Once per subtitle selection, not on every seek reopen.
+  function subtitleNotice(text) {
+    if (noticed === subStream) return;
+    noticed = subStream;
+    toast(text);
+  }
+
+  // The selected subtitle is neither in the HLS session nor drawn by the app.
+  function noticeIfDropped() {
+    if (!subStream || isSidecarText(subStream) || carried.sub) return;
+    subtitleNotice(media.videoResolution === '4k' ? NOT_4K : NOT_AVAILABLE);
   }
 
   async function start() {
@@ -489,7 +552,8 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     seekCount = now - lastSeekAt < 700 ? seekCount + 1 : 0;
     lastSeekAt = now;
     const step = fixed || (seekCount < 3 ? 10000 : seekCount < 8 ? 30000 : seekCount < 16 ? 60000 : 180000);
-    const from = seekTarget != null ? seekTarget : seekLanding != null ? seekLanding : position;
+    const from = seekTarget != null ? seekTarget : seekLanding != null ? seekLanding :
+      committed != null && position < committed ? committed : position;
     seekTarget = Math.max(0, Math.min(duration - 3000, from + dir * step));
     toggleClass(el, 'seeking', true);
     setText(seekLabel, clock(seekTarget));
@@ -508,6 +572,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     const target = seekTarget;
     seekTarget = null;
     seekLanding = target;
+    committed = target;
     toggleClass(el, 'seeking', false);
     showOsd();
     position = target;
@@ -613,17 +678,23 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   async function choose(col, stream) {
     const server = session.server;
     if (col === 0) audioStream = stream;
-    else subStream = stream;
-    server.selectStreams(part.id, {
+    else { subStream = stream; noticed = null; }
+    // PMS converts the streams stored on the part, so a reopen must wait for the write.
+    await server.selectStreams(part.id, {
       audioStreamID: audioStream ? audioStream.id : undefined,
       subtitleStreamID: subStream ? subStream.id : 0,
     });
+    if (!alive) return;
     const wanted = decideMode();
+    if (wanted === 'hls') preferTwin();
+    const sub = subtitlePlan(subStream, media)[0] === 'none' ? null : subStream;
+    const sameSession = !!carried && carried.audio === audioStream && carried.sub === sub;
     if (wanted === 'direct' && mode === 'direct') {
       applyTracks();
       syncSidecar();
-    } else if (mode === 'hls' && wanted === 'hls' && col === 1 && isSidecarText(subStream)) {
+    } else if (mode === 'hls' && wanted === 'hls' && sameSession) {
       syncSidecar();
+      noticeIfDropped();
     } else {
       mode = wanted;
       triedFallback = false;

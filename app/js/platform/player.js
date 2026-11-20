@@ -2,6 +2,7 @@
 // plane under the web layer) on the TV, <video> in a desktop browser.
 //
 // listener: { onTime(ms), onBuffering(bool), onEnd(), onError(msg), onSubtitle(text, durationMs) }
+import { warn } from '../util/log.js';
 
 function avplayBackend(container, listener) {
   const av = webapis.avplay;
@@ -58,13 +59,18 @@ function avplayBackend(container, listener) {
     selectAudio(avIndex) {
       try { av.setSelectTrack('AUDIO', avIndex); return true; } catch (e) { return false; }
     },
+    // false when AVPlay refused, e.g. outside PLAYING/PAUSED for HLS.
     selectText(avIndex) {
-      try {
-        if (avIndex == null) { av.setSilentSubtitle(true); return true; }
-        av.setSelectTrack('TEXT', avIndex);
-        av.setSilentSubtitle(false);
-        return true;
-      } catch (e) { return false; }
+      let err = null;
+      if (avIndex == null) {
+        try { av.setSilentSubtitle(true); } catch (e) { err = e; }
+      } else {
+        try { av.setSelectTrack('TEXT', avIndex); } catch (e) { err = e; }
+        // Even when the select threw: the track may already have been the selected one.
+        try { av.setSilentSubtitle(false); } catch (e) { err = err || e; }
+      }
+      if (err) warn('selectText', avIndex, 'failed:', String(err.name || err));
+      return !err;
     },
     suspend() { try { av.suspend(); } catch (e) {} },
     restore() { try { av.restore(); } catch (e) {} },
