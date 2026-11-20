@@ -19,6 +19,9 @@ const MIDDLE = Math.floor((SLOTS - 1) / 2);
 // Dark labels pooled around focus: ±2 still covers a fill retargeted midway by a quick tap.
 const REACH = 2;
 const WINDOW = REACH * 2 + 1;
+// Outlasts the fade out (--t-focus). A timer, since an action that pushes a screen hides the
+// sheet before its fade starts, and then no transition event ever comes.
+const IDLE_MS = 250;
 
 export class Menu {
   constructor(parent) {
@@ -47,10 +50,8 @@ export class Menu {
     this.index = 0;
     this.isOpen = false;
     // Out of the layer tree while closed: hidden once the fade out ends.
+    this.idleTimer = 0;
     this.idle(true);
-    this.el.addEventListener('transitionend', e => {
-      if (e.target === this.el && e.propertyName === 'opacity' && !this.isOpen) this.idle(true);
-    });
   }
 
   idle(on) {
@@ -84,6 +85,7 @@ export class Menu {
     const current = items.findIndex(it => it.current);
     this.index = current >= 0 ? current : Math.max(0, items.findIndex(it => !it.heading));
     this.isOpen = true;
+    clearTimeout(this.idleTimer);
     // Shown before the layout below, which then starts the slide in from the closed state.
     this.idle(false);
     // Open on the current choice in place, instead of sliding there from the last list.
@@ -99,6 +101,8 @@ export class Menu {
     this.isOpen = false;
     toggleClass(this.scrim, 'open', false);
     toggleClass(this.el, 'open', false);
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => this.idle(true), IDLE_MS);
   }
 
   render() {
