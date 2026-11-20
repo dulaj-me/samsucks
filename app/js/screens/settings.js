@@ -111,7 +111,8 @@ export function SettingsScreen() {
     g.profiles = hasProfiles();
     g.rows = accountRows();
     fill(g);
-    ri = Math.min(ri, g.rows.length - 1);
+    // Rows that change under focus send it back to the groups, so OK never lands on Sign out unasked.
+    if (gi === 0 && zone === 'rows') zone = 'groups';
     render();
   });
 
