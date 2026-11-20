@@ -71,6 +71,8 @@ html.playing .ambience { display: none; }
   background: linear-gradient(var(--veil), rgba(var(--veil-rgb), 0)); will-change: transform;
 }
 
+/* Between a meta line's facts. */
+.hero-dot { width: 5px; height: 5px; margin: 0 12px; border-radius: 3px; background: var(--mute); flex-shrink: 0; }
 /* A format fact (4K, HDR, ATMOS) after the meta line's facts. */
 .badge {
   margin-left: 12px; padding: 5px 9px 4px; border: 1.5px solid var(--line); border-radius: var(--r-chip);
@@ -255,6 +257,12 @@ html.fast .row.live .row-track .tile.gone, html.fast .grid.vmove .grid-track .ti
 .tile-sub {
   margin-top: 5px; font: var(--f-caption-sub); color: var(--mute);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* An episode's summary under its caption, clamped to its kind's `sum` lines (KINDS). */
+.tile-sum {
+  margin-top: 8px; font: 440 20px/28px var(--sans); color: var(--mute);
+  white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* A title that may wrap to its kind's `lines` (KINDS); tile.js sets the clamp. */

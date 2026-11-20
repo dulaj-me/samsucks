@@ -13,7 +13,6 @@
   height: 25px; margin-top: 28px; display: flex; align-items: center;
   font: var(--f-meta); line-height: 1; color: var(--soft); white-space: nowrap;
 }
-.hero-dot { width: 5px; height: 5px; margin: 0 12px; border-radius: 3px; background: var(--mute); flex-shrink: 0; }
 .hero-ep {
   height: 32px; margin-top: 18px; display: flex; align-items: center;
   font: 600 27px/1.2 var(--sans); color: var(--text); white-space: nowrap;
