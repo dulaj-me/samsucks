@@ -429,7 +429,7 @@ Inside every tile frame: the progress groove sits 16 px in from left and right a
 - Left edge (`LEFT`) 96. Gap 36 between wide tiles (step 468), 32 between posters (step 272), 36 between episode tiles (step 468), 28 in search (steps 228 and 384).
 - A focus card is fixed at x 96, above the track: the focused item's lifted art, ring and caption. It never moves. The track's own tile at focus, and every tile left of it, stays hidden under the card or outside the clip.
 - Tiles right of the card sit 16 px further right to clear its lift, leaving 23 to 31 px between the ring and the next tile.
-- A peek card left of the ring shows the previous item's edge. Its right edge sits 16 px plus the tile gap left of the anchor, mirroring the next tile's clearance, so the sliver is 48 px for posters, 44 for wide and episode tiles and 52 in search. It is art only, at rest size, and swaps like the focus card. The track itself shows nothing left of the anchor.
+- A peek card left of the ring shows the previous item's edge. Its right edge sits 16 px plus the tile gap left of the anchor, mirroring the next tile's clearance, so the sliver is 48 px for posters and 44 for wide and episode tiles. In search it is 22 px: the results clip starts at x 640, 14 px clear of the keyboard, so the sliver never runs under the keys. It is art only, at rest size, and swaps like the focus card. The track itself shows nothing left of the anchor.
 - A row without focus shows neither card; its tiles close both gaps and line up under the heading.
 - These apply to every `Row`: Home, search and detail.
 - Rows above the active row are hidden (opacity 0). A row below the active row that is on screen sits at opacity 0.55.

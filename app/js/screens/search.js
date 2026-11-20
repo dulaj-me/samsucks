@@ -113,6 +113,10 @@ export function SearchScreen() {
     if (q === query) return;
     // Nothing to fetch below the minimum, so recents come back without the debounce.
     if (q.length < MIN_QUERY) { run(q); return; }
+    // A request in flight is for an older query, so its results must not land under this one.
+    // Results already up stay until q's arrive.
+    generation++;
+    query = null;
     // Recents give way at once, not after the debounce, so focus never sits on a hidden list.
     renderRecents();
     render();
@@ -124,7 +128,8 @@ export function SearchScreen() {
     clearTimeout(timer);
     const q = input.value.trim();
     if (q !== query) run(q);
-    else if (rows.length) setZone('results');
+    // Rows up for an older query would be replaced, and focus reset, when q's land.
+    else if (rows.length && rowsQuery === q) setZone('results');
     jump = generation;
   }
 
