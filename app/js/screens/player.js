@@ -113,10 +113,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   const tLeft = h('span', 'osd-left', times);
   const controls = h('div', 'osd-controls', osd);
 
-  const menu = new Menu(el);
   const upnext = h('div', 'upnext hidden', el);
   const skipBtn = h('div', 'btn skip hidden', el);
   const errorEl = h('div', 'player-error hidden', el);
+  const menu = new Menu(el);
 
   let item = initial;
   let media = null;
@@ -135,6 +135,10 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   let seekCount = 0;
   let lastSeekAt = 0;
   let seekTimer = 0;
+  // A committed seek's target until the player is there; what it reports meanwhile is stale.
+  let seekLanding = null;
+  // Play/pause was pressed while a seek was pending, so its commit keeps that state.
+  let pauseTouched = false;
   let osdTimer = 0;
   let timelineTimer = 0;
   let subTimer = 0;
@@ -184,7 +188,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   const player = createPlayer(stage, {
     onTime(ms) {
-      if (!started) return;
+      if (!started || seekLanding != null) return;
       position = base + ms;
       if (seekTarget == null) {
         renderProgress(position);
@@ -314,7 +318,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     return directOk && subsOk ? 'direct' : 'hls';
   }
 
-  async function open(atMs) {
+  async function open(atMs, { stayPaused = false } = {}) {
     const server = session.server;
     const t0 = Date.now();
     started = false;
@@ -362,12 +366,13 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     }
     syncSidecar();
     player.play();
-    setPaused(false);
+    if (stayPaused) player.pause();
+    setPaused(stayPaused);
     started = true;
     position = atMs;
     toggleClass(spinner, 'on', false);
     log('playing after ' + (Date.now() - t0) + 'ms (' + mode + ')');
-    report('playing');
+    report(stayPaused ? 'paused' : 'playing');
     startTimeline();
   }
 
@@ -453,6 +458,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       return;
     }
     error('playback failed', msg);
+    stopCountdown();
     toggleClass(spinner, 'on', false);
     errorEl.classList.remove('hidden');
     setText(errorEl, 'Playback failed: ' + msg);
@@ -462,6 +468,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   function togglePause() {
     if (!started) return;
+    if (seekTarget != null || seekLanding != null) pauseTouched = true;
     if (paused) {
       player.play();
       setPaused(false);
@@ -476,12 +483,13 @@ export function PlayerScreen(initial, { offset = null } = {}) {
 
   // fixed: a 10s pill's step, which leaves focus on the pill. Arrows speed up and focus the bar.
   function seekBy(dir, fixed) {
-    if (!started) return;
+    if (!started && seekLanding == null) return;
+    if (seekTarget == null && seekLanding == null) pauseTouched = false;
     const now = Date.now();
     seekCount = now - lastSeekAt < 700 ? seekCount + 1 : 0;
     lastSeekAt = now;
     const step = fixed || (seekCount < 3 ? 10000 : seekCount < 8 ? 30000 : seekCount < 16 ? 60000 : 180000);
-    const from = seekTarget == null ? position : seekTarget;
+    const from = seekTarget != null ? seekTarget : seekLanding != null ? seekLanding : position;
     seekTarget = Math.max(0, Math.min(duration - 3000, from + dir * step));
     toggleClass(el, 'seeking', true);
     setText(seekLabel, clock(seekTarget));
@@ -495,8 +503,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   async function commitSeek() {
     clearTimeout(seekTimer);
     if (seekTarget == null) return;
+    // One seek at a time: a newer target waits for the one in flight to land.
+    if (seekLanding != null) { seekTimer = setTimeout(commitSeek, SEEK_COMMIT_MS); return; }
     const target = seekTarget;
     seekTarget = null;
+    seekLanding = target;
     toggleClass(el, 'seeking', false);
     showOsd();
     position = target;
@@ -505,14 +516,26 @@ export function PlayerScreen(initial, { offset = null } = {}) {
         toggleClass(spinner, 'on', true);
         await player.seek(target);
         toggleClass(spinner, 'on', false);
-        if (paused) togglePause();
+        seekLanding = null;
+        // A seek resumes playback, unless pause was pressed while it was pending.
+        if (paused && !pauseTouched) togglePause();
       } else {
-        await open(target);
+        await open(target, { stayPaused: paused && pauseTouched });
+        seekLanding = null;
       }
     } catch (e) {
+      seekLanding = null;
       warn('seek failed, reopening', e.message);
-      open(target).catch(err => failed(err.message));
+      open(target, { stayPaused: paused && pauseTouched }).catch(err => failed(err.message));
     }
+  }
+
+  function cancelSeek() {
+    clearTimeout(seekTimer);
+    seekTarget = null;
+    toggleClass(el, 'seeking', false);
+    renderProgress(position);
+    showOsd();
   }
 
   // --- Skip intro / credits ---------------------------------------------
@@ -583,6 +606,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       sub: item.type === 'episode' ? episodeCode(item) + '  ·  ' + item.title : item.title,
       items: (audio.length ? [{ heading: 'Audio' }].concat(audio) : []).concat([{ heading: 'Subtitles' }], subtitles),
     });
+    toggleClass(el, 'menu-on', true);
     hideOsd();
   }
 
@@ -677,6 +701,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     upnextMode = mode;
     hideOsd();
     if (menu.isOpen) menu.close();
+    toggleClass(el, 'menu-on', false);
     upnext.innerHTML = '';
     const art = h('div', 'tile-frame upnext-art', upnext);
     loadImage(h('img', 'tile-img', art), session.server.image(nextItem.thumb || nextItem.art, UPNEXT_ART_W, UPNEXT_ART_H));
@@ -742,8 +767,8 @@ export function PlayerScreen(initial, { offset = null } = {}) {
         upnextIndex = action === 'left' ? 0 : 1;
         renderUpnextFocus();
         return true;
-      case 'up': if (credits) showOsd(); return true;
-      case 'down': if (credits) stopCountdown(); return true;
+      case 'up': stopCountdown(); if (credits) showOsd(); return true;
+      case 'down': stopCountdown(); return true;
       case 'rw': case 'ff': if (credits) seekBy(action === 'ff' ? 1 : -1); return true;
       case 'enter':
         if (upnextIndex === 0) playNext();
@@ -821,6 +846,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
       }
       if (menu.isOpen) {
         menu.onKey(action);
+        toggleClass(el, 'menu-on', menu.isOpen);
         // Back returns to the button that opened it.
         if (!menu.isOpen && action === 'back') showOsd(false, 'buttons');
         return true;
@@ -832,7 +858,12 @@ export function PlayerScreen(initial, { offset = null } = {}) {
             renderFocus();
             showOsd();
             return true;
-          case 'up': case 'back': setZone('bar'); showOsd(); return true;
+          case 'back':
+            if (seekTarget != null) { cancelSeek(); return true; }
+            setZone('bar');
+            showOsd();
+            return true;
+          case 'up': setZone('bar'); showOsd(); return true;
           case 'down': showOsd(); return true;
           case 'enter': buttons[btnIndex].run(); return true;
         }
@@ -871,7 +902,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
           return true;
         case 'stop': exit(); return true;
         case 'back':
-          if (seekTarget != null) { seekTarget = null; toggleClass(el, 'seeking', false); renderProgress(position); showOsd(); return true; }
+          if (seekTarget != null) { cancelSeek(); return true; }
           if (el.classList.contains('osd-on') && !paused) { hideOsd(); return true; }
           exit();
           return true;

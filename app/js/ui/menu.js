@@ -46,6 +46,16 @@ export class Menu {
     this.items = [];
     this.index = 0;
     this.isOpen = false;
+    // Out of the layer tree while closed: hidden once the fade out ends.
+    this.idle(true);
+    this.el.addEventListener('transitionend', e => {
+      if (e.target === this.el && e.propertyName === 'opacity' && !this.isOpen) this.idle(true);
+    });
+  }
+
+  idle(on) {
+    toggleClass(this.scrim, 'idle', on);
+    toggleClass(this.el, 'idle', on);
   }
 
   // items: [{ label, icon?, current?, run }]. A list where items set `current` is a
@@ -74,6 +84,8 @@ export class Menu {
     const current = items.findIndex(it => it.current);
     this.index = current >= 0 ? current : Math.max(0, items.findIndex(it => !it.heading));
     this.isOpen = true;
+    // Shown before the layout below, which then starts the slide in from the closed state.
+    this.idle(false);
     // Open on the current choice in place, instead of sliding there from the last list.
     toggleClass(this.list, 'now', true);
     this.render();

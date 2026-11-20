@@ -36,9 +36,11 @@
   font: 560 23px/44px var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .seeking .osd-seek { display: block; }
+/* The bottom scrim is about half dark here; a static shadow keeps the times legible on bright frames. */
 .osd-times {
   position: absolute; left: 96px; top: 900px; width: 1728px; display: flex; justify-content: space-between;
   font: 560 23px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--soft);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75), 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
 /* The transport from the left edge, Audio and subtitles and Next episode at the right. */
@@ -78,10 +80,10 @@
 .upnext-on .subs { left: 96px; right: 680px; }
 
 /* White while OK goes to it; at rest while a control has focus. */
-.skip { position: absolute; right: 96px; top: 760px; background: var(--focus-bg); color: var(--focus-fg); box-shadow: var(--float); }
+.skip { position: absolute; right: 96px; top: 760px; margin-right: 0; background: var(--focus-bg); color: var(--focus-fg); box-shadow: var(--float); }
 .osd-on.osd-buttons .skip { background: var(--faint); color: var(--text); }
-/* OK commits a seek first, and the seek label rides the bar under it. */
-.seeking .skip { opacity: 0; }
+/* OK commits a seek first, and the seek label rides the bar under it. Under the sheet, OK goes to the sheet. */
+.seeking .skip, .menu-on .skip { opacity: 0; }
 
 .upnext {
   position: absolute; right: 96px; bottom: 96px; width: 520px; padding: 20px;
