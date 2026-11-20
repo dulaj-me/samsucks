@@ -1,58 +1,67 @@
 .player { background: transparent; }
 /* The video plane is closed once the up-next card shows. */
-.player.ended { background: var(--bg); }
+.player.ended { background: var(--ink); }
 .player-stage, .av-object { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
 
-.osd { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; opacity: 0; transition: opacity 250ms ease; will-change: opacity; }
+.osd {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  opacity: 0; will-change: opacity; transition: opacity var(--t-focus) ease;
+}
 .osd-on .osd { opacity: 1; }
-.osd-top {
-  position: absolute; top: 0; left: 0; width: 1920px; height: 280px; padding: 64px 96px 0;
-  background: linear-gradient(180deg, rgba(var(--black-rgb), 0.78), transparent);
-}
-.osd-title { font: 700 64px/1 var(--display); }
-.osd-sub { margin-top: 12px; font: 500 28px var(--body); color: var(--dim); }
-.osd-bottom {
-  position: absolute; bottom: 0; left: 0; width: 1920px; height: 360px;
-  background: linear-gradient(0deg, rgba(var(--black-rgb), 0.85), transparent);
-}
-.osd-bar { position: absolute; left: 96px; width: 1728px; bottom: 210px; height: 8px; border-radius: 4px; background: rgba(var(--cream-rgb), 0.25); }
+/* 1px-wide ramps (img/), stretched across: no gradient to paint over the video. */
+.osd-scrim-top { position: absolute; top: 0; left: 0; width: 1920px; height: 260px; }
+.osd-scrim-bottom { position: absolute; top: 660px; left: 0; width: 1920px; height: 420px; }
+
+.osd-title { position: absolute; left: 96px; top: 64px; width: 1200px; }
+.osd-logo-box { height: 96px; display: flex; align-items: flex-end; }
+.osd-logo { display: block; max-width: 320px; max-height: 96px; object-fit: contain; object-position: left bottom; }
+/* A 72px line box keeps the descenders inside the ellipsis clip. */
+.osd-name { font: var(--f-page); line-height: 72px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.osd-sub { margin-top: 14px; font: 560 25px/30px var(--sans); color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.osd-bar { position: absolute; left: 96px; top: 872px; width: 1728px; height: 8px; border-radius: 4px; background: var(--rail); }
 .osd-fill {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  border-radius: 4px; background: var(--coral); transform-origin: 0 0; will-change: transform;
+  border-radius: 4px; background: var(--text); transform-origin: 0 0; will-change: transform;
 }
 .osd-knob {
-  position: absolute; left: -12px; top: -8px; width: 24px; height: 24px; border-radius: 12px;
-  background: var(--cream); box-shadow: 0 2px 10px rgba(var(--black-rgb), 0.5); will-change: transform;
+  position: absolute; left: -14px; top: -10px; width: 28px; height: 28px; border-radius: 14px;
+  background: var(--text); box-shadow: var(--knob); will-change: transform;
 }
-/* The knob marks focus on the bar, so it steps aside while a button has it. */
-.osd-buttons .osd-knob { opacity: 0; }
+/* The knob marks focus on the bar, so it steps aside while a button has it, unless a 10s pill is seeking. */
+.osd-buttons:not(.seeking) .osd-knob { opacity: 0; }
 .osd-seek {
-  display: none; position: absolute; bottom: 40px; left: 12px;
-  transform: translateX(-50%); padding: 8px 16px; border-radius: 10px;
-  background: var(--cream); color: var(--bg); font: 700 28px var(--body); white-space: nowrap;
+  display: none; position: absolute; bottom: 40px; left: 14px; height: 44px; padding: 0 18px;
+  transform: translateX(-50%); border-radius: 22px; background: var(--text); color: var(--on-text);
+  font: 560 23px/44px var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .seeking .osd-seek { display: block; }
 .osd-times {
-  position: absolute; left: 96px; width: 1728px; bottom: 150px;
-  display: flex; justify-content: space-between; font: 500 26px var(--body);
+  position: absolute; left: 96px; top: 900px; width: 1728px; display: flex; justify-content: space-between;
+  font: 560 23px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--soft);
 }
-.osd-info { color: var(--dim); }
-.osd-controls { position: absolute; left: 96px; bottom: 54px; display: flex; }
-/* Fixed, so Play and Pause swap without moving the buttons after it. */
-.osd-play { width: 188px; justify-content: center; }
-.osd-hint { position: absolute; right: 96px; bottom: 54px; line-height: 72px; font: 500 20px var(--body); color: var(--dim); }
+
+/* The transport from the left edge, Audio and subtitles and Next episode at the right. */
+.osd-controls { position: absolute; left: 96px; top: 948px; width: 1728px; display: flex; }
+.osd-controls .btn { margin-right: 14px; }
+.osd-controls .btn:last-child { margin-right: 0; }
+.osd-tracks { margin-left: auto; }
+/* Round and fixed, so Play and Pause swap without moving the pills after it. */
+.osd-play { width: 68px; padding: 0; justify-content: center; }
+.osd-play svg { margin-right: 0; }
+.osd-fwd svg { margin: 0 0 0 14px; transform: scaleX(-1); }
 
 .pause-big {
   position: absolute; left: 880px; top: 380px; width: 160px; height: 160px; padding: 36px;
-  border-radius: 80px; background: rgba(var(--bg-rgb), 0.6); color: var(--cream);
-  opacity: 0; transition: opacity 200ms ease; will-change: opacity;
+  border-radius: 80px; background: var(--veil); color: var(--text);
+  opacity: 0; will-change: opacity; transition: opacity var(--t-focus) ease;
 }
 .pause-big svg { width: 88px; height: 88px; display: block; }
 .paused .pause-big { opacity: 1; }
 
 .spinner {
   display: none; position: absolute; left: 912px; top: 492px; width: 96px; height: 96px;
-  border-radius: 50%; border: 6px solid rgba(var(--cream-rgb), 0.18); border-top-color: var(--coral);
+  border-radius: 50%; border: 6px solid var(--hair); border-top-color: var(--text);
   animation: spin 0.9s linear infinite; will-change: transform;
 }
 .spinner.on { display: block; }
@@ -61,54 +70,50 @@
 .subs {
   position: absolute; left: 160px; right: 160px; bottom: 90px;
   text-align: center; white-space: pre-line;
-  font: 600 46px/1.25 var(--body); color: var(--white);
-  text-shadow: 0 2px 6px var(--black), 0 0 3px var(--black), 0 0 3px var(--black);
+  font: 600 46px/1.25 var(--sans); color: var(--text);
+  text-shadow: 0 2px 6px #000, 0 0 3px #000, 0 0 3px #000;
 }
 .osd-on .subs { bottom: 380px; }
-/* Subtitles move left of the up-next card (x 1104-1824) instead of running under it. */
-.upnext-on .subs { left: 96px; right: 880px; }
+/* Subtitles move left of the up-next card (x 1304-1824) instead of running under it. */
+.upnext-on .subs { left: 96px; right: 680px; }
 
-.tracks {
-  position: absolute; right: 0; top: 0; width: 960px; height: 1080px;
-  padding: 110px 72px; display: flex;
-  background: rgba(var(--bg-rgb), 0.94);
-}
-.tracks-col { flex: 1; margin-right: 32px; overflow: hidden; }
-.tracks-head { display: flex; align-items: center; margin-bottom: 24px; font: 600 24px var(--body); color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
-.tracks-head svg { width: 30px; height: 30px; margin-right: 12px; }
-.tracks-opt {
-  padding: 16px 22px; margin-bottom: 6px; border-radius: 14px;
-  font: 500 25px var(--body); color: rgba(var(--cream-rgb), 0.75);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tracks-opt.on { color: var(--cream); }
-.tracks-opt.on::before { content: '✓  '; color: var(--coral); }
-.tracks-opt.focus { background: var(--cream); color: var(--bg); }
-
-.skip {
-  position: absolute; right: 96px; bottom: 120px; padding: 22px 44px;
-  border-radius: 14px; background: var(--cream); color: var(--bg);
-  font: 600 30px var(--body); box-shadow: 0 12px 40px rgba(var(--black-rgb), 0.5);
-}
-.osd-on .skip { bottom: 300px; } /* above the seek-time label, which rides the bar at 242-294px */
-/* OK goes to the focused button, not to Skip. */
-.osd-on.osd-buttons .skip { opacity: 0.5; }
+/* White while OK goes to it; at rest while a control has focus. */
+.skip { position: absolute; right: 96px; top: 760px; background: var(--focus-bg); color: var(--focus-fg); box-shadow: var(--float); }
+.osd-on.osd-buttons .skip { background: var(--faint); color: var(--text); }
+/* OK commits a seek first, and the seek label rides the bar under it. */
+.seeking .skip { opacity: 0; }
 
 .upnext {
-  position: absolute; right: 96px; bottom: 120px; width: 720px; padding: 40px;
-  border-radius: 22px; background: var(--raised);
-  /* The outline keeps the card's shape over black credits. */
-  box-shadow: inset 0 0 0 2px var(--hair), 0 20px 60px rgba(var(--black-rgb), 0.6);
+  position: absolute; right: 96px; bottom: 96px; width: 520px; padding: 20px;
+  border-radius: var(--r-panel); background: var(--toast);
+  /* The inset edge keeps the card's shape over black credits. */
+  box-shadow: inset 0 0 0 2px var(--hair), var(--card);
 }
 /* Over the credits it fades in; on black at the end of the file it appears at once. */
-.player:not(.ended) .upnext { animation: upnext-in 250ms ease; }
+.player:not(.ended) .upnext { animation: upnext-in var(--t-focus) ease; }
 @keyframes upnext-in { from { opacity: 0; } }
-.upnext-label { font: 700 22px var(--body); color: var(--coral); letter-spacing: 0.08em; text-transform: uppercase; }
-.upnext-title { margin: 12px 0; font: 600 42px/1.1 var(--display); }
-.upnext-art { width: 640px; height: 360px; margin-bottom: 28px; }
-.upnext-actions { margin-top: 28px; }
+.upnext-art { width: 480px; height: 270px; }
+.upnext-title { margin-top: 18px; font: 620 27px/34px var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upnext-meta { margin-top: 6px; font: 500 21px/28px var(--sans); color: var(--mute); white-space: nowrap; }
+.upnext-actions { margin-top: 18px; display: flex; }
+/* Equal halves, so the countdown's text changes move nothing. */
+.upnext-actions .btn {
+  position: relative; flex: 1; height: 60px; padding: 0 20px; margin-right: 12px; border-radius: 30px;
+  justify-content: center; font-size: 23px; overflow: hidden;
+}
+.upnext-actions .btn:last-child { margin-right: 0; }
+.upnext-actions .btn svg { width: 24px; height: 24px; margin-right: 12px; }
+.upnext-actions .btn > :not(.upnext-cd) { position: relative; }
+/* What is left of the countdown, shrinking to the left. */
+.upnext-cd {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(var(--sheet-rgb), 0.12); transform-origin: 0 0; will-change: transform;
+  animation: upnext-cd linear forwards;
+}
+@keyframes upnext-cd { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 .player-error {
   position: absolute; left: 360px; right: 360px; top: 470px; padding: 40px;
-  border-radius: 22px; background: var(--raised); text-align: center; font: 500 30px var(--body);
+  border-radius: var(--r-panel); background: var(--toast); box-shadow: var(--card);
+  text-align: center; font: var(--f-message);
 }
