@@ -209,6 +209,10 @@ html.playing .ambience { display: none; }
 .row .tile.focus .tile-frame { transform: translateX(-16px) scale(1.07); }
 .row .tile.focus .tile-text { transform: translate(-16px, var(--cap-shift)); }
 
+/* A cast face: a circle (its radius comes from KINDS), the name centred under it. */
+.tile-cast .tile-text { text-align: center; }
+.tile-cast .tile-ph { align-items: center; justify-content: center; padding: 0; font: 600 56px/1 var(--sans); }
+
 html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .focus-box, html.fast .nav-track,
 html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .menu-hl {
   transition-duration: var(--t-held);
