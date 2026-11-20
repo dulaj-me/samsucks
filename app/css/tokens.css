@@ -69,6 +69,7 @@
   --r-option: 16px;
   --r-row: 18px;
   --r-panel: 20px;
+  --r-pin: 22px;
 
   --lift: 0 20px 44px rgba(0, 0, 0, 0.55);
   --sheet-edge: -40px 0 80px rgba(0, 0, 0, 0.45);

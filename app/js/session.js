@@ -45,8 +45,13 @@ export function hasProfiles() {
 }
 
 const usersListeners = [];
+// Returns the unsubscribe.
 export function onUsersChange(fn) {
   usersListeners.push(fn);
+  return () => {
+    const i = usersListeners.indexOf(fn);
+    if (i >= 0) usersListeners.splice(i, 1);
+  };
 }
 
 export function signIn(token, user) {
