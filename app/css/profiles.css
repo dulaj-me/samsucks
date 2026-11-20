@@ -35,6 +35,10 @@
 .profile.focus .profile-name { color: var(--text); transform: translateY(8px); }
 .profile-lock { margin-top: 8px; height: 26px; display: flex; justify-content: center; color: var(--mute); }
 .profile-lock svg { width: 24px; height: 24px; }
+/* 13 to 15 profiles: eight 150px faces a line (x 112 to 1808), so two lines hold them all. */
+.profiles-people.compact { width: 1696px; column-gap: 48px; }
+.compact .profile { width: 170px; }
+.compact .profile-face, .compact .profile-lift, .compact .profile-ring { width: 150px; height: 150px; }
 
 .profiles-servers { margin-top: 90px; width: 880px; }
 

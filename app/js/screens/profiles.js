@@ -10,9 +10,11 @@ import * as icons from '../ui/icons.js';
 import { error, warn } from '../util/log.js';
 
 const FACE = 200;
-// Six faces fit a line at 1920; more wrap, and the block rises half a line per extra line.
-const PER_LINE = 6;
-const LINE_SHIFT = 173;
+// Six 200px faces a line; a Plex Home of 13 to 15 takes eight 150px faces a line (.compact),
+// so the picker never needs a third line. A second line raises the block by half its pitch.
+const NORMAL = { face: FACE, perLine: 6, shift: 173 };
+const COMPACT = { face: 150, perLine: 8, shift: 148 };
+const COMPACT_FROM = 13;
 const PICKER_TOP = 290;
 const PIN_LENGTH = 4;
 // The pad row by row; '' is the empty slot left of 0, which never takes focus.
@@ -54,6 +56,7 @@ export function ProfilesScreen({ rejected = false } = {}) {
   let mode = 'users';   // 'users' | 'pin' | 'servers'
   let options = [];     // faces or servers: { el, run }
   let index = 0;
+  let layout = NORMAL;
   let picked = null;    // the home user being switched to
   let pin = '';
   let keyIndex = 0;
@@ -82,21 +85,23 @@ export function ProfilesScreen({ rejected = false } = {}) {
     setMode('users', 'Who’s watching?');
     const users = session.users || [];
     const me = session.user && session.user.uuid;
+    layout = users.length >= COMPACT_FROM ? COMPACT : NORMAL;
+    toggleClass(people, 'compact', layout === COMPACT);
     people.innerHTML = '';
     options = users.map(u => {
       const p = h('div', 'profile', people);
       // The lift and ring are layers of their own, faded in; only the face scales.
       const face = h('div', 'profile-face', p);
       h('i', 'profile-lift', face);
-      avatar(face, u, FACE);
+      avatar(face, u, layout.face);
       h('i', 'profile-ring', face);
       h('div', 'profile-name', p).textContent = u.title;
       const lock = h('div', 'profile-lock', p);
       if (u.protected) lock.innerHTML = icons.lock;
       return { el: p, run: () => pick(u) };
     });
-    const lines = Math.max(1, Math.ceil(users.length / PER_LINE));
-    picker.style.top = (PICKER_TOP - (lines - 1) * LINE_SHIFT) + 'px';
+    const lines = Math.max(1, Math.ceil(users.length / layout.perLine));
+    picker.style.top = (PICKER_TOP - (lines - 1) * layout.shift) + 'px';
     index = Math.max(0, users.findIndex(u => u.uuid === me));
     renderOptions();
     if (!users.length) setText(status, 'Loading profiles…');
@@ -127,6 +132,7 @@ export function ProfilesScreen({ rejected = false } = {}) {
   function showServers(u, res) {
     const here = session.server ? session.server.name : 'this server';
     setMode('servers', u.title + ' can’t use ' + here);
+    picker.style.top = PICKER_TOP + 'px';
     list.innerHTML = '';
     options = res.servers.map(s => {
       const b = h('div', 'btn btn-wide', list);
@@ -245,12 +251,24 @@ export function ProfilesScreen({ rejected = false } = {}) {
     renderOptions();
   }
 
+  // Lines fill left to right and the short last one is centred, so ▲ and ▼ match faces by
+  // their offset from the centre, landing on the nearest face in the next line.
+  function moveLine(dir) {
+    const per = layout.perLine;
+    const line = Math.floor(index / per) + dir;
+    if (line < 0 || line * per >= options.length) return;
+    const count = l => Math.min(per, options.length - l * per);
+    const offset = index % per - (count(line - dir) - 1) / 2;
+    const col = Math.round(offset + (count(line) - 1) / 2);
+    move(line * per + Math.max(0, Math.min(count(line) - 1, col)) - index);
+  }
+
   function usersKey(action) {
     switch (action) {
       case 'left': move(-1); return true;
       case 'right': move(1); return true;
-      case 'up': move(-PER_LINE); return true;
-      case 'down': move(PER_LINE); return true;
+      case 'up': moveLine(-1); return true;
+      case 'down': moveLine(1); return true;
       case 'enter': if (options[index]) options[index].run(); return true;
     }
     return false;
