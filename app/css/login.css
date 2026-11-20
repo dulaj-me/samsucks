@@ -28,7 +28,7 @@
 .login-qr-card rect { fill: none; }
 .login-qr-card path { fill: currentColor; }
 .login-qr-label { margin-top: 20px; font: var(--f-small); color: var(--mute); text-align: center; }
-/* No blank QR card before the first code. */
+/* No QR card, blank or stale, while a code is on its way. */
 .login.waiting .login-or, .login.waiting .login-qr { visibility: hidden; }
 
 /* plex.tv unreachable: centred, with Try again in focus. */

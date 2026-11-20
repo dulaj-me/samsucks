@@ -34,13 +34,11 @@ export function LoginScreen({ onDone }) {
   h('span', '', failBody).textContent = 'Kinescope keeps trying every few seconds.';
   h('div', 'btn focus', fail).innerHTML = icons.restart + 'Try again';
 
-  // Four empty boxes until plex.tv sends the code.
-  setCode('    ');
-
   let timer = 0;
   let alive = true;
-  // Bumped by every start(), so a code or poll from an earlier one stops instead of running beside it.
+  // Bumped by every start() and by destroy(), so a code, poll or sign-in from an earlier one stops.
   let attempt = 0;
+  let finishing = false;
 
   function setCode(text) {
     while (boxes.length < text.length) boxes.push(h('b', '', code));
@@ -50,6 +48,9 @@ export function LoginScreen({ onDone }) {
   async function start() {
     clearTimeout(timer);
     const mine = ++attempt;
+    // Empty boxes and no QR while the new code is on its way: the old one is no longer polled.
+    toggleClass(el, 'waiting', true);
+    setCode('    ');
     try {
       setText(status, '');
       const pin = await createPin();
@@ -65,14 +66,15 @@ export function LoginScreen({ onDone }) {
       const poll = async () => {
         if (!alive || mine !== attempt) return;
         if (Date.now() > expires) { start(); return; }
+        let token;
         try {
-          const token = await checkPin(pin.id);
-          if (mine !== attempt) return;
-          if (token) { await finish(token); return; }
+          token = await checkPin(pin.id);
         } catch (e) {
           error('pin poll failed', e);
         }
-        if (alive && mine === attempt) timer = setTimeout(poll, 2000);
+        if (!alive || mine !== attempt) return;
+        if (token) { finishOnce(token, mine); return; }
+        timer = setTimeout(poll, 2000);
       };
       timer = setTimeout(poll, 2000);
     } catch (e) {
@@ -83,12 +85,27 @@ export function LoginScreen({ onDone }) {
     }
   }
 
-  async function finish(token) {
+  // The PIN is spent once it has a token: a failure here says so and stops, and OK starts over.
+  async function finishOnce(token, mine) {
+    finishing = true;
+    try {
+      await finish(token, () => !alive || mine !== attempt);
+    } catch (e) {
+      error('sign-in failed', e);
+      if (alive && mine === attempt) setText(status, 'Couldn’t finish signing in. Press OK for a new code.');
+    } finally {
+      finishing = false;
+    }
+  }
+
+  async function finish(token, stale) {
     setText(status, 'Signed in. Finding your servers…');
     const user = await getUser(token);
+    if (stale()) return;
     signIn(token, user);
     log('signed in as', session.user.title);
     const servers = await getServers(token);
+    if (stale()) return;
     if (!servers.length) {
       setText(status, 'No Plex Media Servers on this account.');
       return;
@@ -96,6 +113,7 @@ export function LoginScreen({ onDone }) {
     if (servers.length === 1) {
       setText(status, 'Connecting to ' + servers[0].name + '…');
       const uri = await connect(servers[0]);
+      if (stale()) return;
       useServer(servers[0], uri);
       onDone();
       return;
@@ -110,12 +128,13 @@ export function LoginScreen({ onDone }) {
     name: 'login',
     onShow() { ambience.restore(); },
     onKey(action) {
-      // New code, or Try again: either way, ask plex.tv now.
-      if (action === 'enter') { start(); return true; }
+      // New code, or Try again: either way, ask plex.tv now. Not while a sign-in is finishing.
+      if (action === 'enter') { if (!finishing) start(); return true; }
       return false;
     },
     destroy() {
       alive = false;
+      attempt++;
       clearTimeout(timer);
     },
   };
@@ -136,6 +155,9 @@ export function ServerPicker({ servers, onDone }) {
     return b;
   });
   let index = 0;
+  let alive = true;
+  // One connection at a time; Back while it runs leaves the server as it was.
+  let connecting = false;
   const render = () => buttons.forEach((b, i) => toggleClass(b, 'focus', i === index));
   render();
 
@@ -150,12 +172,21 @@ export function ServerPicker({ servers, onDone }) {
         return true;
       }
       if (action === 'enter') {
+        if (connecting) return true;
+        connecting = true;
         const s = servers[index];
         setText(status, 'Connecting to ' + s.name + '…');
-        connect(s).then(uri => { if (useServer(s, uri)) onDone(); }, e => setText(status, e.message));
+        connect(s).then(uri => {
+          connecting = false;
+          if (alive && useServer(s, uri)) onDone();
+        }, e => {
+          connecting = false;
+          if (alive) setText(status, e.message);
+        });
         return true;
       }
       return false;
     },
+    destroy() { alive = false; },
   };
 }
