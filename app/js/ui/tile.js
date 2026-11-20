@@ -119,7 +119,7 @@ function artFor(item, kind) {
 }
 
 function titleFor(item, kind) {
-  if (item.type === 'episode' && kind !== 'episode') return item.grandparentTitle || item.title;
+  if (item.type === 'episode' && kind !== 'episode' && kind !== 'search-wide') return item.grandparentTitle || item.title;
   if (kind === 'episode' && item.index != null) return item.index + '. ' + item.title;
   return item.title;
 }
@@ -132,8 +132,10 @@ function subFor(item, kind) {
     return timeLeft(item) || [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
   }
   if (kind === 'episode') return [duration(item.duration), timeLeft(item)].filter(Boolean).join('  ·  ');
+  // A search row of episodes names each one, so the show goes under it.
+  if (kind === 'search-wide' && item.type === 'episode') return [item.grandparentTitle, episodeCode(item)].filter(Boolean).join('  ·  ');
   // Shows keep the year alone: Plex's childCount counts Specials as a season.
-  if (kind === 'grid' && item.type === 'movie') return [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
+  if ((kind === 'grid' || kind === 'search-poster') && item.type === 'movie') return [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
   if (item.type === 'episode') return episodeLabel(item) + '  ' + item.title;
   if (item.type === 'season') return item.leafCount ? item.leafCount + ' episodes' : '';
   return item.year || '';

@@ -15,4 +15,7 @@ export const next = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 5.
 export const previous = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 5.2v13.6a1 1 0 0 1-1.53.85l-10.2-6.8a1 1 0 0 1 0-1.7l10.2-6.8A1 1 0 0 1 20 5.2z"/><rect fill="currentColor" x="4.2" y="4.5" width="2.8" height="15" rx="1.2"/></svg>';
 export const arrow = '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5"/></svg>';
 export const chevron = '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M6 9.5l6 6 6-6"/></svg>';
+// Keyboard keys: an open box for Space, a backspace tag for Delete.
+export const space = '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 10v4h16v-4"/></svg>';
+export const del = '<svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h10.5a1.5 1.5 0 0 1 1.5 1.5v11a1.5 1.5 0 0 1-1.5 1.5H9l-6-7z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/></g></svg>';
 export const remove = '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>';

@@ -1,28 +1,45 @@
-.search-bar {
-  position: absolute; top: 64px; left: 96px; right: 96px; height: 96px; padding: 0 36px;
-  border-radius: 48px; background: rgba(var(--cream-rgb), 0.08);
-  display: flex; align-items: center;
+/* The field: the query drawn over an invisible input that takes Samsung's keyboard. */
+.search-field {
+  position: absolute; left: 96px; top: 84px; width: 530px; height: 80px;
+  display: flex; align-items: center; border-bottom: 2px solid var(--hair);
 }
-.search.in-input .search-bar { box-shadow: 0 0 0 4px var(--coral); }
-.search-icon svg { width: 40px; height: 40px; display: block; color: var(--dim); }
+.search-field > svg { width: 34px; height: 34px; margin-right: 18px; flex-shrink: 0; color: var(--mute); }
+.search.in-input .search-field { border-bottom-color: var(--text); }
+.search.in-input .search-field > svg { color: var(--text); }
+.search-q { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; overflow: hidden; }
+/* Right to left, so a query wider than the field overflows at its start, not past the caret. */
+.search-q-clip { min-width: 0; overflow: hidden; direction: rtl; text-align: left; white-space: nowrap; }
+.search-q-text { display: inline-block; direction: ltr; white-space: pre; font: 650 52px/68px var(--sans); letter-spacing: -0.015em; }
+.search-caret { flex-shrink: 0; width: 3px; height: 50px; margin: 0 6px 0 7px; border-radius: 2px; background: var(--text); }
+.search-ph { font: 520 34px/1 var(--sans); color: var(--mute); white-space: nowrap; }
 .search-input {
-  flex: 1; margin-left: 22px; border: 0; outline: 0; background: transparent;
-  color: var(--cream); font: 500 38px var(--body);
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0; border: 0; outline: 0;
+  opacity: 0; background: transparent; color: transparent; caret-color: transparent;
 }
-.search-input::placeholder { color: rgba(var(--cream-rgb), 0.4); }
 
-/* D-pad keyboard (ui/keyboard.js): plain .btn keys in fixed cells, so focus changes lay nothing out. */
+/* The d-pad keyboard (ui/keyboard.js): fixed cells, so focus changes lay nothing out. */
 .keyboard {
-  position: absolute; top: 230px; left: 96px;
-  display: grid; grid-template-columns: repeat(6, 80px); grid-auto-rows: 72px; gap: 8px;
+  position: absolute; top: 204px; left: 96px;
+  display: grid; grid-template-columns: repeat(6, 80px); grid-auto-rows: 80px; gap: 10px;
 }
-.key { padding: 0; margin: 0; justify-content: center; }
+.key {
+  display: flex; align-items: center; justify-content: center; border-radius: var(--r-tile);
+  background: var(--ghost); font: 600 34px/1 var(--sans); color: var(--soft);
+}
+.key-wide { font-size: 26px; }
+.key svg { width: 34px; height: 34px; }
+.key.focus { background: var(--focus-bg); color: var(--focus-fg); }
 
 /*
- * Results and recent searches share the area right of the keyboard; the clip starts just past the keys.
+ * Right of the keyboard, from x 706: the results, a message, or recent searches. The rows' clip
+ * starts 14px clear of the keys; the row sits 30px further left, so its tiles land on 706.
  */
-.search-status { position: absolute; top: 196px; left: 720px; font: 500 26px var(--body); color: var(--dim); }
-.search-rows { position: absolute; top: 230px; left: 624px; right: 0; bottom: 0; overflow: hidden; }
-.search-recent { position: absolute; top: 230px; left: 624px; width: 760px; }
-.search-recent-list { margin: 12px 0 0 96px; }
-.search-recent-list span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.search-rows { position: absolute; top: 84px; left: 640px; right: 0; bottom: 0; overflow: hidden; }
+.search-rows .rows-track { left: -30px; }
+.search-note { position: absolute; left: 706px; top: 88px; width: 1100px; }
+.search-note-msg { font: var(--f-message); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-note-hint { margin-top: 10px; font: var(--f-body); color: var(--soft); }
+.search-recent { position: absolute; left: 706px; top: 84px; width: 1100px; }
+.search-recent .row-title { margin-left: 0; }
+.search-recent-list { margin-top: 24px; display: flex; flex-wrap: wrap; row-gap: 14px; }
+.search-recent-list .pill { max-width: 520px; overflow: hidden; text-overflow: ellipsis; }
