@@ -196,7 +196,8 @@ html.hero-raster .hero-dissolve {
   display: flex; align-items: center; justify-content: center; background: var(--veil); color: var(--text);
 }
 .tile-seen svg { width: 20px; height: 20px; display: block; }
-.tile-text { margin-top: 16px; transition: transform var(--t-focus) var(--ease); }
+/* No transition: captions share their row's layer, and animating them would re-raster it twice per press. */
+.tile-text { margin-top: 16px; }
 .tile-cap {
   font: var(--f-caption); color: var(--soft);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

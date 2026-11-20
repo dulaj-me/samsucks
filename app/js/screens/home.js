@@ -29,6 +29,7 @@ function slimHub(hub) {
     Metadata: hub.Metadata.map(m => {
       const o = {};
       for (const k of keep) if (m[k] !== undefined) o[k] = m[k];
+      if (o.Genre) o.Genre = o.Genre.slice(0, 2).map(g => ({ tag: g.tag }));
       return o;
     }),
   };
@@ -139,8 +140,10 @@ export function HomeScreen() {
     const key = item.ratingKey;
     if (fulls.has(key)) { setMeta(item, fulls.get(key)); return; }
     const server = session.server;
+    // Not through the server's cache: it never evicts, and `fulls` already keeps just the badges.
     badgeTimer = setTimeout(() => {
-      server.get('/library/metadata/' + key, null, { maxAge: 600000 }).then(mc => {
+      if (fulls.has(key)) { if (alive && heroItem === item) setMeta(item, fulls.get(key)); return; }
+      server.get('/library/metadata/' + key).then(mc => {
         const b = badges((mc.Metadata || [])[0]);
         fulls.set(key, b);
         if (alive && heroItem === item && b.length) setMeta(item, b);

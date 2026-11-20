@@ -8,8 +8,9 @@ import { createTile, fillTile, createFocusBox, focusGeometry, KINDS } from './ti
 
 const LEFT = 96;
 // Clear space between the clip's top and the first row's posters, so the lifted
-// tile and its ring are never cut (DESIGN.md, Headroom Rule).
-const HEAD = 40;
+// tile and its ring are never cut (DESIGN.md, Headroom Rule). At most rowGap minus the
+// 74px caption block, or the row above's sub-line shows at the clip's top edge.
+const HEAD = 36;
 
 export class Grid {
   constructor({ cols = 7, kind = 'grid', rowGap = 112, top = 0, height = 1080, getItem, total = 0, onFocus, onSelect, onNeed }) {
