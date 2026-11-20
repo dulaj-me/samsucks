@@ -1,11 +1,62 @@
-/* Profile picker and PIN pad, built from the server picker's classes. Layout only. */
+/* A flat veil over the ambience, static, so it costs one composite. */
+.profiles-veil { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; background: rgba(var(--veil-rgb), 0.35); }
 
-.profile-opt { flex-direction: row; align-items: center; justify-content: flex-start; }
-.profile-opt .avatar { margin-right: 28px; }
-.profile-text { display: flex; flex-direction: column; }
+/* A centred column from y 290; profiles.js raises it for each line of faces past the first. */
+.profiles-picker {
+  position: absolute; left: 0; top: 290px; width: 1920px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.profiles-title { font: var(--f-page); line-height: 60px; white-space: nowrap; }
+.profiles-status { margin-top: 60px; min-height: 36px; font: var(--f-body); color: var(--soft); text-align: center; }
 
-.pin-pad { position: absolute; left: 160px; top: 260px; }
-.pin-cells { display: flex; }
-.pin-cell { width: 72px; padding: 0; text-align: center; }
-.pin-keys { display: grid; grid-template-columns: repeat(3, 160px); gap: 18px; margin-top: 48px; }
-.pin-key { justify-content: center; margin-right: 0; padding: 0; }
+.profiles-people {
+  margin-top: 90px; width: 1920px;
+  display: flex; flex-wrap: wrap; justify-content: center; column-gap: 72px; row-gap: 48px;
+}
+.profile { width: 220px; text-align: center; }
+.profile-face {
+  position: relative; width: 200px; height: 200px; margin: 0 10px;
+  will-change: transform; transition: transform var(--t-focus) var(--ease);
+}
+.profile.focus .profile-face { transform: scale(1.07); }
+/* Shadows stay put; only their layers' opacity changes. */
+.profile-lift, .profile-ring {
+  position: absolute; top: 0; left: 0; width: 200px; height: 200px; border-radius: 50%;
+  opacity: 0; will-change: opacity; transition: opacity var(--t-focus) ease;
+}
+.profile-lift { box-shadow: var(--lift); }
+.profile-ring { box-shadow: 0 0 0 4px var(--ink), 0 0 0 8px var(--text); }
+.profile.focus .profile-lift, .profile.focus .profile-ring { opacity: 1; }
+.profile-name {
+  margin-top: 30px; font: 600 28px/34px var(--sans); color: var(--soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.profile .profile-name { will-change: transform; transition: transform var(--t-focus) var(--ease); }
+.profile.focus .profile-name { color: var(--text); transform: translateY(8px); }
+.profile-lock { margin-top: 8px; height: 26px; display: flex; justify-content: center; color: var(--mute); }
+.profile-lock svg { width: 24px; height: 24px; }
+
+.profiles-servers { margin-top: 90px; width: 880px; }
+
+/* PIN entry: the profile on the left, the pad from x 920. */
+.pin { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; }
+.pin-who { position: absolute; left: 380px; top: 360px; width: 400px; display: flex; flex-direction: column; align-items: center; }
+.pin-who .profile-name { width: 400px; text-align: center; }
+.pin-pad { position: absolute; left: 920px; top: 176px; width: 760px; }
+.pin-title { font: var(--f-page); }
+.pin-dots { margin-top: 36px; display: flex; }
+.pin-dots i { width: 28px; height: 28px; margin-right: 28px; border-radius: 14px; border: 3px solid var(--soft); }
+.pin-dots i.on { background: var(--text); border-color: var(--text); }
+.pin-msg {
+  margin-top: 22px; height: 30px; font: 560 24px/30px var(--sans); color: var(--soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pin-msg.error { color: var(--danger); }
+.pin-keys { margin-top: 26px; display: grid; grid-template-columns: repeat(3, 136px); grid-auto-rows: 96px; gap: 16px; }
+.pin-key {
+  display: flex; align-items: center; justify-content: center; border-radius: var(--r-pin);
+  background: var(--ghost); font: 600 38px/1 var(--sans); color: var(--text);
+}
+.pin-key svg { width: 38px; height: 38px; }
+.pin-key.focus { background: var(--focus-bg); color: var(--focus-fg); }
+.pin-blank { visibility: hidden; }
