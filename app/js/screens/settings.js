@@ -1,7 +1,7 @@
 import { DEV, VERSION } from '../config.js';
 import { h, setText, toggleClass } from '../util/dom.js';
 import * as store from '../util/store.js';
-import { session, signOut, useServer, profileToken, hasProfiles } from '../session.js';
+import { session, signOut, useServer, profileToken, hasProfiles, onUsersChange } from '../session.js';
 import { getServers, connect } from '../plex/auth.js';
 import { setHud, hudEnabled } from '../ui/hud.js';
 import * as router from '../router.js';
@@ -53,15 +53,15 @@ export function SettingsScreen() {
   let ri = 0;
 
   const who = () => (session.user ? session.user.title : '—');
-  const account = hasProfiles()
+  const accountRows = () => (hasProfiles()
     ? [
       { label: 'Switch profile', value: who, run: () => openProfiles() },
       { label: 'Sign out', sub: 'Every profile on this TV signs out with it.', run: doSignOut },
     ]
-    : [{ label: 'Sign out', value: who, run: doSignOut }];
+    : [{ label: 'Sign out', value: who, run: doSignOut }]);
 
   const groups = [
-    { label: 'Profile and account', icon: icons.user, rows: account },
+    { label: 'Profile and account', icon: icons.user, rows: accountRows(), profiles: hasProfiles() },
     {
       label: 'Server', icon: icons.server, rows: [
         { label: 'Switch server', value: () => (session.server ? session.server.name : '—'), run: switchServer },
@@ -101,6 +101,22 @@ export function SettingsScreen() {
     g.el.innerHTML = g.icon;
     h('span', '', g.el).textContent = g.label;
     g.pane = h('div', 'settings-pane', el);
+    fill(g);
+  }
+
+  // After a first sign-in the profile list can land while this screen is open.
+  const offUsers = onUsersChange(() => {
+    const g = groups[0];
+    if (g.profiles === hasProfiles()) return;
+    g.profiles = hasProfiles();
+    g.rows = accountRows();
+    fill(g);
+    ri = Math.min(ri, g.rows.length - 1);
+    render();
+  });
+
+  function fill(g) {
+    g.pane.innerHTML = '';
     if (!g.rows.length) about(g.pane);
     for (const it of g.rows) {
       it.el = h('div', it.sub ? 'setting setting-two' : 'setting', g.pane);
@@ -246,6 +262,6 @@ export function SettingsScreen() {
     onKey(action) {
       return zone === 'rows' ? rowsKey(action) : groupsKey(action);
     },
-    destroy() { alive = false; },
+    destroy() { alive = false; offUsers(); },
   };
 }
