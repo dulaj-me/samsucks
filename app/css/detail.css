@@ -12,10 +12,13 @@
   width: 860px; padding-bottom: 10px; font: var(--f-display); font-stretch: 104%; letter-spacing: -0.025em; text-wrap: balance;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* A 31px line box: the genres clip, and at line-height 1 their descenders would too. */
 .detail-meta {
   height: 31px; margin-top: 30px; display: flex; align-items: center;
-  font: var(--f-meta); line-height: 1; color: var(--soft); white-space: nowrap;
+  font: var(--f-meta); line-height: 31px; color: var(--soft); white-space: nowrap;
 }
+.detail-meta > * { flex-shrink: 0; }
+.detail-meta > .detail-genres { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .detail-tagline {
   height: 34px; margin-top: 22px; font: 600 27px/34px var(--sans); color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

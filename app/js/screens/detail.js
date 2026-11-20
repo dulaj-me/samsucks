@@ -117,12 +117,11 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   h('div', 'detail-hint', el).textContent = 'Hold OK for options';
   const menu = new Menu(el);
 
-  // Movies and episodes have no seasons, so their rows follow the buttons.
+  // Movies and episodes have no seasons, so their rows follow the buttons. A show keeps the
+  // seasons' room until they load.
   const showLike = initial.type === 'show' || initial.type === 'season';
-  const rowsTop = showLike ? SHOW_ROWS_TOP : 0;
-  rowlist.el.style.top = rowsTop + 'px';
-  show(seasonsEl, showLike);
-  show(episodesWrap, showLike);
+  let rowsTop = 0;
+  placeBelow(showLike);
 
   let item = initial;
   let buttons = [];
@@ -130,6 +129,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   let seasons = [];
   let seasonIndex = 0;
   let episodes = null;
+  let episodesAsk = 0; // the latest season asked for; older answers are dropped
   let slots = [];
   let rowsBuilt = false;
   let loaded = false;
@@ -154,7 +154,9 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       setText(compactTitle, name);
     }
     const f = facts(item, item.type === 'movie' ? 3 : 2);
-    metaFacts.forEach((el, i) => { show(el, i < f.length); setText(el, f[i]); });
+    // Genres come last; they give way before the badges do.
+    const genres = (item.Genre || []).length ? f.length - 1 : -1;
+    metaFacts.forEach((el, i) => { show(el, i < f.length); setText(el, f[i]); toggleClass(el, 'detail-genres', i === genres); });
     metaDots.forEach((el, i) => show(el, i + 1 < f.length));
     const b = formatBadges(item);
     metaBadges.forEach((el, i) => { show(el, i < b.length); setText(el, b[i]); });
@@ -210,6 +212,13 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     }
     buttonIndex = Math.min(buttonIndex, buttons.length - 1);
     renderFocus();
+  }
+
+  function placeBelow(hasSeasons) {
+    show(seasonsEl, hasSeasons);
+    show(episodesWrap, hasSeasons);
+    rowsTop = hasSeasons ? SHOW_ROWS_TOP : 0;
+    rowlist.el.style.top = rowsTop + 'px';
   }
 
   function renderSeasons() {
@@ -342,8 +351,9 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   // --- Loading ---------------------------------------------------------
 
   async function loadEpisodes(season, keepKey) {
+    const ask = ++episodesAsk;
     const kids = await session.server.children(season.ratingKey);
-    if (!alive) return;
+    if (!alive || ask !== episodesAsk) return;
     if (!episodes) {
       const row = new Row({
         kind: 'episode', caption: true, items: kids,
@@ -381,6 +391,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
         const deckSeason = item.onDeck ? seasons.findIndex(s => s.ratingKey === item.onDeck.parentRatingKey) : -1;
         const pref = preferSeason ? seasons.findIndex(s => s.ratingKey === preferSeason) : -1;
         seasonIndex = pref >= 0 ? pref : (deckSeason >= 0 ? deckSeason : 0);
+        placeBelow(seasons.length > 0);
         renderSeasons();
         if (seasons[seasonIndex]) await loadEpisodes(seasons[seasonIndex]);
       }
@@ -416,6 +427,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       if (full) item = full;
       seasons = kids.filter(s => s.type === 'season');
       seasonIndex = Math.min(seasonIndex, seasons.length - 1);
+      placeBelow(seasons.length > 0);
       renderSeasons();
       renderButtons();
       if (seasons[seasonIndex]) await loadEpisodes(seasons[seasonIndex], keep && keep.ratingKey);
