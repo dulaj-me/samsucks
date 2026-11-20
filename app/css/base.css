@@ -148,7 +148,7 @@ html.playing .ambience { display: none; }
   will-change: transform; transition: transform var(--t-slide) var(--ease);
 }
 
-/* The lift's static shadow and the ring around the focused tile, under the tiles. */
+/* The lift's static shadow and the ring around the focused tile, under it. */
 .focus-box {
   position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0;
   will-change: transform, opacity;
@@ -159,6 +159,27 @@ html.playing .ambience { display: none; }
 .ring { position: absolute; border: 4px solid var(--text); border-radius: 23px; }
 
 .tile { position: absolute; top: 0; left: 0; }
+
+/*
+ * Row tiles never lift; the card at the anchor does. Each row tile is one layer, caption
+ * included, so the one entering or leaving the card fades as a whole. A tile at or left of
+ * focus (.gone) hides; its offset rides the track's curve, so its net move is row.js's SHORT.
+ */
+.row-slot { position: absolute; top: 0; left: 0; }
+.row-track .tile { will-change: transform, opacity; }
+.row-track .tile-frame { will-change: auto; transition: none; }
+.row.active .row-track .tile.gone { opacity: 0; transform: translateX(var(--gone-x)); }
+.row.live .row-track .tile { transition: transform var(--t-slide) var(--ease), opacity var(--t-swap) ease; }
+/* Appears in place over the focused tile when the row takes focus, then lifts; fades out as it leaves. */
+.row-card {
+  position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0;
+  will-change: opacity; transition: opacity var(--t-focus) ease;
+}
+.row.active .row-card { opacity: 1; transition: none; }
+.row-card .tile { will-change: transform, opacity; }
+.row-card .tile-cap { color: var(--text); }
+.row.active .row-card .tile-frame { transform: scale(1.07); }
+.row.active .row-card .tile-text { transform: translateY(var(--cap-shift)); }
 .tile-frame {
   position: relative; border-radius: var(--r-tile); overflow: hidden; background: var(--well);
   will-change: transform; transition: transform var(--t-focus) var(--ease);
@@ -201,16 +222,13 @@ html.playing .ambience { display: none; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Focus: the tile lifts about its centre and its caption drops clear (--cap-shift, set by
-   the list). In a row it also closes the 16px its right-hand neighbours keep for the lift. */
+/* Grid focus: the tile lifts about its centre and its caption drops clear (--cap-shift, set by the grid). */
 .tile.focus .tile-frame { transform: scale(1.07); }
 .tile.focus .tile-text { transform: translateY(var(--cap-shift)); }
 .tile.focus .tile-cap { color: var(--text); }
-.row .tile.focus .tile-frame { transform: translateX(-16px) scale(1.07); }
-.row .tile.focus .tile-text { transform: translate(-16px, var(--cap-shift)); }
 
 html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .focus-box, html.fast .nav-track,
-html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .menu-hl {
+html.fast .tile-frame, html.fast .row.live .row-track .tile, html.fast .menu-track, html.fast .menu-hl {
   transition-duration: var(--t-held);
 }
 
@@ -266,7 +284,7 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
 .menu-list.more-top { -webkit-mask-image: linear-gradient(transparent, #000 48px); }
 .menu-list.more-bottom { -webkit-mask-image: linear-gradient(#000 calc(100% - 48px), transparent); }
 .menu-list.more-top.more-bottom { -webkit-mask-image: linear-gradient(transparent, #000 48px, #000 calc(100% - 48px), transparent); }
-/* The focus highlight: its own layer, under the options. */
+/* The focus highlight: a card on its own layer over the options, with a dark copy of the focused one. */
 .menu-hl {
   position: absolute; top: 0; left: 0; width: 512px; height: 72px; border-radius: var(--r-option);
   background: var(--focus-bg);
@@ -283,7 +301,7 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
 .menu-tick { margin-left: auto; padding-left: 18px; }
 .menu-tick svg { display: block; margin: 0; }
 .menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); }
-.menu .menu-opt.focus { background: none; }
+.menu-hl .menu-opt { color: var(--focus-fg); will-change: transform, opacity; }
 
 .btn-wide {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
