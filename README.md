@@ -232,6 +232,12 @@ measurable difference.
   which rejects these transcode requests, so SamSUCKS identifies itself as `Samsung`.
 - Samsung TVs from 2018 on can't decode DTS. For those files Plex copies the video
   and converts only the audio, to AC3 5.1.
+- Burning in a subtitle re-encodes the video, which at 4K runs below realtime on most
+  servers. Embedded text subtitles are requested as `subtitles=segmented` with a WebVTT
+  `subtitleProfile` target instead: Plex keeps copying the video and adds a WebVTT
+  subtitle rendition that AVPlay shows. 4K never burns.
+- A copied HLS stream starts on the keyframe before the requested offset, sometimes
+  10 s earlier. The real start is `minOffsetAvailable` on `/transcode/sessions/<session>`.
 </details>
 
 ## Credits
