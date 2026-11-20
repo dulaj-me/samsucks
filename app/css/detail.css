@@ -14,10 +14,15 @@
   position: absolute; left: 96px; top: 140px; width: 1728px;
   will-change: transform; transition: transform 380ms var(--ease);
 }
+/* Fixed heights down to the buttons, so the rows below always peek at the same place. */
+.detail-logo-box { height: 210px; display: flex; align-items: flex-end; }
 .detail-logo { display: block; max-width: 640px; max-height: 210px; object-fit: contain; object-position: left bottom; }
-.detail-title { font: 700 108px/0.95 var(--display); max-width: 1150px; }
-.detail-sub { margin-top: 18px; font: 600 30px var(--body); min-height: 36px; }
-.detail-meta { margin-top: 12px; font: 500 26px var(--body); color: var(--dim); }
+.detail-title {
+  font: 700 108px/0.95 var(--display); max-width: 1150px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.detail-sub { margin-top: 18px; font: 600 30px var(--body); height: 42px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detail-meta { margin-top: 12px; height: 39px; display: flex; align-items: center; font: 500 26px var(--body); color: var(--dim); white-space: nowrap; }
 .detail-tags { margin-top: 10px; font: 400 22px var(--body); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 1100px; }
 .detail-summary {
   margin-top: 22px; max-width: 980px; height: 156px;
@@ -28,8 +33,24 @@
 
 .detail-seasons { margin-top: 60px; height: 56px; white-space: nowrap; }
 .detail-episodes { position: relative; margin: 24px 0 0 -96px; width: 1920px; height: 330px; }
+
+/* Below the fold the active row takes the header's place, so what sat above it fades. */
+.detail-head, .detail-seasons, .detail-episodes { will-change: opacity; transition: opacity var(--t-focus) ease; }
+.detail.deep .detail-head, .detail.deep .detail-seasons, .detail.deep .detail-episodes { opacity: 0; }
+
+/* Cast, Extras and More like this. Rows stack inside; the first one peeks under the buttons. */
+.detail-rows { position: relative; margin: 60px 0 0 -96px; width: 1920px; height: 0; }
+.detail-rows .row.current:not(.active) { opacity: 0.55; }
+/* A held key shortens the track's slide; the fade keeps pace so a hidden heading never lingers on the bottom edge. */
+html.fast .detail-rows .row { transition-duration: var(--t-held); }
+.detail-ghost { position: absolute; top: 64px; border-radius: var(--r-tile); background: var(--ghost); }
+.detail-failed-box { position: absolute; left: 96px; top: 64px; height: 68px; display: flex; align-items: center; }
+.detail-failed-msg { margin-right: 24px; font: var(--f-body); color: var(--soft); white-space: nowrap; }
+
 .detail-hint {
   position: absolute; left: 96px; bottom: 48px; font: 500 22px var(--body); color: var(--dim);
   opacity: 0; will-change: opacity; transition: opacity 380ms var(--ease);
 }
 .detail.shifted .detail-hint { opacity: 1; }
+/* It would sit on the faces and posters peeking at the bottom. */
+.detail.has-rows .detail-hint { display: none; }

@@ -73,7 +73,7 @@ function facts(item) {
 }
 
 // Resolution, then Dolby Vision or HDR, then Atmos, from the first media's streams.
-function badges(full) {
+export function badges(full) {
   const m = ((full && full.Media) || [])[0];
   if (!m) return [];
   const streams = (m.Part && m.Part[0] && m.Part[0].Stream) || [];
