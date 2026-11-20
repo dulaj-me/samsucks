@@ -82,6 +82,8 @@ export function LibraryScreen(section) {
   let isEmpty = false;       // the grid has nothing to show: no matches, an empty library or an error
   let wayOut = null;         // the bar's chip out of that: 'clear' or 'retry'
   let loading = false;       // the first page is on its way, behind the skeleton
+  // Every move retries a failed refetch; one toast per outage, until a page loads again.
+  let refreshWarned = false;
   let swapping = false;      // new filters' first page is on its way; the old grid stays up
   let zone = 'grid';
   let inPicker = false;      // the menu shows one category's values
@@ -173,6 +175,7 @@ export function LibraryScreen(section) {
       }
       res.items.forEach((it, i) => { items[p * PAGE + i] = it; });
       pages.set(p, true);
+      refreshWarned = false;
       if (p === 0) setLoading(false);
       showTotal(res.total);
       // A cut lands on the first poster without sliding the old grid there.
@@ -191,8 +194,10 @@ export function LibraryScreen(section) {
       // The old grid no longer matches the chips.
       if (p === 0 && swapping) { swapping = false; clearGrid(); }
       // A refetch after a title left keeps the posters it has; the next move asks again.
-      if (p === 0 && grid.total) toast("Couldn't refresh " + section.title + '.');
-      else if (p === 0) showEmpty("Couldn't load " + section.title, 'Check that ' + session.server.name + ' is on, then try again.', 'retry');
+      if (p === 0 && grid.total) {
+        if (!refreshWarned) toast("Couldn't refresh " + section.title + '.');
+        refreshWarned = true;
+      } else if (p === 0) showEmpty("Couldn't load " + section.title, 'Check that ' + session.server.name + ' is on, then try again.', 'retry');
     }
     // The four filter lists wait for the first page, so they never hold up its posters.
     if (p === 0) ensureLists();
