@@ -164,6 +164,7 @@ export class Row {
       }
       fillTile(tile, this.items[i]);
       toggleClass(tile.el, 'gone', i <= this.index);
+      toggleClass(tile.slot, 'under', i <= this.index);
     }
     // Slots not covering any item this frame.
     for (const tile of this.pool) {

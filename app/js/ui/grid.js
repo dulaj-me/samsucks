@@ -91,10 +91,10 @@ export class Grid {
     toggleClass(this.el, 'hmove', mode === 'h');
   }
 
-  // Data for some rows arrived: re-fill whatever is on screen.
+  // Data for some rows arrived: re-fill whatever is on screen, in place, so a page landing
+  // mid-move doesn't cut the move's transitions.
   refresh() {
-    for (const r of this.rows) r.row = -1;
-    this.render();
+    this.render(true);
     if (this.active) this.card.show(this.current());
   }
 
@@ -136,7 +136,7 @@ export class Grid {
     if (item && this.onSelect) this.onSelect(item, this.index);
   }
 
-  render() {
+  render(refill) {
     const focusRow = Math.floor(this.index / this.cols);
     const focusCol = this.index % this.cols;
     this.scrollRow = focusRow;
@@ -146,11 +146,14 @@ export class Grid {
     for (let r = firstRow; r < lastRow; r++) {
       const slot = this.rows[r % this.poolRows];
       // A recycled row takes its tiles' state without transitions.
-      toggleClass(slot.el, 'fresh', slot.row !== r);
-      if (slot.row !== r) {
+      const recycled = slot.row !== r;
+      toggleClass(slot.el, 'fresh', recycled);
+      if (recycled) {
         slot.row = r;
         slot.el.style.visibility = '';
         setTransform(slot.el, 'translateY(' + r * this.stepY + 'px)');
+      }
+      if (recycled || refill) {
         for (let c = 0; c < this.cols; c++) {
           const i = r * this.cols + c;
           const tile = slot.tiles[c];
@@ -163,6 +166,8 @@ export class Grid {
         }
       }
       toggleClass(slot.el, 'above', r < focusRow);
+      // The row whose poster enters the card stays under the row sliding over it.
+      toggleClass(slot.el, 'under', r <= focusRow);
       for (let c = 0; c < this.cols; c++) toggleClass(slot.tiles[c].el, 'gone', c === focusCol && r <= focusRow);
     }
     for (const slot of this.rows) {

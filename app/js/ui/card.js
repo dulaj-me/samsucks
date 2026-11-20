@@ -32,6 +32,8 @@ export class Card {
     // How far content travels on a swap: a tenth of the tile's width.
     this.travel = Math.round(size.w / 10);
     this.drop = lifted ? g.caption : 0;
+    // A focus card with no item yet (a page still loading) shows the empty well, not a hole.
+    this.lifted = lifted;
     this.el = h('div', 'card' + (lifted ? ' card-lifted' : ''), parent);
     if (lifted) createFocusBox(this.el, size, x, y);
 
@@ -63,12 +65,14 @@ export class Card {
     this.cur = 0;
   }
 
-  // In place, no motion.
+  // In place, no motion. Showing what is already there leaves a running swap alone, so a
+  // refresh landing mid-swap doesn't snap it.
   show(item) {
     const face = this.faces[this.cur];
+    if (face.item === (item || null)) return;
     stop(face);
     fillTile(face, item || null);
-    setShown(face, !!item);
+    setShown(face, !!item || this.lifted);
   }
 
   // dx, dy: the direction the content travels, -1, 0 or 1 on each axis.
@@ -118,7 +122,7 @@ export class Card {
     fillTile(inn, item || null);
     const had = out.el.classList.contains('shown');
     setShown(out, false);
-    setShown(inn, !!item);
+    setShown(inn, !!item || this.lifted);
     if (instant || !inn.el.animate) return;
     const { duration, ease } = swapTiming();
     const run = (face, list) => {
@@ -128,7 +132,7 @@ export class Card {
       });
     };
     if (had) run(out, outAnims(out));
-    if (item) run(inn, inAnims(inn, had));
+    if (item || this.lifted) run(inn, inAnims(inn, had));
   }
 }
 

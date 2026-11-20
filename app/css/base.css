@@ -176,7 +176,9 @@ html.playing .ambience { display: none; }
 .row-slot.fresh .tile, .grid-row.fresh .tile { transition: none !important; }
 /* The tile entering the card sits under the next one and fades fast: the next one overlaps it
    within a frame or two, and its art showing in the next one's corners reads as square corners. */
-.row-track .tile.gone, .grid-track .tile.gone { z-index: -1; }
+/* Slots, not tiles: each slot's transform makes it its own stacking context. */
+.row-slot, .grid-row { z-index: 1; }
+.row-slot.under, .grid-row.under { z-index: 0; }
 .row.live .row-track .tile.gone, .grid.vmove .grid-track .tile.gone {
   transition: transform var(--t-slide) var(--ease), opacity calc(var(--t-swap) / 4) linear;
 }
@@ -184,6 +186,9 @@ html.playing .ambience { display: none; }
    once covered, then drops to its waiting offset. */
 .grid.hmove .grid-track .tile.gone { transition: opacity 0s linear var(--t-slide), transform 0s linear var(--t-slide); }
 html.fast .grid.hmove .grid-track .tile.gone { transition-delay: var(--t-held); }
+html.fast .row.live .row-track .tile.gone, html.fast .grid.vmove .grid-track .tile.gone {
+  transition-duration: var(--t-held), calc(var(--t-swap) / 4);
+}
 
 /*
  * A card (ui/card.js): two faces of one tile. The face being replaced sits on top, so it fades
@@ -321,6 +326,8 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
   position: absolute; top: 0; left: 0; width: 512px; height: 72px; border-radius: var(--r-option);
   background: var(--focus-bg);
   will-change: transform; transition: transform var(--t-slide) var(--ease);
+  /* Its label is rewritten on every press; keep that layout inside it. */
+  contain: strict;
 }
 .menu-track { position: relative; will-change: transform; transition: transform var(--t-slide) var(--ease); }
 .menu-list.now .menu-hl, .menu-list.now .menu-track { transition: none; }
