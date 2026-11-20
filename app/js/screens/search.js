@@ -1,4 +1,4 @@
-// Search across the server. Zones: the search bar (OK opens Samsung's keyboard), the d-pad
+// Search across the server. Zones: the search field (OK opens Samsung's keyboard), the d-pad
 // keyboard below it, and to its right the results, or recent searches while the query is empty.
 // Results update as you type, from either keyboard.
 import { h, setText, setTransform, show, toggleClass } from '../util/dom.js';
@@ -18,6 +18,12 @@ const IME_CANCEL = 65385;
 const DEBOUNCE_MS = 350;
 const MIN_QUERY = 2;
 const MAX_RECENT = 8;
+// The results area's top; a row whose heading would end below the Safe Frame (y 1026) stays hidden.
+const RESULTS_TOP = 84;
+const SAFE_BOTTOM = 1026;
+const HEADING_H = 40;
+// Home's 76px under a row's captions would put the second row's captions past y 1026.
+const ROW_GAP_TRIM = 48;
 
 // Per profile, so profiles don't see each other's searches.
 const recentStoreKey = () => 'recentSearches.' + ((session.user && session.user.uuid) || '');
@@ -25,15 +31,23 @@ const recentStoreKey = () => 'recentSearches.' + ((session.user && session.user.
 export function SearchScreen() {
   const el = h('div', 'screen search');
   const ambience = useAmbience();
-  const bar = h('div', 'search-bar', el);
-  const icon = h('div', 'search-icon', bar);
-  icon.innerHTML = icons.search;
-  const input = h('input', 'search-input', bar);
+  // The query is drawn here; the input underneath, invisible, takes Samsung's keyboard.
+  const field = h('div', 'search-field', el);
+  field.innerHTML = icons.search;
+  const shown = h('div', 'search-q', field);
+  // Clips from the left, so a long query keeps its end and the caret in view.
+  const qClip = h('div', 'search-q-clip', shown);
+  const qText = h('span', 'search-q-text', qClip);
+  h('i', 'search-caret', shown);
+  const placeholder = h('span', 'search-ph', shown);
+  placeholder.textContent = 'Search movies and shows';
+  const input = h('input', 'search-input', field);
   input.type = 'text';
-  input.placeholder = 'Search movies and shows';
   input.setAttribute('autocomplete', 'off');
   const keyboard = new Keyboard(el, type);
-  const status = h('div', 'search-status', el);
+  const note = h('div', 'search-note', el);
+  const noteMsg = h('div', 'search-note-msg', note);
+  const noteHint = h('div', 'search-note-hint', note);
   const recentEl = h('div', 'search-recent', el);
   h('h2', 'row-title', recentEl).textContent = 'Recent searches';
   const recentList = h('div', 'search-recent-list', recentEl);
@@ -55,30 +69,46 @@ export function SearchScreen() {
   let generation = 0;
   let jump = 0; // results of this generation take focus when they arrive
 
+  // A message and a hint where the results go, while there are none to show.
+  function setNote(msg, hint) {
+    setText(noteMsg, msg);
+    setText(noteHint, hint);
+    show(noteMsg, !!msg);
+    show(note, !!(msg || hint));
+  }
+
   async function run(q) {
     query = q;
     const gen = ++generation;
-    if (q.length < MIN_QUERY) { setRows([]); setText(status, ''); return; }
-    setText(status, 'Searching…');
+    if (q.length < MIN_QUERY) { setRows([]); setNote('', ''); return; }
+    // Results already up stay until the new ones arrive.
+    if (!rows.length) setNote('', 'Searching…');
     renderRecents();
     try {
       const hubs = await session.server.search(q);
       if (gen !== generation) return;
       setRows(hubs);
       rowsQuery = q;
-      setText(status, hubs.length ? '' : 'Nothing found for “' + q + '”');
+      setNote(hubs.length ? '' : 'Nothing for “' + q + '”', hubs.length ? '' : 'Try a different spelling, or part of the title.');
       if (gen === jump && rows.length) setZone('results');
     } catch (e) {
       if (gen !== generation) return;
       error('search failed', e);
       query = null; // the same text runs again on the next change
-      setText(status, 'Search failed');
+      setRows([]);
+      setNote('Search failed', 'Change the search to try again.');
     }
+  }
+
+  function renderQuery() {
+    setText(qText, input.value);
+    show(placeholder, !input.value);
   }
 
   // Called after every edit, from the d-pad keyboard or the IME.
   function changed() {
     clearTimeout(timer);
+    renderQuery();
     const q = input.value.trim();
     if (q === query) return;
     // Nothing to fetch below the minimum, so recents come back without the debounce.
@@ -128,6 +158,7 @@ export function SearchScreen() {
   function setRows(hubs) {
     track.innerHTML = '';
     let y = 0;
+    if (hubs.length) setNote('', '');
     rows = hubs.map(hub => {
       const row = new Row({
         title: hub.title, kind: hub.type === 'episode' ? 'search-wide' : 'search-poster',
@@ -135,7 +166,7 @@ export function SearchScreen() {
       });
       setTransform(row.el, 'translateY(' + y + 'px)');
       row.y = y;
-      y += row.height;
+      y += row.height - ROW_GAP_TRIM;
       track.appendChild(row.el);
       return row;
     });
@@ -159,7 +190,7 @@ export function SearchScreen() {
     return !rows.length && input.value.trim().length < MIN_QUERY && recents.length > 0;
   }
 
-  // Rebuilt only when the list changes; moving focus in it toggles classes.
+  // Chips, rebuilt only when the list changes; moving focus among them toggles classes.
   function renderRecents() {
     const on = recentsShown();
     show(recentEl, on);
@@ -167,10 +198,9 @@ export function SearchScreen() {
     if (!recentOpts) {
       recentList.innerHTML = '';
       recentOpts = recents.map(q => {
-        const opt = h('div', 'menu-opt', recentList);
-        opt.innerHTML = icons.search;
-        h('span', '', opt).textContent = q;
-        return opt;
+        const chip = h('div', 'pill', recentList);
+        chip.textContent = q;
+        return chip;
       });
     }
     recentIndex = Math.min(recentIndex, recentOpts.length - 1);
@@ -185,10 +215,15 @@ export function SearchScreen() {
     // A zone whose content went away hands focus back to the keyboard.
     if ((zone === 'results' && !rows.length) || (zone === 'recent' && !recentsShown())) zone = 'keys';
     keyboard.setActive(zone === 'keys');
-    rows.forEach((r, i) => r.setActive(zone === 'results' && i === rowIndex));
+    const y = rows[rowIndex] ? rows[rowIndex].y : 0;
+    // Rows above the current one hide, and so do rows whose heading would cross the Safe Frame.
+    rows.forEach((r, i) => {
+      r.setActive(zone === 'results' && i === rowIndex);
+      toggleClass(r.el, 'current', i === rowIndex);
+      toggleClass(r.el, 'above', i < rowIndex || RESULTS_TOP + r.y - y + HEADING_H > SAFE_BOTTOM);
+    });
     if (recentOpts) recentOpts.forEach((o, i) => toggleClass(o, 'focus', zone === 'recent' && i === recentIndex));
     toggleClass(el, 'in-input', zone === 'input');
-    const y = rowIndex > 0 && rows[rowIndex] ? rows[rowIndex].y : 0;
     setTransform(track, 'translateY(' + (-y) + 'px)');
   }
 
@@ -200,6 +235,7 @@ export function SearchScreen() {
 
   function pickRecent(q) {
     input.value = q;
+    renderQuery();
     setZone('keys');
     submit();
   }
@@ -266,11 +302,12 @@ export function SearchScreen() {
     return false;
   }
 
+  // The chips run as one line, wrapped or not: Left and Right step through them.
   function recentsKey(action) {
     switch (action) {
-      case 'left': setZone('keys'); return true;
-      case 'up': if (recentIndex === 0) { inputFrom = 'recent'; setZone('input'); } else { recentIndex--; render(); } return true;
-      case 'down': if (recentIndex < recentOpts.length - 1) { recentIndex++; render(); } return true;
+      case 'left': if (recentIndex === 0) setZone('keys'); else { recentIndex--; render(); } return true;
+      case 'right': if (recentIndex < recentOpts.length - 1) { recentIndex++; render(); } return true;
+      case 'up': inputFrom = 'recent'; setZone('input'); return true;
       case 'enter': pickRecent(recents[recentIndex]); return true;
       case 'hold': recentMenu(); return true;
       case 'back': setZone('keys'); return true;
@@ -278,6 +315,7 @@ export function SearchScreen() {
     return true;
   }
 
+  renderQuery();
   renderRecents();
   render();
 

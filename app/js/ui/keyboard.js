@@ -1,11 +1,12 @@
 // On-screen keyboard for the d-pad: a fixed grid of fixed-size keys. Moving focus only
 // swaps a class on two keys, so a press lays nothing out.
 import { h, setText, toggleClass } from '../util/dom.js';
+import * as icons from './icons.js';
 
 const COLS = 6;
 const LAYOUT = [
-  [{ id: 'space', label: 'Space', span: 2 }, { id: 'delete', label: 'Delete', span: 2 }, { id: 'clear', label: 'Clear', span: 2 }],
   'abcdef', 'ghijkl', 'mnopqr', 'stuvwx', 'yz1234', '567890',
+  [{ id: 'space', icon: icons.space, span: 2 }, { id: 'delete', icon: icons.del, span: 2 }, { id: 'clear', label: 'Clear', span: 2 }],
 ];
 
 export class Keyboard {
@@ -18,14 +19,15 @@ export class Keyboard {
       const keys = typeof row === 'string' ? row.split('').map(id => ({ id, label: id, span: 1 })) : row;
       const cells = [];
       for (const k of keys) {
-        const key = { id: k.id, el: h('div', 'btn key', this.el) };
-        setText(key.el, k.label);
+        const key = { id: k.id, el: h('div', k.span > 1 ? 'key key-wide' : 'key', this.el) };
+        if (k.icon) key.el.innerHTML = k.icon;
+        else setText(key.el, k.label);
         if (k.span > 1) key.el.style.gridColumn = 'span ' + k.span;
         for (let i = 0; i < k.span; i++) cells.push(key);
       }
       return cells;
     });
-    this.r = 1;
+    this.r = 0;
     this.c = 0;
     this.active = false;
   }
