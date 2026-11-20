@@ -4,7 +4,7 @@ import { h, setText, setTransform, toggleClass, show } from '../util/dom.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { Row } from '../ui/row.js';
 import { RowList } from '../ui/rowlist.js';
-import { KINDS } from '../ui/tile.js';
+import { KINDS, captionExtra } from '../ui/tile.js';
 import { Menu } from '../ui/menu.js';
 import { isWatched, toggleWatched, openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
@@ -29,7 +29,7 @@ function formatBadges(item) {
 }
 
 // A row's height as Row computes it: heading, tiles, caption block, gap to the next row.
-const rowHeight = (kind, caption) => 64 + KINDS[kind].h + (caption ? 81 : 0) + 76;
+const rowHeight = (kind, caption) => 64 + KINDS[kind].h + (caption ? 81 + captionExtra(KINDS[kind]) : 0) + 76;
 
 // Stands in for a row while it loads: static ghost shapes at its geometry. Unlike a Row it
 // has no pooled tiles, layers or images, so it costs next to nothing to show.

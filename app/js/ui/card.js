@@ -5,7 +5,7 @@
 // Rows and the grid put a lifted, ringed card over their focus; a row also keeps an
 // unlifted one for the previous item's edge at its left.
 import { h, toggleClass } from '../util/dom.js';
-import { createTile, fillTile, createFocusBox, focusGeometry, KINDS, LIFT } from './tile.js';
+import { createTile, fillTile, createFocusBox, focusGeometry, captionExtra, KINDS, LIFT } from './tile.js';
 
 const CAP_H = 64;    // the caption block: a 23px line, 5px, a 22px line at 1.2
 const HOLD = 0.25;   // the old face stays solid this far into a swap, so its slide reads
@@ -43,7 +43,7 @@ export class Card {
     let cap = null;
     if (caption) {
       cap = h('div', 'card-cap', this.el);
-      place(cap, x, y + size.h + 16 + (lifted ? g.caption : 0), size.w, CAP_H);
+      place(cap, x, y + size.h + 16 + (lifted ? g.caption : 0), size.w, CAP_H + captionExtra(size));
     }
     this.faces = [0, 1].map(() => {
       const t = createTile(kind, { caption });
