@@ -40,14 +40,10 @@
   --avatar-ink: #2A160C;
   --hud: #9f9;
 
-  /*
-   * Focus on controls. White fill by default; html.focus-outline switches every control to
-   * the bloom fallback (faint fill, white text, 4px white line) for an A/B on the panel.
-   */
+  /* Focus on controls: a white fill. DESIGN.md has the fallback if it blooms. */
   --focus-bg: var(--text);
   --focus-fg: var(--on-text);
   --focus-fg-dim: var(--on-text-dim);
-  --focus-line: transparent;
 
   --sans: 'Kinescope Sans', 'SamsungOneUI', sans-serif;
   --f-display: 700 96px/0.98 var(--sans);
@@ -103,9 +99,3 @@
   --body: var(--sans);
 }
 
-html.focus-outline {
-  --focus-bg: var(--faint);
-  --focus-fg: var(--text);
-  --focus-fg-dim: var(--mute);
-  --focus-line: var(--text);
-}

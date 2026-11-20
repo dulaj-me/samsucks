@@ -58,18 +58,12 @@ html.playing .ambience { display: none; }
 .hero-img.on { opacity: 1; }
 .hero-fade { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 /*
- * The art dissolves into its own ambience: clear to 22% from the left, solid from 64%;
- * clear to 34% from the bottom, solid from 76%. A static mask, painted once.
- * html.hero-raster swaps in the same alpha as a small stretched image, for an A/B on the TV.
+ * The art dissolves into its own ambience through a static mask, clear at the box's left and
+ * bottom edges. Boxes stay as small as the visible art: full screen cost Home a frame step on the TV.
  */
 .hero-dissolve {
-  -webkit-mask-image: linear-gradient(to right, transparent 22%, #000 64%), linear-gradient(to top, transparent 34%, #000 76%);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 53.86%), linear-gradient(to top, transparent, #000 63.65%);
   -webkit-mask-composite: source-in;
-}
-html.hero-raster .hero-dissolve {
-  -webkit-mask-image: url(../img/hero-mask.png);
-  -webkit-mask-size: 100% 100%;
-  -webkit-mask-composite: source-over;
 }
 /* Its own layer, so text changing under it never repaints the gradient. */
 .top-veil {
@@ -114,7 +108,7 @@ html.hero-raster .hero-dissolve {
   font: var(--f-nav); color: var(--mute); white-space: nowrap;
 }
 .nav-item.current { background: var(--faint); color: var(--text); }
-.nav-item.focus { background: var(--focus-bg); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
+.nav-item.focus { background: var(--focus-bg); color: var(--focus-fg); }
 .nav-icons { display: flex; align-items: center; flex-shrink: 0; margin-left: 24px; }
 .nav-icons .nav-item:last-child { margin-right: 0; }
 .nav-icon { width: 52px; padding: 0; color: var(--soft); }
@@ -240,7 +234,7 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
 }
 .btn svg { width: 28px; height: 28px; margin-right: 14px; }
 .btn small { margin-left: 14px; font: 520 22px/1 var(--sans); color: var(--mute); }
-.btn.focus { background: var(--focus-bg); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
+.btn.focus { background: var(--focus-bg); color: var(--focus-fg); }
 .btn.focus small { color: var(--focus-fg-dim); }
 
 /* A chip. .current is a set filter or the current choice. */
@@ -250,7 +244,7 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
   font: var(--f-chip); line-height: 53px; color: var(--mute); white-space: nowrap;
 }
 .pill.current { background: var(--faint); border-color: transparent; color: var(--text); }
-.pill.focus { background: var(--focus-bg); border-color: var(--text); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
+.pill.focus { background: var(--focus-bg); border-color: var(--text); color: var(--focus-fg); }
 .pill svg { width: 20px; height: 20px; margin-left: 10px; vertical-align: -4px; }
 
 /* The side sheet (ui/menu.js), over a scrim that dims the screen. */
@@ -275,7 +269,7 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
 /* The focus highlight: its own layer, under the options. */
 .menu-hl {
   position: absolute; top: 0; left: 0; width: 512px; height: 72px; border-radius: var(--r-option);
-  background: var(--focus-bg); box-shadow: inset 0 0 0 4px var(--focus-line);
+  background: var(--focus-bg);
   will-change: transform; transition: transform var(--t-slide) var(--ease);
 }
 .menu-track { position: relative; will-change: transform; transition: transform var(--t-slide) var(--ease); }
@@ -288,8 +282,8 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
 .menu-opt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .menu-tick { margin-left: auto; padding-left: 18px; }
 .menu-tick svg { display: block; margin: 0; }
-.menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
-.menu .menu-opt.focus { background: none; box-shadow: none; }
+.menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); }
+.menu .menu-opt.focus { background: none; }
 
 .btn-wide {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
@@ -304,7 +298,7 @@ html.fast .tile-frame, html.fast .tile-text, html.fast .menu-track, html.fast .m
   background: var(--ghost); font: var(--f-setting);
 }
 .setting-value { color: var(--mute); font-weight: 520; }
-.setting.focus { background: var(--focus-bg); color: var(--focus-fg); box-shadow: inset 0 0 0 4px var(--focus-line); }
+.setting.focus { background: var(--focus-bg); color: var(--focus-fg); }
 .setting.focus .setting-value { color: var(--focus-fg-dim); }
 
 /* ---------- toast ---------- */

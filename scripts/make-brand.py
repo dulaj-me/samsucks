@@ -73,20 +73,6 @@ def wordmark_svg(color):
             f'width="{width:.2f}" height="{h:.2f}"><path fill="{color}" d="{d}"/></svg>\n')
 
 
-def hero_mask():
-    # The hero dissolve as alpha, at 1/10 scale: clear to 22% from the left, solid from 64%;
-    # clear to 34% from the bottom, solid from 76%. The compositor stretches it.
-    w, h = 192, 108
-    ramp = lambda t, a, b: min(1.0, max(0.0, (t - a) / (b - a)))
-    im = Image.new('LA', (w, h))
-    px = im.load()
-    for y in range(h):
-        ay = ramp(1 - (y + 0.5) / h, 0.34, 0.76)
-        for x in range(w):
-            px[x, y] = (0, round(255 * ramp((x + 0.5) / w, 0.22, 0.64) * ay))
-    im.save(root / 'app/img/hero-mask.png', optimize=True)
-
-
 def shoot(url, w, h, out, transparent=False):
     args = [CHROME, '--headless=new', '--hide-scrollbars', '--force-device-scale-factor=1',
             f'--window-size={w},{h}', '--virtual-time-budget=4000', f'--screenshot={out}']
@@ -120,7 +106,6 @@ def main():
     (brand / 'mark.svg').write_text(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 34" width="34" height="34">{MARK}</svg>\n')
     (brand / 'lockup-light.svg').write_text(lockup_svg(LIGHT))
     (brand / 'lockup-dark.svg').write_text(lockup_svg(DARK))
-    hero_mask()
 
     for name, color in (('light', LIGHT), ('dark', DARK)):
         centred(lockup_svg(color), 1920, 640, 0.72, brand / f'lockup-horizontal-{name}-1920x640.png')

@@ -30,8 +30,7 @@ python3 -m venv /tmp/brand && /tmp/brand/bin/pip install fonttools brotli uharfb
 ```
 
 It needs Google Chrome for the PNG renders (`CHROME=` overrides the path) and starts
-`design/serve.mjs` on port 8398 for the comps. It also writes `app/img/hero-mask.png`, the
-raster fallback for Home's hero dissolve.
+`design/serve.mjs` on port 8398 for the comps.
 
 ## Usage
 

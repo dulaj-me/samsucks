@@ -1,4 +1,6 @@
-.home-art { left: 0; top: 0; width: 1920px; height: 1080px; }
+.home-art { left: 422px; top: 0; width: 1498px; height: 713px; }
+/* The art keeps its full-screen framing inside the cropped box. */
+.home-art .hero-img { left: -422px; width: 1920px; height: 1080px; }
 
 .hero-info { position: absolute; left: 96px; top: 184px; width: 820px; }
 .hero-logo-box { height: 196px; display: flex; align-items: flex-end; }
