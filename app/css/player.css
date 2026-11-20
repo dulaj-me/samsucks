@@ -65,6 +65,8 @@
   text-shadow: 0 2px 6px var(--black), 0 0 3px var(--black), 0 0 3px var(--black);
 }
 .osd-on .subs { bottom: 380px; }
+/* Subtitles move left of the up-next card (x 1104-1824) instead of running under it. */
+.upnext-on .subs { left: 96px; right: 880px; }
 
 .tracks {
   position: absolute; right: 0; top: 0; width: 960px; height: 1080px;
@@ -94,8 +96,13 @@
 
 .upnext {
   position: absolute; right: 96px; bottom: 120px; width: 720px; padding: 40px;
-  border-radius: 22px; background: var(--raised); box-shadow: 0 20px 60px rgba(var(--black-rgb), 0.6);
+  border-radius: 22px; background: var(--raised);
+  /* The outline keeps the card's shape over black credits. */
+  box-shadow: inset 0 0 0 2px var(--hair), 0 20px 60px rgba(var(--black-rgb), 0.6);
 }
+/* Over the credits it fades in; on black at the end of the file it appears at once. */
+.player:not(.ended) .upnext { animation: upnext-in 250ms ease; }
+@keyframes upnext-in { from { opacity: 0; } }
 .upnext-label { font: 700 22px var(--body); color: var(--coral); letter-spacing: 0.08em; text-transform: uppercase; }
 .upnext-title { margin: 12px 0; font: 600 42px/1.1 var(--display); }
 .upnext-art { width: 640px; height: 360px; margin-bottom: 28px; }
