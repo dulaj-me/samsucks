@@ -257,6 +257,9 @@ html.fast .row.live .row-track .tile.gone, html.fast .grid.vmove .grid-track .ti
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* A title that may wrap to its kind's `lines` (KINDS); tile.js sets the clamp. */
+.tile-cap-wrap { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; }
+
 /* A cast face: a circle (its radius comes from KINDS), the name centred under it. The caption
    carries the kind itself, as a row's card moves it out of the tile. */
 .tile-text-cast { text-align: center; }

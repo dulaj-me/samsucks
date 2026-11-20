@@ -3,7 +3,7 @@
 // so no poster is ever seen travelling through the ring. Left of the ring, a second card
 // shows the edge of the previous item, swapped the same way.
 import { h, setText, setTransform, toggleClass } from '../util/dom.js';
-import { createTile, fillTile, focusGeometry, KINDS } from './tile.js';
+import { createTile, fillTile, focusGeometry, captionExtra, KINDS } from './tile.js';
 import { Card } from './card.js';
 import { isFast } from '../input.js';
 
@@ -33,6 +33,7 @@ export class Row {
     this.onSelect = onSelect;
 
     const geo = focusGeometry(this.size);
+    const captionH = caption ? CAPTION_H + captionExtra(this.size) : 0;
     this.el = h('section', 'row idle');
     // A tile at or left of focus waits here, one slot right less SHORT, hidden. Moving with
     // the track on the same curve, its net travel on a move is SHORT alone.
@@ -48,7 +49,7 @@ export class Row {
     clip.style.left = clipLeft + 'px';
     clip.style.top = clipTop + 'px';
     clip.style.width = (1920 - clipLeft) + 'px';
-    clip.style.height = (geo.ring.h + (caption ? CAPTION_H : 0)) + 'px';
+    clip.style.height = (geo.ring.h + captionH) + 'px';
     this.track = h('div', 'row-track', clip);
     this.track.style.left = (LEFT - clipLeft + AFTER) + 'px';
     this.track.style.top = (top - clipTop) + 'px';
@@ -58,7 +59,7 @@ export class Row {
     this.peek = new Card(this.el, kind, LEFT - AFTER - this.size.gap - this.size.w, top, { lifted: false });
     this.card = new Card(this.el, kind, LEFT, top, { caption });
 
-    this.height = top + this.size.h + (caption ? CAPTION_H : 0) + BELOW;
+    this.height = top + this.size.h + captionH + BELOW;
 
     const visible = Math.ceil((1920 - LEFT) / this.step);
     this.poolSize = visible + BEHIND + 2;
