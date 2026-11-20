@@ -12,7 +12,8 @@ import { useAmbience, setLegacyGradients, legacyGradients } from '../ui/backdrop
 
 // Device-wide preferences. The player reads store 'prefs' directly, so a missing key
 // must mean its default there too.
-const PREF_DEFAULTS = { autoplayNext: true };
+const PREF_DEFAULTS = { autoplayNext: true, upnextSeconds: 10 };
+const COUNTDOWNS = [5, 10, 15, 30];
 
 function prefs() {
   return Object.assign({}, PREF_DEFAULTS, store.get('prefs'));
@@ -66,6 +67,10 @@ export function SettingsScreen() {
     ]],
     ['Playback', [
       { label: 'Autoplay next episode', value: () => onOff(prefs().autoplayNext), run: () => setPref('autoplayNext', !prefs().autoplayNext) },
+      {
+        label: 'Up next countdown', value: () => prefs().upnextSeconds + ' seconds',
+        run: () => setPref('upnextSeconds', COUNTDOWNS[(COUNTDOWNS.indexOf(prefs().upnextSeconds) + 1) % COUNTDOWNS.length]),
+      },
     ]],
     ['About', [
       { label: 'Version', value: VERSION + (DEV ? ' (dev)' : '') },

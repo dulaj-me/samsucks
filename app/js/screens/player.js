@@ -27,7 +27,6 @@ const TEXT_SUBS = { srt: 1, subrip: 1, ass: 1, ssa: 1, mov_text: 1, vtt: 1, webv
 const OSD_HIDE_MS = 4000;
 const SEEK_COMMIT_MS = 900;
 const TIMELINE_MS = 10000;
-const UPNEXT_SECONDS = 10;
 const UPNEXT_ART_W = 640;
 const UPNEXT_ART_H = 360;
 
@@ -59,10 +58,15 @@ function subtitleLabel(s) {
   return title ? title + (s.key ? ' · external' : '') : kind || 'Subtitle';
 }
 
-// Settings owns the prefs object; a missing key means on.
+// Settings owns the prefs object; a missing key means its default.
 function autoplayNext() {
   const prefs = store.get('prefs', null);
   return !(prefs && prefs.autoplayNext === false);
+}
+
+function upnextSeconds() {
+  const prefs = store.get('prefs', null);
+  return (prefs && prefs.upnextSeconds) || 10;
 }
 
 function button(parent, icon, label) {
@@ -703,7 +707,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     // Credits that a scene follows get no countdown, or autoplay would skip the scene.
     const countdown = autoplayNext() && (mode === 'end' || creditsMarker.final);
     if (!countdown) { setText(upnextLabel, 'Next episode'); return; }
-    let left = UPNEXT_SECONDS;
+    let left = upnextSeconds();
     setText(upnextLabel, 'Up next in ' + left);
     upnextTimer = setInterval(() => {
       left--;
@@ -857,7 +861,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
         case 'pause': if (!paused) togglePause(); return true;
         case 'left': case 'rw': seekBy(-1); return true;
         case 'right': case 'ff': seekBy(1); return true;
-        case 'up': case 'info': showOsd(); return true;
+        case 'up':
+          if (el.classList.contains('osd-on') && !paused && seekTarget == null) hideOsd();
+          else showOsd();
+          return true;
+        case 'info': showOsd(); return true;
         case 'down': showOsd(false, 'buttons'); setZone('buttons'); return true;
         case 'stop': exit(); return true;
         case 'back':
