@@ -33,7 +33,11 @@
 
 .home-rows { position: absolute; left: 0; width: 1920px; bottom: 0; overflow: hidden; }
 .rows-track.now { transition: none; }
-.home-empty { position: absolute; left: 96px; top: 680px; width: 1200px; font: var(--f-message); }
+/* Where a library's message sits: under the nav, at the content's left edge. */
+.home-empty { position: absolute; left: 96px; top: 300px; width: 1200px; }
+.home-empty-msg { font: var(--f-message); }
+.home-empty-hint { margin-top: 10px; font: var(--f-body); color: var(--soft); }
+.home-empty .btn { margin-top: 36px; }
 
 /* Ghost shapes at the geometry of the hero and the first row. */
 .home-skeleton .skel { position: absolute; left: 96px; height: 20px; border-radius: 10px; background: var(--ghost); }

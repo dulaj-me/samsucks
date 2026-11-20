@@ -18,7 +18,6 @@ import { error, log } from '../util/log.js';
 const ROWS_TOP = 616;
 // Format badges need the full metadata, fetched once focus has settled on a title.
 const BADGES_DELAY = 400;
-const EMPTY = 'Nothing here yet. Add some media to your Plex server.';
 // Only this hub's items can be taken out of it; On Deck has no such action.
 const isContinue = hubId => /continue/i.test(hubId);
 
@@ -125,18 +124,27 @@ export function HomeScreen() {
   const epLeft = h('span', 'hero-ep-left', heroEp);
   const heroSummary = h('p', 'hero-summary', info);
   show(heroEp, false);
+  // Hidden until a hero lands: empty, its pooled dots and badge outlines would show.
+  show(info, false);
 
   const rowsClip = h('div', 'home-rows', el);
   rowsClip.style.top = ROWS_TOP + 'px';
   const track = h('div', 'rows-track', rowsClip);
   const skeleton = h('div', 'home-skeleton', el);
+  // A message and a hint in place of the rows; when Home failed to load, Try again under them.
   const empty = h('div', 'home-empty', el);
+  const emptyMsg = h('div', 'home-empty-msg', empty);
+  const emptyHint = h('div', 'home-empty-hint', empty);
+  const retry = h('div', 'btn', empty);
+  retry.textContent = 'Try again';
+  show(empty, false);
   const menu = new Menu(el);
 
   let rows = [];
   let offsets = [];
   let rowIndex = 0;
   let zone = 'rows';
+  let failed = false;  // Home failed to load and shows Try again
   let loadedAt = 0;
   let heroTimer = 0;
   let artTimer = 0;
@@ -155,6 +163,20 @@ export function HomeScreen() {
   function setZone(z) {
     zone = z;
     topnav.setActive(z === 'nav');
+    toggleClass(retry, 'focus', failed && z === 'rows');
+  }
+
+  // '' hides it. retryable: Home failed to load, and OK loads it again.
+  function setEmpty(msg, hint, retryable) {
+    setText(emptyMsg, msg);
+    setText(emptyHint, hint);
+    show(empty, !!msg);
+    if (msg) show(info, false);
+    failed = !!retryable;
+    show(retry, failed);
+    toggleClass(retry, 'focus', failed && zone === 'rows');
+    // Nothing to focus below: the nav is the way out.
+    if (msg && !failed && zone === 'rows') setZone('nav');
   }
 
   function setMeta(item, extra) {
@@ -184,6 +206,7 @@ export function HomeScreen() {
   function showHero(item) {
     if (!item || !visible) return;
     heroItem = item;
+    show(info, true);
     const server = session.server;
     const logoPath = clearLogo(item);
     show(heroLogo, !!logoPath);
@@ -288,7 +311,8 @@ export function HomeScreen() {
     layoutRows();
     renderRows(true);
     show(skeleton, false);
-    setText(empty, rows.length ? '' : EMPTY);
+    if (rows.length) setEmpty('');
+    else setEmpty('Nothing here yet', 'Add some media to your Plex server.');
     // A hero still waiting on a held key would land on a title from before this refresh.
     clearTimeout(heroTimer);
     const item = rows[rowIndex] && heroOf(rows[rowIndex]);
@@ -344,7 +368,7 @@ export function HomeScreen() {
       error('home load failed', e);
       if (!rows.length) {
         show(skeleton, false);
-        setText(empty, 'Couldn\'t load from ' + server.name + '. Press OK to retry.');
+        setEmpty('Couldn\'t load Home', 'Check that ' + server.name + ' is on, then try again.', true);
       }
     }
   }
@@ -392,7 +416,7 @@ export function HomeScreen() {
       if (menu.isOpen) return menu.onKey(action);
       if (zone === 'nav') {
         if (topnav.onKey(action)) return true;
-        if (action === 'down' && rows.length) { setZone('rows'); renderRows(); return true; }
+        if (action === 'down' && (rows.length || failed)) { setZone('rows'); renderRows(); return true; }
         if (action === 'back') return false;
         return true;
       }
