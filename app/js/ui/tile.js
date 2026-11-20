@@ -1,6 +1,6 @@
 // Poster / landscape tiles. A tile node is created once and re-filled as it is
 // recycled; fill() only touches the DOM for fields that changed.
-import { h, setText, show, setTransform } from '../util/dom.js';
+import { h, setText, show, setTransform, toggleClass } from '../util/dom.js';
 import { load } from './images.js';
 import { session } from '../session.js';
 import { progress, episodeLabel, episodeCode, timeLeft, duration } from '../util/format.js';
@@ -101,6 +101,7 @@ function subFor(item, kind) {
 export function fillTile(tile, item) {
   if (tile.item === item) return;
   tile.item = item;
+  toggleClass(tile.el, 'tile-more', !!(item && item.seeAll));
   if (!item) {
     load(tile.img, '');
     setText(tile.ph, '');
@@ -110,6 +111,7 @@ export function fillTile(tile, item) {
     if (tile.cap) { setText(tile.cap, ''); setText(tile.sub, ''); }
     return;
   }
+  if (item.seeAll) { fillSeeAll(tile, item); return; }
   const kind = tile.kind;
   const server = session.server;
   const path = artFor(item, kind);
@@ -138,4 +140,21 @@ export function fillTile(tile, item) {
     setText(tile.cap, titleFor(item, kind));
     setText(tile.sub, subFor(item, kind));
   }
+}
+
+// The last tile of a row that shows only part of its list: an arrow over a label, no art.
+// The arrow is made on first use, as most tiles never show one. It goes after the label:
+// the label must stay right after the image, which hides it once art loads.
+function fillSeeAll(tile, item) {
+  load(tile.img, '');
+  show(tile.bar, false);
+  show(tile.count, false);
+  show(tile.seen, false);
+  if (!tile.arrow) {
+    tile.arrow = h('i', 'tile-arrow');
+    tile.arrow.innerHTML = icons.arrow;
+    tile.ph.parentNode.insertBefore(tile.arrow, tile.ph.nextSibling);
+  }
+  setText(tile.ph, item.title);
+  if (tile.cap) { setText(tile.cap, ''); setText(tile.sub, ''); }
 }

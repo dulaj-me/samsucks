@@ -5,18 +5,22 @@ import { Row } from '../ui/row.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { TopNav } from '../ui/topnav.js';
 import { Menu } from '../ui/menu.js';
-import { openItemMenu } from '../ui/itemmenu.js';
+import { openItemMenu, removeFromContinueWatching } from '../ui/itemmenu.js';
+import { toast } from '../ui/toast.js';
 import { session } from '../session.js';
 import { duration, progress, episodeCode, timeLeft } from '../util/format.js';
 import { isFast } from '../input.js';
 import * as store from '../util/store.js';
-import { openItem, playItem } from '../nav.js';
+import { openItem, playItem, openHub } from '../nav.js';
 import { error, log } from '../util/log.js';
 
 // The active row's top. Its pitch keeps the next row's heading below the fold.
 const ROWS_TOP = 616;
 // Format badges need the full metadata, fetched once focus has settled on a title.
 const BADGES_DELAY = 400;
+const EMPTY = 'Nothing here yet. Add some media to your Plex server.';
+// Only this hub's items can be taken out of it; On Deck has no such action.
+const isContinue = hubId => /continue/i.test(hubId);
 
 function slimHub(hub) {
   // Keep the cache small: only fields the home screen renders.
@@ -26,6 +30,7 @@ function slimHub(hub) {
     'originallyAvailableAt', 'UltraBlurColors', 'grandparentRatingKey', 'parentRatingKey', 'Image', 'Genre'];
   return {
     hubIdentifier: hub.hubIdentifier, title: hub.title, type: hub.type,
+    key: hub.key, more: hub.more, size: hub.size, totalSize: hub.totalSize,
     Metadata: hub.Metadata.map(m => {
       const o = {};
       for (const k of keep) if (m[k] !== undefined) o[k] = m[k];
@@ -33,6 +38,18 @@ function slimHub(hub) {
       return o;
     }),
   };
+}
+
+// A hub with more titles than its row shows ends in a See all tile, which opens the whole hub.
+function rowItems(hub) {
+  if (!hub.more && !(hub.totalSize > hub.size)) return hub.Metadata;
+  return hub.Metadata.concat({ seeAll: true, title: 'See all', hub });
+}
+
+// See all has no hero of its own: the hero keeps the row's last title.
+function heroOf(row) {
+  const it = row.current();
+  return it && it.seeAll ? row.items[row.index - 1] : it;
 }
 
 export function heroArtPath(item) {
@@ -211,14 +228,15 @@ export function HomeScreen() {
     const sameShape = hubs.length === rows.length && hubs.every((hb, i) => rows[i].hubId === hb.hubIdentifier);
     const focusedKey = rows[rowIndex] && rows[rowIndex].current() && rows[rowIndex].current().ratingKey;
     if (sameShape) {
-      hubs.forEach((hb, i) => rows[i].setItems(hb.Metadata, i === rowIndex ? focusedKey : null));
+      hubs.forEach((hb, i) => rows[i].setItems(rowItems(hb), i === rowIndex ? focusedKey : null));
     } else {
       track.innerHTML = '';
       rows = hubs.map(hb => {
         const wide = /continue|ondeck/i.test(hb.hubIdentifier);
         const row = new Row({
-          title: hb.title, kind: wide ? 'wide' : 'poster', caption: wide, items: hb.Metadata,
-          onFocus: onFocusItem, onSelect: item => openItem(item),
+          title: hb.title, kind: wide ? 'wide' : 'poster', caption: wide, items: rowItems(hb),
+          onFocus: (it, r) => onFocusItem(heroOf(r)),
+          onSelect: it => (it.seeAll ? openHub(it.hub) : openItem(it)),
         });
         row.hubId = hb.hubIdentifier;
         track.appendChild(row.el);
@@ -229,13 +247,47 @@ export function HomeScreen() {
     }
     renderRows();
     show(skeleton, false);
-    setText(empty, rows.length ? '' : 'Nothing here yet. Add some media to your Plex server.');
-    const cur = rows[rowIndex] && rows[rowIndex].current();
+    setText(empty, rows.length ? '' : EMPTY);
+    const cur = rows[rowIndex] && heroOf(rows[rowIndex]);
     if (cur) showHero(cur);
     if (!reportedPaint && rows.length) {
       reportedPaint = true;
       log('home rows ready at ' + Math.round(performance.now()) + 'ms after page start');
     }
+  }
+
+  // Out of its row at once. A reload once Plex confirms settles the rest, as a title further
+  // down Continue Watching may move up into the row; a failure reloads the item back in.
+  function removeContinue(hubId, item) {
+    const row = rows.find(r => r.hubId === hubId);
+    const i = row ? row.items.findIndex(it => it.ratingKey === item.ratingKey) : -1;
+    if (i >= 0) {
+      const items = row.items.filter((it, k) => k !== i);
+      const titles = items.filter(it => !it.seeAll).length;
+      if (!titles) dropRow(row);
+      else {
+        // Focus keeps its slot, now on the title that moved into it; at the end, the one before.
+        row.setItems(items, items[Math.min(i, titles - 1)].ratingKey);
+        if (row === rows[rowIndex]) onFocusItem(heroOf(row));
+      }
+    }
+    removeFromContinueWatching(item).then(() => load(), e => {
+      error('remove from continue watching failed', e);
+      toast('Couldn\'t remove that from Continue Watching.');
+      load();
+    });
+  }
+
+  // The row below moves up into its place; past the last row, focus goes up one.
+  function dropRow(row) {
+    const i = rows.indexOf(row);
+    rows.splice(i, 1);
+    track.removeChild(row.el);
+    if (i < rowIndex || rowIndex >= rows.length) rowIndex = Math.max(0, rowIndex - 1);
+    layoutRows();
+    renderRows();
+    if (rows.length) onFocusItem(heroOf(rows[rowIndex]));
+    else setText(empty, EMPTY);
   }
 
   async function load() {
@@ -316,17 +368,31 @@ export function HomeScreen() {
         case 'right': row.move(1); return true;
         case 'up':
           if (rowIndex === 0) { setZone('nav'); renderRows(); return true; }
-          rowIndex--; renderRows(); onFocusItem(rows[rowIndex].current()); return true;
+          rowIndex--; renderRows(); onFocusItem(heroOf(rows[rowIndex])); return true;
         case 'down':
-          if (rowIndex < rows.length - 1) { rowIndex++; renderRows(); onFocusItem(rows[rowIndex].current()); }
+          if (rowIndex < rows.length - 1) { rowIndex++; renderRows(); onFocusItem(heroOf(rows[rowIndex])); }
           return true;
         case 'enter': row.select(); return true;
-        case 'hold': openItemMenu(menu, row.current(), { changed: () => load() }); return true;
-        case 'play': case 'playpause': if (row.current()) playItem(row.current()); return true;
+        case 'hold': {
+          const it = row.current();
+          if (it && !it.seeAll) {
+            const hubId = row.hubId;
+            openItemMenu(menu, it, {
+              changed: () => load(),
+              remove: isContinue(hubId) ? item => removeContinue(hubId, item) : null,
+            });
+          }
+          return true;
+        }
+        case 'play': case 'playpause': {
+          const it = row.current();
+          if (it && !it.seeAll) playItem(it);
+          return true;
+        }
         case 'back':
           // Back from deep in the rows returns to the top first.
           if (rowIndex > 0 || row.index > 0) {
-            rowIndex = 0; rows.forEach(r => r.focusIndex(0)); renderRows(); onFocusItem(rows[0].current());
+            rowIndex = 0; rows.forEach(r => r.focusIndex(0)); renderRows(); onFocusItem(heroOf(rows[0]));
             return true;
           }
           return false;
