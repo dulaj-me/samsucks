@@ -107,7 +107,7 @@ choose **Add to Home**.
 | Remote | What it does |
 | --- | --- |
 | Arrows / OK | Move around / select |
-| Hold OK on a poster | Play, or mark watched or unwatched |
+| Hold OK on a poster | Play, or mark watched or unwatched; on Continue Watching, remove it |
 | ▲ from the top row | Top bar: Home, libraries, search, settings, profile |
 | Play/Pause | Play whatever is focused, or pause and resume |
 | Back | Go back (while watching, the first press hides the controls; at Home, press twice to exit) |
@@ -117,10 +117,12 @@ choose **Add to Home**.
 | ▲ in a library | Filter bar: genre, decade, rating and collection; unwatched; sort (Yellow also cycles the sort) |
 | CH ▲ / CH ▼ | Jump by letter in a library |
 
-What's in it: home rows (Continue Watching, On Deck, Recently Added…), full library
-grids, search with the TV keyboard, movie and show pages with seasons and episodes,
-resume and mark watched, audio and subtitle picker (including external `.srt` files),
-up-next autoplay, and watch progress synced back to Plex.
+What's in it: Plex Home profiles, home rows (Continue Watching, On Deck, Recently
+Added…) with See all, full library grids with filters, search with an on-screen and the
+TV keyboard, movie and show pages with seasons, episodes, cast, extras and More like
+this, resume and mark watched, audio and subtitle picker (including external `.srt`
+files), an up-next card over the credits with a countdown you can set, and watch
+progress synced back to Plex.
 
 ## Why it's fast
 
@@ -235,9 +237,8 @@ measurable difference.
 ## Credits
 
 Inspired by [plx-native](https://github.com/GLinnik21/plx-native), a native Plex client
-for LG TVs. Fonts: [Inter](https://rsms.me/inter/) and
-[Barlow Condensed](https://fonts.google.com/specimen/Barlow+Condensed) (SIL Open Font
-License). QR codes: [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
+for LG TVs. Font: Kinescope Sans, based on [Mona Sans](https://github.com/github/mona-sans)
+by GitHub (SIL Open Font License). QR codes: [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
 by Kazuhiko Arase (MIT).
 
 SamSUCKS is an independent project, not affiliated with Plex or Samsung.
