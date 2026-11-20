@@ -12,10 +12,6 @@ import { error } from '../util/log.js';
 
 const PAGE = 140;
 const NOUNS = { movie: 'movie', show: 'show', episode: 'episode', season: 'season' };
-// Stands in for a title whose page hasn't landed: it fills as a plain well. A never-filled
-// tile given null keeps its default badges and the card shows no well.
-const PENDING = {};
-const real = it => it && it !== PENDING;
 
 export function HubScreen(hub) {
   const el = h('div', 'screen hub');
@@ -40,9 +36,9 @@ export function HubScreen(hub) {
 
   const grid = new Grid({
     top: 252, height: 828, total: seed,
-    getItem: i => items[i] || PENDING,
-    onFocus: item => { if (real(item) && visible) ambience.set(item.UltraBlurColors); },
-    onSelect: item => { if (real(item)) openItem(item); },
+    getItem: i => items[i] || null,
+    onFocus: item => { if (item && visible) ambience.set(item.UltraBlurColors); },
+    onSelect: item => openItem(item),
   });
   // Set after construction: the constructor asks for data before `grid` exists.
   grid.onNeed = (start, end) => {
@@ -142,8 +138,8 @@ export function HubScreen(hub) {
         case 'pageup': grid.focusIndex(grid.index - grid.cols * 3); return true;
         case 'pagedown': grid.focusIndex(grid.index + grid.cols * 3); return true;
         case 'enter': grid.select(); return true;
-        case 'hold': if (real(grid.current())) openItemMenu(menu, grid.current(), { changed: refreshItem }); return true;
-        case 'play': case 'playpause': if (real(grid.current())) playItem(grid.current()); return true;
+        case 'hold': openItemMenu(menu, grid.current(), { changed: refreshItem }); return true;
+        case 'play': case 'playpause': if (grid.current()) playItem(grid.current()); return true;
       }
       return false;
     },

@@ -73,6 +73,8 @@ export function createTile(kind, { caption = false } = {}) {
   seen.innerHTML = icons.check;
   const bar = h('div', 'tile-bar', frame);
   const fill = h('i', '', bar);
+  // Built with every tile and shown only on See all, so recycling a tile into one adds no nodes.
+  frame.appendChild(seeAllArrow());
   let cap = null;
   let sub = null;
   if (caption) {
@@ -163,19 +165,21 @@ export function fillTile(tile, item) {
   }
 }
 
+let arrowTemplate = null;
+function seeAllArrow() {
+  if (!arrowTemplate) {
+    arrowTemplate = h('i', 'tile-arrow');
+    arrowTemplate.innerHTML = icons.arrow;
+  }
+  return arrowTemplate.cloneNode(true);
+}
+
 // The last tile of a row that shows only part of its list: an arrow over a label, no art.
-// The arrow is made on first use, as most tiles never show one. It goes after the label:
-// the label must stay right after the image, which hides it once art loads.
 function fillSeeAll(tile, item) {
   load(tile.img, '');
   show(tile.bar, false);
   show(tile.count, false);
   show(tile.seen, false);
-  if (!tile.arrow) {
-    tile.arrow = h('i', 'tile-arrow');
-    tile.arrow.innerHTML = icons.arrow;
-    tile.ph.parentNode.insertBefore(tile.arrow, tile.ph.nextSibling);
-  }
   setText(tile.ph, item.title);
   if (tile.cap) { setText(tile.cap, ''); setText(tile.sub, ''); }
 }

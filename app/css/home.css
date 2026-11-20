@@ -45,17 +45,6 @@
 .home-skeleton .skel-frame { top: 0; height: 243px; border-radius: var(--r-tile); }
 .home-skeleton .skel-cap { top: 261px; }
 
-/*
- * See all: the last tile of a row with more titles than it shows. A faint fill, a step above
- * the well, so it never reads as art still loading. The arrow sits over the label, centred.
- */
-.row-track .tile-more .tile-frame, .card .tile-more .card-inner { background: var(--faint); }
-.tile-more .tile-ph { align-items: center; justify-content: center; padding: 58px 0 0; font: var(--f-button); color: var(--soft); }
-.tile-arrow { display: none; }
-.tile-more .tile-arrow { display: block; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -42px 0 0 -22px; color: var(--soft); }
-.tile-arrow svg { display: block; width: 44px; height: 44px; }
-.card .tile-more .tile-ph, .card .tile-more .tile-arrow { color: var(--text); }
-
 /* A hub in full (screens/hub.js). The heading sits where a library's filter bar does, so the
    grid keeps the library's geometry. */
 .hub-head {
