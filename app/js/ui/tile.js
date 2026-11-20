@@ -123,10 +123,8 @@ function subFor(item, kind) {
     return timeLeft(item) || [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
   }
   if (kind === 'episode') return episodeLabel(item) + (item.duration ? '  ·  ' + Math.round(item.duration / 60000) + 'm' : '');
+  // Shows keep the year alone: Plex's childCount counts Specials as a season.
   if (kind === 'grid' && item.type === 'movie') return [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
-  if (kind === 'grid' && item.type === 'show' && item.childCount) {
-    return [item.year, item.childCount + (item.childCount === 1 ? ' season' : ' seasons')].filter(Boolean).join('  ·  ');
-  }
   if (item.type === 'episode') return episodeLabel(item) + '  ' + item.title;
   if (item.type === 'season') return item.leafCount ? item.leafCount + ' episodes' : '';
   return item.year || '';

@@ -14,6 +14,7 @@ import { prefetch } from '../ui/images.js';
 import { isFast } from '../input.js';
 import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
+import { toast } from '../ui/toast.js';
 
 const PAGE = 140;
 const GRID_TOP = 252;
@@ -76,7 +77,9 @@ export function LibraryScreen(section) {
   let items = [];
   let letters = [];          // [{ title: 'A', start: 0 }]
   let generation = 0;
-  let isEmpty = false;       // the current filters matched nothing
+  let isEmpty = false;       // the grid has nothing to show: no matches, an empty library or an error
+  let wayOut = null;         // the bar's chip out of that: 'clear' or 'retry'
+  let loading = false;       // the first page is on its way, behind the skeleton
   let zone = 'grid';
   let inPicker = false;      // the menu shows one category's values
 
@@ -120,9 +123,7 @@ export function LibraryScreen(section) {
           if (items[i]) prefetch(session.server.image(items[i].thumb, grid.size.w, grid.size.h));
         }
       }
-      if (!item) return;
-      // The backdrop is shared: a late answer must not tint the screen on top.
-      if (visible) ambience.set(item.UltraBlurColors);
+      if (item) tint(item.UltraBlurColors);
     },
     onSelect: item => openItem(item),
   });
@@ -168,7 +169,9 @@ export function LibraryScreen(section) {
       if (gen !== generation) return;
       pages.delete(p);
       error('library page failed', section.title, p, e);
-      if (p === 0) showEmpty("Couldn't load " + section.title, 'Check that ' + session.server.name + ' is on, then try again.', 'retry');
+      // A refetch after a title left keeps the posters it has; the next move asks again.
+      if (p === 0 && grid.total) toast("Couldn't refresh " + section.title + '.');
+      else if (p === 0) showEmpty("Couldn't load " + section.title, 'Check that ' + session.server.name + ' is on, then try again.', 'retry');
     }
     // The four filter lists wait for the first page, so they never hold up its posters.
     if (p === 0) ensureLists();
@@ -198,29 +201,32 @@ export function LibraryScreen(section) {
     return words.join(' ');
   }
 
-  // action: the chip that leads out, 'clear' or 'retry'. It takes focus in the bar.
-  function showEmpty(msg, hint, action) {
+  // way: the chip that leads out, 'clear' or 'retry'.
+  function showEmpty(msg, hint, way) {
     isEmpty = true;
     setLoading(false);
     // No title has focus, so the room takes no title's colours.
-    if (visible) ambience.set(null);
+    tint(null);
     setText(emptyMsg, msg);
     setText(emptyHint, hint);
     show(empty, true);
-    setAction(action);
+    setAction(way);
     if (zone === 'grid') setZone('bar');
   }
 
-  function setAction(action) {
+  // The chip goes last in the bar. It takes focus only from outside the bar, so a page landing
+  // never moves focus off a chip the user is on.
+  function setAction(way) {
+    wayOut = way || null;
     bar = bar.filter(c => c !== actionChip);
     toggleClass(actionChip.el, 'focus', false);
-    show(actionChip.el, !!action);
-    if (action) {
-      actionChip.icon.innerHTML = action === 'clear' ? icons.remove : icons.restart;
-      setText(actionChip.label, action === 'clear' ? 'Clear filters' : 'Try again');
-      actionChip.run = action === 'clear' ? clearFilters : () => { reload(); setZone('grid'); };
+    show(actionChip.el, !!wayOut);
+    if (wayOut) {
+      actionChip.icon.innerHTML = wayOut === 'clear' ? icons.remove : icons.restart;
+      setText(actionChip.label, wayOut === 'clear' ? 'Clear filters' : 'Try again');
+      actionChip.run = wayOut === 'clear' ? clearFilters : () => { reload(); setZone('grid'); };
       bar.push(actionChip);
-      barIndex = bar.length - 1;
+      if (zone !== 'bar') barIndex = bar.length - 1;
     }
     barIndex = Math.min(barIndex, bar.length - 1);
     renderBar();
@@ -228,7 +234,14 @@ export function LibraryScreen(section) {
 
   // The skeleton stands in for the grid, and its focus card, until the first page lands.
   function setLoading(on) {
+    loading = on;
     toggleClass(el, 'loading', on);
+  }
+
+  // The backdrop is shared: while another screen is on top, only remember the colours.
+  function tint(colors) {
+    if (visible) ambience.set(colors);
+    else ambience.remember(colors);
   }
 
   function flashLetter(text) {
@@ -254,20 +267,31 @@ export function LibraryScreen(section) {
     } catch (e) { /* letter jump just won't work */ }
   }
 
+  // A failed list is not an empty one: it never removes the Filter chip, and the next
+  // ensureLists() (opening Filter, or the first page landing again) fetches it again.
   async function loadLists() {
     const all = await Promise.all(CATEGORIES.map(c =>
       session.server.get('/library/sections/' + section.key + '/' + c.id, { type }, { maxAge: 300000 })
         .then(mc => (mc.Directory || []).map(tag), e => {
           error('library filter list failed', section.title, c.id, e);
-          return [];
+          return null;
         })));
     if (!alive) return;
+    const failed = all.some(l => !l);
+    if (failed) listsLoading = null;
+    if (all.every(l => !l)) {
+      if (menuWaits && menu.isOpen) {
+        menu.open({ title: 'Filter', sub: "Couldn't load the filters", items: [{ label: 'Try again', icon: icons.restart, run: openFilters }] });
+      }
+      menuWaits = false;
+      return;
+    }
     lists = {};
-    CATEGORIES.forEach((c, i) => { lists[c.id] = all[i]; });
+    CATEGORIES.forEach((c, i) => { lists[c.id] = all[i] || []; });
     if (menuWaits && menu.isOpen) openFilters();
     menuWaits = false;
-    // A failed list looks empty too; a remembered value keeps the chip so it can be cleared.
-    if (CATEGORIES.some(c => lists[c.id].length || f[c.id])) return;
+    // A remembered value keeps the chip so it can be cleared.
+    if (failed || CATEGORIES.some(c => lists[c.id].length || f[c.id])) return;
     const focused = bar[barIndex];
     head.removeChild(filterChip.el);
     bar = bar.filter(c => c !== filterChip);
@@ -317,10 +341,11 @@ export function LibraryScreen(section) {
 
   function openFilters() {
     inPicker = false;
+    // Fetches again only when the last try failed.
+    ensureLists();
     if (!lists) {
       menuWaits = true;
       menu.open({ title: 'Filter', sub: section.title, items: [{ label: 'Loading…', run() {} }] });
-      ensureLists();
       return;
     }
     const entries = CATEGORIES.filter(c => lists[c.id].length || f[c.id]).map(c => ({
@@ -364,6 +389,7 @@ export function LibraryScreen(section) {
   reload();
 
   function jump(dir) {
+    if (!grid.total) return;
     if (letters.length) {
       const i = grid.index;
       let li = letters.findIndex((l, k) => i >= l.start && (k === letters.length - 1 || i < letters[k + 1].start));
@@ -441,11 +467,12 @@ export function LibraryScreen(section) {
         return true;
       }
       case 'up': setZone('nav'); return true;
-      case 'down': if (!isEmpty) setZone('grid'); return true;
+      case 'down': if (!isEmpty && !loading) setZone('grid'); return true;
       case 'enter': bar[barIndex].run(); return true;
       case 'yellow': setSort((sortIndex() + 1) % SORTS.length); return true;
+      // Back clears filters that matched nothing; after an error it leaves, filters kept.
       case 'back':
-        if (!isEmpty || !anyFilter()) return false;
+        if (wayOut !== 'clear') return false;
         clearFilters();
         return true;
     }
