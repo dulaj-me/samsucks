@@ -33,7 +33,11 @@
 
 .home-rows { position: absolute; left: 0; width: 1920px; bottom: 0; overflow: hidden; }
 .rows-track.now { transition: none; }
-.home-empty { position: absolute; left: 96px; top: 680px; width: 1200px; font: var(--f-message); }
+/* Where a library's message sits: under the nav, at the content's left edge. */
+.home-empty { position: absolute; left: 96px; top: 300px; width: 1200px; }
+.home-empty-msg { font: var(--f-message); }
+.home-empty-hint { margin-top: 10px; font: var(--f-body); color: var(--soft); }
+.home-empty .btn { margin-top: 36px; }
 
 /* Ghost shapes at the geometry of the hero and the first row. */
 .home-skeleton .skel { position: absolute; left: 96px; height: 20px; border-radius: 10px; background: var(--ghost); }
@@ -54,8 +58,14 @@
   display: flex; align-items: baseline; justify-content: space-between; white-space: nowrap;
 }
 .hub-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: var(--f-page); letter-spacing: -0.02em; }
-.hub-count { flex-shrink: 0; margin-left: 32px; font: var(--f-meta); color: var(--mute); }
-.hub-note { position: absolute; left: 96px; top: 288px; width: 1200px; }
-.hub-msg { font: var(--f-message); }
-.hub-hint { margin-top: 8px; font: var(--f-body); color: var(--soft); }
+.hub-count { flex-shrink: 0; margin-left: 32px; font: 520 23px/1 var(--sans); color: var(--mute); }
+/* Messages sit where a library's do. */
+.hub-note { position: absolute; left: 96px; top: 300px; width: 1200px; }
+.hub-msg { font: var(--f-message); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub-hint { margin-top: 10px; font: var(--f-body); color: var(--soft); }
 .hub-note .btn { margin-top: 36px; }
+.hub-skeleton { display: none; }
+.hub.loading .hub-skeleton { display: block; }
+.hub.loading .grid { visibility: hidden; }
+.hub-skel { position: absolute; background: var(--ghost); border-radius: var(--r-tile); }
+.hub-skel-line { border-radius: 10px; }
