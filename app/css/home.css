@@ -31,6 +31,7 @@
 }
 
 .home-rows { position: absolute; left: 0; width: 1920px; bottom: 0; overflow: hidden; }
+.rows-track.now { transition: none; }
 .home-empty { position: absolute; left: 96px; top: 680px; width: 1200px; font: var(--f-message); }
 
 /* Ghost shapes at the geometry of the hero and the first row. */
@@ -44,3 +45,16 @@
 .home-skeleton .skel-tile .skel { left: 0; }
 .home-skeleton .skel-frame { top: 0; height: 243px; border-radius: var(--r-tile); }
 .home-skeleton .skel-cap { top: 261px; }
+
+/* A hub in full (screens/hub.js). The heading sits where a library's filter bar does, so the
+   grid keeps the library's geometry. */
+.hub-head {
+  position: absolute; left: 96px; right: 96px; top: 140px; height: 64px;
+  display: flex; align-items: baseline; justify-content: space-between; white-space: nowrap;
+}
+.hub-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: var(--f-page); letter-spacing: -0.02em; }
+.hub-count { flex-shrink: 0; margin-left: 32px; font: var(--f-meta); color: var(--mute); }
+.hub-note { position: absolute; left: 96px; top: 288px; width: 1200px; }
+.hub-msg { font: var(--f-message); }
+.hub-hint { margin-top: 8px; font: var(--f-body); color: var(--soft); }
+.hub-note .btn { margin-top: 36px; }

@@ -265,6 +265,17 @@ html.fast .row.live .row-track .tile.gone, html.fast .grid.vmove .grid-track .ti
 .tile-text-cast { text-align: center; }
 .tile-cast .tile-ph { align-items: center; justify-content: center; padding: 0; font: 600 56px/1 var(--sans); }
 
+/*
+ * See all: the last tile of a row with more titles than it shows. A faint fill, a step above
+ * the well, so it never reads as art still loading. Every tile carries the arrow, hidden.
+ */
+.tile-arrow { display: none; }
+.row-track .tile-more .tile-frame, .card .tile-more .card-inner { background: var(--faint); }
+.tile-more .tile-ph { align-items: center; justify-content: center; padding: 58px 0 0; font: var(--f-button); color: var(--soft); }
+.tile-more .tile-arrow { display: block; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -42px 0 0 -22px; color: var(--soft); }
+.tile-arrow svg { display: block; width: 44px; height: 44px; }
+.card .tile-more .tile-ph, .card .tile-more .tile-arrow { color: var(--text); }
+
 html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .nav-track, html.fast .grid .card,
 html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, html.fast .menu-track, html.fast .menu-hl {
   transition-duration: var(--t-held);

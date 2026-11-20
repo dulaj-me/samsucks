@@ -1,6 +1,7 @@
 // Where selecting things goes. Kept in one place so screens don't import each other.
 import * as router from './router.js';
 import { DetailScreen } from './screens/detail.js';
+import { HubScreen } from './screens/hub.js';
 import { LibraryScreen } from './screens/library.js';
 import { PlayerScreen } from './screens/player.js';
 import { ProfilesScreen } from './screens/profiles.js';
@@ -42,4 +43,9 @@ export function openSettings() {
 
 export function openProfiles() {
   router.push(ProfilesScreen());
+}
+
+// A Home row's hub in full, from its See all tile.
+export function openHub(hub) {
+  router.push(HubScreen(hub));
 }
