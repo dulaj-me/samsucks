@@ -45,6 +45,7 @@
 .detail-rows .row.above { opacity: 0; }
 /* A held key shortens the track's slide; the fade keeps pace so a hidden heading never lingers on the bottom edge. */
 html.fast .detail-rows .row { transition-duration: var(--t-held); }
+.detail-ghost { position: absolute; top: 64px; border-radius: var(--r-tile); background: var(--ghost); }
 .detail-failed-box { position: absolute; left: 96px; top: 64px; height: 68px; display: flex; align-items: center; }
 .detail-failed-msg { margin-right: 24px; font: var(--f-body); color: var(--soft); white-space: nowrap; }
 

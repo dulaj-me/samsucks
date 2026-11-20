@@ -16,6 +16,8 @@ import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
 
 const SHIFT = 400; // how far the body slides up to reveal seasons/episodes
+// Rows start once the art has faded in. Without art, or if it never arrives, they wait this long.
+const OPEN_FALLBACK = 1500;
 
 // Resolution, Dolby Vision or HDR, then Atmos or, without it, the channel layout.
 function formatBadges(item) {
@@ -26,13 +28,33 @@ function formatBadges(item) {
   return out;
 }
 
-// Empty tiles at the row's geometry while it loads: frames in `well`, like art still decoding.
-function ghosts(kind) {
+// A row's height as Row computes it: heading, tiles, caption block, gap to the next row.
+const rowHeight = (kind, caption) => 64 + KINDS[kind].h + (caption ? 81 : 0) + 76;
+
+// Stands in for a row while it loads: static ghost shapes at its geometry. Unlike a Row it
+// has no pooled tiles, layers or images, so it costs next to nothing to show.
+function skeletonRow(title, kind, height) {
   const k = KINDS[kind];
-  return Array.from({ length: Math.ceil((1920 - 96) / (k.w + k.gap)) }, () => ({}));
+  const el = h('section', 'row detail-skeleton');
+  h('h2', 'row-title', el).textContent = title;
+  for (let x = 96; x < 1920; x += k.w + k.gap) {
+    const g = h('div', 'detail-ghost', el);
+    g.style.left = x + 'px';
+    g.style.width = k.w + 'px';
+    g.style.height = k.h + 'px';
+  }
+  return {
+    el, height,
+    setActive(on) { toggleClass(el, 'active', on); },
+    current() { return null; },
+    move() { return false; },
+    select() {},
+  };
 }
 
 const playable = m => m.type === 'movie' || m.type === 'show';
+// Tiles need only the item's own fields; with every element /related ran to 440 KB for 24 titles.
+const TRIM = 'Media,Genre,Country,Director,Writer,Role,Producer,Guid,Rating,CommonSenseMedia';
 
 export function DetailScreen(initial, { autoplay = false } = {}) {
   const el = h('div', 'screen detail');
@@ -71,6 +93,8 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   let episodes = null;
   let slots = [];
   let rowsBuilt = false;
+  let loaded = false;
+  let opened = false;
   let zone = 'buttons';
   let alive = true;
   let shown = false;
@@ -194,7 +218,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   }
 
   // Stands in for a row that failed to load, at its height so nothing below it moves.
-  function failedRow(slot) {
+  function failedRow(slot, height) {
     const row = h('section', 'row detail-failed');
     h('h2', 'row-title', row).textContent = slot.title;
     const box = h('div', 'detail-failed-box', row);
@@ -204,43 +228,42 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     h('span', '', btn).textContent = 'Try again';
     return {
       el: row,
-      height: slot.row.height,
+      height,
       setActive(on) { toggleClass(row, 'active', on); toggleClass(btn, 'focus', on); },
       current() { return null; },
       move() { return false; },
       select() {
-        slot.row.setItems(ghosts(slot.kind));
-        swap(slot, slot.row);
+        swap(slot, skeletonRow(slot.title, slot.kind, height));
         slot.load();
       },
     };
   }
 
-  // A row filled by fetch(): ghost tiles while it loads, left out when the answer is empty,
-  // and a Try again in its place when it fails.
+  // A row filled by fetch(): a skeleton while it loads, left out when the answer is empty,
+  // and a Try again in its place when it fails. The Row itself is built once data arrives.
   function section(title, kind, fetch, select) {
-    const row = new Row({
-      title, kind, caption: kind !== 'poster', items: ghosts(kind),
-      onSelect: it => { if (it.ratingKey) select(it); },
-    });
-    const slot = { title, kind, row, entry: row };
+    const caption = kind !== 'poster';
+    const height = rowHeight(kind, caption);
+    const slot = { title, kind, row: null, entry: skeletonRow(title, kind, height) };
     slot.load = keepKey => fetch().then(items => {
       if (!alive) return;
       if (!items.length) { swap(slot, null); return; }
-      row.setItems(items, keepKey);
-      swap(slot, row);
+      if (slot.row) slot.row.setItems(items, keepKey);
+      else slot.row = new Row({ title, kind, caption, items, onSelect: select });
+      swap(slot, slot.row);
     }, e => {
       if (!alive) return;
       error(title + ' failed', e);
       // A refresh that fails keeps what the row already shows.
-      if (!(row.items[0] && row.items[0].ratingKey)) swap(slot, failedRow(slot));
+      if (slot.entry !== slot.row) swap(slot, failedRow(slot, height));
     });
     return slot;
   }
 
-  // Once the header has painted, so the rows never delay it.
+  // Waits for the opening: built during the art's fade-in, the rows' DOM, layers and images
+  // share its frames and cost frames on the TV. They're below the fold, so nothing shows late.
   function buildRows() {
-    if (rowsBuilt || !alive) return;
+    if (rowsBuilt || !alive || !loaded) return;
     rowsBuilt = true;
     const server = session.server;
     const path = '/library/metadata/' + item.ratingKey;
@@ -248,22 +271,22 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     const cast = (item.Role || []).map(r => ({ title: r.tag, role: r.role, thumb: r.thumb }));
     if (cast.length) rows.push(new Row({ title: 'Cast', kind: 'cast', caption: true, items: cast }));
     slots = [
-      section('Extras', 'extra', () => server.get(path + '/extras')
+      section('Extras', 'extra', () => server.get(path + '/extras', { excludeElements: TRIM })
         .then(mc => (mc.Metadata || []).filter(m => m.type === 'clip')), x => playItem(x)),
       // Plex's own ranking; /similar answers more titles but slower and unordered.
-      section('More like this', 'poster', () => server.get(path + '/related', { count: 24 }).then(mc => {
+      section('More like this', 'poster', () => server.get(path + '/related', { count: 24, excludeElements: TRIM }).then(mc => {
         const hub = (mc.Hub || []).find(hb => (hb.Metadata || []).some(playable));
         return hub ? hub.Metadata.filter(playable) : [];
       }), it => openItem(it)),
     ];
-    rowlist.setRows(rows.concat(slots.map(s => s.row)));
+    rowlist.setRows(rows.concat(slots.map(s => s.entry)));
     renderFocus();
     slots.forEach(s => s.load());
   }
 
   // OK on an extra or a related title already plays or opens it; the menu marks it.
   function openRowMenu() {
-    const slot = slots.find(s => s.entry === rowlist.current());
+    const slot = slots.find(s => s.row && s.entry === s.row && s.entry === rowlist.current());
     const it = slot && slot.row.current();
     if (!it || !it.ratingKey) return;
     openItemMenu(menu, it, {
@@ -305,7 +328,8 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       if (!alive || !full) return;
       item = full;
       renderHeader();
-      if (!rowsBuilt) requestAnimationFrame(() => setTimeout(buildRows, 0));
+      loaded = true;
+      if (opened) buildRows();
       if (isShowLike()) {
         seasons = (await session.server.children(item.ratingKey)).filter(s => s.type === 'season');
         if (!alive) return;
@@ -364,6 +388,17 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     });
   }
 
+  function onOpened() {
+    if (opened) return;
+    opened = true;
+    clearTimeout(openTimer);
+    buildRows();
+  }
+  const openTimer = setTimeout(onOpened, OPEN_FALLBACK);
+  art.el.addEventListener('transitionend', e => {
+    if (e.propertyName === 'opacity' && e.target.classList.contains('on')) onOpened();
+  });
+
   if (item.title) renderHeader();
   renderButtons();
   load();
@@ -395,6 +430,8 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
         return true;
       }
       if (action === 'down') {
+        // Down before the opening has finished: the rows are wanted now.
+        if (!rowsBuilt && zone === zones().pop()) buildRows();
         if (zone === 'rows') rowlist.move(1);
         else moveZone(1);
         return true;
@@ -444,6 +481,9 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       }
       return false;
     },
-    destroy() { alive = false; },
+    destroy() {
+      alive = false;
+      clearTimeout(openTimer);
+    },
   };
 }
