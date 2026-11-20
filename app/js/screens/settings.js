@@ -1,5 +1,5 @@
 import { DEV, VERSION } from '../config.js';
-import { h, setText, setTransform, toggleClass } from '../util/dom.js';
+import { h, setText, toggleClass } from '../util/dom.js';
 import * as store from '../util/store.js';
 import { session, signOut, useServer, profileToken, hasProfiles } from '../session.js';
 import { getServers, connect } from '../plex/auth.js';
@@ -8,6 +8,7 @@ import * as router from '../router.js';
 import { ServerPicker } from './login.js';
 import { openProfiles } from '../nav.js';
 import { error } from '../util/log.js';
+import * as icons from '../ui/icons.js';
 import { useAmbience, setLegacyGradients, legacyGradients } from '../ui/backdrop.js';
 
 // Device-wide preferences. The player reads store 'prefs' directly, so a missing key
@@ -38,73 +39,102 @@ function serverAddress(uri) {
   }
 }
 
+// Groups on the left; the current group's rows on the right. Left and Right move between them.
 export function SettingsScreen() {
   const el = h('div', 'screen settings');
   const ambience = useAmbience();
   h('h1', 'settings-title', el).textContent = 'Settings';
-  const clip = h('div', 'settings-clip', el);
-  const track = h('div', 'settings-track', clip);
+  const groupList = h('div', 'settings-groups', el);
 
   let alive = true;
   let visible = false;
-  let index = 0;
-  let maxScroll = 0;
-  let viewMid = 0;
+  let zone = 'groups'; // 'groups' | 'rows'
+  let gi = 0;
+  let ri = 0;
 
   const who = () => (session.user ? session.user.title : '—');
-  // Signing out leaves the whole Plex account, not just the profile.
   const account = hasProfiles()
     ? [
-      { label: 'Profile', value: who, action: 'Switch', run: () => openProfiles() },
-      { label: 'Plex account', value: 'Sign out', run: doSignOut },
+      { label: 'Switch profile', value: who, run: () => openProfiles() },
+      { label: 'Sign out', sub: 'Every profile on this TV signs out with it.', run: doSignOut },
     ]
-    : [{ label: 'Signed in as', value: who, action: 'Sign out', run: doSignOut }];
+    : [{ label: 'Sign out', value: who, run: doSignOut }];
 
   const groups = [
-    ['Profile and account', account],
-    ['Server', [
-      { label: 'Server', value: () => (session.server ? session.server.name : '—'), action: 'Switch', run: switchServer },
-    ]],
-    ['Playback', [
-      { label: 'Autoplay next episode', value: () => onOff(prefs().autoplayNext), run: () => setPref('autoplayNext', !prefs().autoplayNext) },
-      {
-        label: 'Up next countdown', value: () => prefs().upnextSeconds + ' seconds',
-        run: () => setPref('upnextSeconds', COUNTDOWNS[(COUNTDOWNS.indexOf(prefs().upnextSeconds) + 1) % COUNTDOWNS.length]),
-      },
-    ]],
-    ['About', [
-      { label: 'Version', value: VERSION + (DEV ? ' (dev)' : '') },
-      { label: 'Based on', value: 'SamSUCKS by rfaile313' },
-      { label: 'License', value: 'GNU GPL v3.0, no warranty' },
-      { label: 'Kinescope Sans font', value: 'Based on Mona Sans by GitHub, SIL OFL 1.1' },
-      { label: 'QR codes', value: 'qrcode-generator by Kazuhiko Arase, MIT License' },
-    ]],
-    ['Advanced', [
-      { label: 'Performance overlay', value: () => onOff(hudEnabled()), run: () => setHud(!hudEnabled()) },
-      // For before/after recordings: brings back the full-screen gradients that took ~2s per repaint.
-      { label: 'Demo: original slow renderer', value: () => onOff(legacyGradients()), run: () => setLegacyGradients(!legacyGradients()) },
-      // Host and port only: a plex.direct host is long enough that the ellipsis would hide the port.
-      { label: 'Server address', value: () => (session.server ? serverAddress(session.server.uri) : '—') },
-    ]],
+    { label: 'Profile and account', icon: icons.user, rows: account },
+    {
+      label: 'Server', icon: icons.server, rows: [
+        { label: 'Switch server', value: () => (session.server ? session.server.name : '—'), run: switchServer },
+      ],
+    },
+    {
+      label: 'Playback', icon: icons.play, note: 'Audio and subtitle choices follow your Plex account settings.', rows: [
+        {
+          label: 'Autoplay next episode', sub: 'The next episode starts after a short countdown.',
+          value: () => onOff(prefs().autoplayNext), run: () => setPref('autoplayNext', !prefs().autoplayNext),
+        },
+        {
+          label: 'Up next countdown', value: () => prefs().upnextSeconds + ' seconds',
+          run: () => setPref('upnextSeconds', COUNTDOWNS[(COUNTDOWNS.indexOf(prefs().upnextSeconds) + 1) % COUNTDOWNS.length]),
+        },
+      ],
+    },
+    // Nothing to act on: focus stays on the group.
+    { label: 'About', icon: icons.info, rows: [] },
+    {
+      label: 'Advanced', icon: icons.sliders, rows: [
+        { label: 'Performance overlay', value: () => onOff(hudEnabled()), run: () => setHud(!hudEnabled()) },
+        // For before/after recordings: brings back the full-screen gradients that took ~2s per repaint.
+        {
+          label: 'Demo: original slow renderer', sub: 'The old full-screen gradients, for comparison videos.',
+          value: () => onOff(legacyGradients()), run: () => setLegacyGradients(!legacyGradients()),
+        },
+        // Host and port only: a plex.direct host is long enough that the ellipsis would hide the port.
+        { label: 'Server address', value: () => (session.server ? serverAddress(session.server.uri) : '—') },
+      ],
+    },
   ];
 
-  const items = [];
-  for (const [title, rows] of groups) {
-    h('div', 'row-title settings-head', track).textContent = title;
-    for (const it of rows) {
-      it.el = h('div', 'setting', track);
-      h('span', 'setting-label', it.el).textContent = it.label;
+  // Every pane is built once and stacked; changing group only swaps which one is visible.
+  for (const g of groups) {
+    g.el = h('div', 'menu-opt settings-group', groupList);
+    g.el.innerHTML = g.icon;
+    h('span', '', g.el).textContent = g.label;
+    g.pane = h('div', 'settings-pane', el);
+    if (!g.rows.length) about(g.pane);
+    for (const it of g.rows) {
+      it.el = h('div', it.sub ? 'setting setting-two' : 'setting', g.pane);
+      const label = h('span', 'setting-label', it.el);
+      label.textContent = it.label;
+      if (it.sub) h('small', '', label).textContent = it.sub;
       it.valueEl = h('span', 'setting-value', it.el);
       refresh(it);
-      items.push(it);
+    }
+    if (g.note) h('p', 'settings-note', g.pane).textContent = g.note;
+  }
+
+  function about(pane) {
+    const lockup = h('div', 'settings-lockup', pane);
+    lockup.innerHTML = icons.mark;
+    h('span', '', lockup).textContent = 'kinescope';
+    h('div', 'settings-version', pane).textContent = 'Version ' + VERSION + (DEV ? ' (dev)' : '');
+    const body = h('p', 'settings-body', pane);
+    h('span', '', body).textContent = 'Based on SamSUCKS by rfaile313.';
+    h('span', '', body).textContent = 'Free software under the GNU General Public License 3.0.';
+    h('span', '', body).textContent = 'It comes with no warranty.';
+    h('h2', 'settings-credits-title', pane).textContent = 'Credits';
+    const list = h('div', 'settings-credits', pane);
+    for (const [what, licence] of [['Mona Sans by GitHub', 'SIL Open Font License 1.1'], ['qrcode-generator by Kazuhiko Arase', 'MIT License']]) {
+      const row = h('div', 'settings-credit', list);
+      h('span', '', row).textContent = what;
+      h('span', '', row).textContent = licence;
     }
   }
-  toggleClass(items[0].el, 'focus', true);
 
   // status, while set, stands in for the value: loading and error text for the row's action.
   function refresh(it) {
     const value = typeof it.value === 'function' ? it.value() : it.value;
-    setText(it.valueEl, it.status || (value + (it.action ? '  ·  ' + it.action : '')));
+    setText(it.valueEl, it.status || value);
   }
 
   function setStatus(it, text) {
@@ -112,27 +142,38 @@ export function SettingsScreen() {
     refresh(it);
   }
 
-  // Read once per show, so a key press only writes a class and a transform.
-  function measure() {
-    viewMid = clip.offsetHeight / 2;
-    maxScroll = Math.max(0, track.offsetHeight - clip.offsetHeight);
-    for (const it of items) it.mid = it.el.offsetTop + it.el.offsetHeight / 2;
+  // Class swaps only: the panes and rows are fixed sizes, so a key press lays nothing out.
+  function render() {
+    groups.forEach((g, i) => {
+      const cur = i === gi;
+      toggleClass(g.el, 'focus', cur && zone === 'groups');
+      toggleClass(g.el, 'current', cur && zone === 'rows');
+      toggleClass(g.pane, 'on', cur);
+      g.rows.forEach((it, j) => toggleClass(it.el, 'focus', cur && zone === 'rows' && j === ri));
+    });
   }
 
-  // The focused row sits mid-view while the list can scroll. The jump is instant: a
-  // sliding list under an instantly moved highlight reads as the screen jumping.
-  function place() {
-    const y = Math.round(Math.max(0, Math.min(maxScroll, items[index].mid - viewMid)));
-    setTransform(track, 'translateY(' + -y + 'px)');
+  function groupsKey(action) {
+    switch (action) {
+      case 'up': if (gi > 0) { gi--; render(); } return true;
+      case 'down': if (gi < groups.length - 1) { gi++; render(); } return true;
+      case 'right': case 'enter':
+        if (groups[gi].rows.length) { zone = 'rows'; ri = 0; render(); }
+        return true;
+    }
+    return false;
   }
 
-  function move(delta) {
-    const next = Math.max(0, Math.min(items.length - 1, index + delta));
-    if (next === index) return;
-    toggleClass(items[index].el, 'focus', false);
-    index = next;
-    toggleClass(items[index].el, 'focus', true);
-    place();
+  function rowsKey(action) {
+    const rows = groups[gi].rows;
+    switch (action) {
+      case 'up': if (ri > 0) { ri--; render(); } return true;
+      case 'down': if (ri < rows.length - 1) { ri++; render(); } return true;
+      case 'left': case 'back': zone = 'groups'; render(); return true;
+      case 'right': return true;
+      case 'enter': activate(rows[ri]); return true;
+    }
+    return false;
   }
 
   function activate(it) {
@@ -180,6 +221,7 @@ export function SettingsScreen() {
     }
   }
 
+  // Signing out leaves the whole Plex account, not just the profile.
   function doSignOut() {
     signOut();
     restart();
@@ -190,22 +232,19 @@ export function SettingsScreen() {
     window.dispatchEvent(new Event('samsucks:restart'));
   }
 
+  render();
+
   return {
     el,
     name: 'settings',
     onShow() {
       visible = true;
       ambience.restore();
-      items.forEach(refresh);
-      measure();
-      place();
+      groups.forEach(g => g.rows.forEach(refresh));
     },
     onHide() { visible = false; },
     onKey(action) {
-      if (action === 'up') { move(-1); return true; }
-      if (action === 'down') { move(1); return true; }
-      if (action === 'enter') { activate(items[index]); return true; }
-      return false;
+      return zone === 'rows' ? rowsKey(action) : groupsKey(action);
     },
     destroy() { alive = false; },
   };
