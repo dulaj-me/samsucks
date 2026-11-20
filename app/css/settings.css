@@ -1,10 +1,35 @@
-.settings-title { position: absolute; left: 160px; top: 110px; font: 700 80px/1 var(--display); }
-.settings-clip { position: absolute; left: 160px; top: 236px; width: 1100px; height: 790px; overflow: hidden; }
-.settings-track { position: absolute; top: 0; left: 0; width: 1100px; will-change: transform; }
-.settings-head { margin: 34px 0 12px; }
-.settings-head:first-child { margin-top: 0; }
-.settings-track .setting-label { flex-shrink: 0; }
-.settings-track .setting-value {
+.settings-title { position: absolute; left: 96px; top: 56px; font: var(--f-page); }
+
+/* Groups use the side sheet's option; the current group keeps a faint pill while its rows have focus. */
+.settings-groups { position: absolute; left: 96px; top: 184px; width: 440px; }
+.settings-group.current { background: var(--faint); color: var(--text); }
+
+/* One pane per group, stacked; visibility, unlike display, swaps them without a layout. */
+.settings-pane { position: absolute; left: 632px; top: 184px; width: 880px; visibility: hidden; }
+.settings-pane.on { visibility: visible; }
+.setting-two { height: 108px; }
+.setting-label { flex-shrink: 0; }
+.setting-label small { display: block; margin-top: 8px; font: var(--f-small); color: var(--mute); }
+.setting.focus .setting-label small { color: var(--focus-fg-dim); }
+.setting-value {
   min-width: 0; margin-left: 48px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   line-height: 34px; /* at line-height 1 the clip cuts the descenders */
 }
+.settings-note { margin-top: 24px; padding: 0 32px; font: 500 22px/1.4 var(--sans); color: var(--mute); }
+
+/* About: the lockup at 58px mark and 56px type, then version, credit and licence, then Credits. */
+.settings-lockup {
+  display: flex; align-items: center;
+  font: 650 56px/1 var(--sans); font-stretch: 108%; letter-spacing: -0.01em;
+}
+.settings-lockup svg { width: 58px; height: 58px; margin-right: 18px; display: block; }
+.settings-version { margin-top: 20px; font: var(--f-meta); color: var(--soft); }
+.settings-body { margin-top: 28px; width: 760px; font: var(--f-body); color: var(--soft); }
+.settings-body span { display: block; }
+.settings-credits-title { margin-top: 56px; font: var(--f-row); }
+.settings-credits { margin-top: 16px; border-top: 2px solid var(--hair); }
+.settings-credit {
+  display: flex; align-items: center; justify-content: space-between; height: 76px;
+  border-bottom: 2px solid var(--hair); font: 580 25px/1 var(--sans);
+}
+.settings-credit span:last-child { font-weight: 500; color: var(--mute); }
