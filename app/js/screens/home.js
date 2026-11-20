@@ -175,7 +175,8 @@ export function HomeScreen() {
 
     ambience.set(item.UltraBlurColors);
     clearTimeout(artTimer);
-    artTimer = setTimeout(() => hero.set(server.image(heroArtPath(item), 1920, 1080)), isFast() ? 350 : 120);
+    // Only once focus rests: swapping full-size art at browsing speed cost Home a frame step on the TV.
+    artTimer = setTimeout(() => hero.set(server.image(heroArtPath(item), 1920, 1080)), isFast() ? 350 : 300);
     showBadges(item);
   }
 
