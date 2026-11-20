@@ -81,7 +81,7 @@ export function createTile(kind, { caption = false } = {}) {
     cap = h('div', 'tile-cap', text);
     sub = h('div', 'tile-sub', text);
   }
-  return { el, img, ph, count, seen, bar, fill, cap, sub, kind, size, item: null };
+  return { el, img, ph, count, seen, bar, fill, cap, sub, kind, size, item: undefined };
 }
 
 function artFor(item, kind) {
