@@ -40,6 +40,7 @@ function pump() {
         remember(job.url);
         if (job.img._want === job.url) attach(job.img, job.url, false);
       }
+      if (job.done) job.done();
       pump();
     };
     if (loader.decode) loader.decode().then(() => done(true), () => done(false));
@@ -66,10 +67,25 @@ export function load(img, url) {
   pump();
 }
 
+const sink = url => ({ _want: url, classList: { add() {}, remove() {} } });
+
 // Warm the cache without a target element (e.g. the next page of a grid).
 export function prefetch(url) {
   if (!url || loaded.has(url)) return;
-  const sink = { _want: url, classList: { add() {}, remove() {} } };
-  queue.unshift({ img: sink, url });
+  queue.unshift({ img: sink(url), url });
   pump();
+}
+
+// Decode these first, ahead of everything queued. Resolves once all are in (or failed), or
+// after ms, whichever is first; a tile pointed at one then shows it without a fade.
+export function warm(urls, ms) {
+  const want = urls.filter(url => url && !loaded.has(url));
+  if (!want.length) return Promise.resolve();
+  return new Promise(resolve => {
+    let left = want.length;
+    const timer = setTimeout(resolve, ms);
+    const done = () => { if (--left === 0) { clearTimeout(timer); resolve(); } };
+    for (const url of want) queue.push({ img: sink(url), url, done });
+    pump();
+  });
 }

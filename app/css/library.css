@@ -16,6 +16,9 @@
 .lib-msg { font: var(--f-message); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lib-hint { margin-top: 10px; font: var(--f-body); color: var(--soft); }
 
+/* A filter change cuts to the new first poster rather than sliding the old grid there. */
+.library .grid.cut .grid-track, .library .grid.cut .card { transition: none; }
+
 /* Static ghosts at the grid's geometry, shown instead of the grid while its first page loads. */
 .lib-skeleton { display: none; }
 .library.loading .lib-skeleton { display: block; }

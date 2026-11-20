@@ -10,7 +10,7 @@ import { openItemMenu, isWatched } from '../ui/itemmenu.js';
 import * as icons from '../ui/icons.js';
 import * as store from '../util/store.js';
 import { session } from '../session.js';
-import { prefetch } from '../ui/images.js';
+import { prefetch, warm } from '../ui/images.js';
 import { isFast } from '../input.js';
 import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
@@ -22,6 +22,8 @@ const GRID_TOP = 252;
 const FIRST_ROW = 288;
 // How long the letter landed on stays up after a letter jump.
 const LETTER_MS = 900;
+// The longest a filter change waits on the new first rows' posters before it cuts to them.
+const SWAP_WAIT = 500;
 const SORTS = [
   { id: 'titleSort', label: 'A–Z' },
   { id: 'addedAt:desc', label: 'Recently added' },
@@ -80,6 +82,7 @@ export function LibraryScreen(section) {
   let isEmpty = false;       // the grid has nothing to show: no matches, an empty library or an error
   let wayOut = null;         // the bar's chip out of that: 'clear' or 'retry'
   let loading = false;       // the first page is on its way, behind the skeleton
+  let swapping = false;      // new filters' first page is on its way; the old grid stays up
   let zone = 'grid';
   let inPicker = false;      // the menu shows one category's values
 
@@ -129,6 +132,8 @@ export function LibraryScreen(section) {
   });
   // Set after construction: the constructor asks for data before `grid` exists.
   grid.onNeed = (start, end) => {
+    // Pages for the new filters would land in the old grid's slots.
+    if (swapping) return;
     for (let p = Math.floor(start / PAGE); p <= Math.floor(end / PAGE); p++) loadPage(p);
   };
   el.appendChild(grid.el);
@@ -158,17 +163,33 @@ export function LibraryScreen(section) {
     try {
       const res = await session.server.items(section.key, p * PAGE, PAGE, Object.assign({ sort: f.sort }, filters()));
       if (gen !== generation) return;
+      const cut = swapping;
+      if (cut) {
+        await warm(res.items.slice(0, grid.cols * 2).map(it => session.server.image(it.thumb, grid.size.w, grid.size.h)), SWAP_WAIT);
+        if (gen !== generation) return;
+        swapping = false;
+        items = [];
+        grid.index = 0;
+      }
       res.items.forEach((it, i) => { items[p * PAGE + i] = it; });
       pages.set(p, true);
       if (p === 0) setLoading(false);
       showTotal(res.total);
+      // A cut lands on the first poster without sliding the old grid there.
+      if (cut) toggleClass(grid.el, 'cut', true);
       if (grid.total !== res.total) grid.setTotal(res.total);
       else grid.refresh();
+      if (cut) {
+        grid.el.getBoundingClientRect();
+        toggleClass(grid.el, 'cut', false);
+      }
       if (p === 0 && res.items[0]) grid.onFocus(grid.current());
     } catch (e) {
       if (gen !== generation) return;
       pages.delete(p);
       error('library page failed', section.title, p, e);
+      // The old grid no longer matches the chips.
+      if (p === 0 && swapping) { swapping = false; clearGrid(); }
       // A refetch after a title left keeps the posters it has; the next move asks again.
       if (p === 0 && grid.total) toast("Couldn't refresh " + section.title + '.');
       else if (p === 0) showEmpty("Couldn't load " + section.title, 'Check that ' + session.server.name + ' is on, then try again.', 'retry');
@@ -299,20 +320,30 @@ export function LibraryScreen(section) {
     renderBar();
   }
 
-  function reload() {
+  // keep: a filter change over posters leaves them up until the new first page and its first
+  // rows' posters are in, then cuts. Anything else (opening, retrying, leaving an empty
+  // result) shows the skeleton.
+  function reload(keep) {
     generation++;
     pages = new Map();
+    swapping = !!keep && grid.total > 0 && !isEmpty;
+    if (!swapping) {
+      isEmpty = false;
+      show(empty, false);
+      setAction(null);
+      setLoading(true);
+      clearGrid();
+    }
+    loadPage(0);
+    loadLetters();
+  }
+
+  function clearGrid() {
     items = [];
-    isEmpty = false;
-    show(empty, false);
-    setAction(null);
-    setLoading(true);
     setText(count, '');
     grid.total = 0;
     grid.index = 0;
     grid.refresh();
-    loadPage(0);
-    loadLetters();
   }
 
   function filtersChanged() {
@@ -320,7 +351,7 @@ export function LibraryScreen(section) {
     saved[storeKey] = f;
     store.set('libFilters', saved);
     renderChips();
-    reload();
+    reload(true);
   }
 
   // Only a filter change touches the labels. A focus move toggles .focus and nothing that
@@ -389,7 +420,7 @@ export function LibraryScreen(section) {
   reload();
 
   function jump(dir) {
-    if (!grid.total) return;
+    if (!grid.total || swapping) return;
     if (letters.length) {
       const i = grid.index;
       let li = letters.findIndex((l, k) => i >= l.start && (k === letters.length - 1 || i < letters[k + 1].start));
@@ -423,6 +454,8 @@ export function LibraryScreen(section) {
   function removeItem(it) {
     if (!alive) return;
     if (!f.unwatched) { refreshItem(it); return; }
+    // The first page for new filters is already on its way.
+    if (swapping) return;
     const i = indexOf(it);
     if (i < 0) return;
     items.splice(i, 1);

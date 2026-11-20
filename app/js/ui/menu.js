@@ -1,12 +1,12 @@
 // Side sheet of actions for the focused item, or of choices for a filter. Modal: while
 // it's open the owning screen forwards every key to onKey().
-// It moves like rows: the highlight is a card over the list carrying its own dark copy of
-// the focused option, so list labels never change colour and never re-raster on a press.
+// The highlight is a white card riding in the list's track, over the options. It clips a dark
+// copy of the whole list that counter-moves with it, so the dark labels sit exactly over the
+// list's own: only the fill travels, the text never slides, and nothing re-rasters on a press.
 // One key press moves either the highlight or the list, never both. On a long list the
 // highlight travels to the middle slot, stays there while the list slides, and travels
 // again near the end.
-import { h, setText, setTransform, toggleClass, swapIn } from '../util/dom.js';
-import { isFast } from '../input.js';
+import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import * as icons from './icons.js';
 
 // Options are one fixed height, so every position comes from the index: no layout reads.
@@ -14,7 +14,6 @@ const PITCH = 78;    // 72px option + 6px gap
 const CLIP = 818;    // from below the sub-line to y 1026
 const SLOTS = Math.floor((CLIP + PITCH - 72) / PITCH);
 const MIDDLE = Math.floor((SLOTS - 1) / 2);
-const NUDGE = 8;     // the highlight's new label slides this far into place
 
 export class Menu {
   constructor(parent) {
@@ -25,8 +24,9 @@ export class Menu {
     this.list = h('div', 'menu-list', this.el);
     this.list.style.height = CLIP + 'px';
     this.track = h('div', 'menu-track', this.list);
-    this.hl = h('div', 'menu-hl', this.list);
-    this.hlOpt = h('div', 'menu-opt', this.hl);
+    this.hl = h('div', 'menu-hl');
+    // A .menu-track, so it shares the highlight's transition, held-key speed and .now.
+    this.hlTrack = h('div', 'menu-track', this.hl);
     this.items = [];
     this.index = 0;
     this.isOpen = false;
@@ -46,6 +46,8 @@ export class Menu {
       if (it.current) h('i', 'menu-tick', el).innerHTML = icons.check;
       return Object.assign({ el }, it);
     });
+    this.hlTrack.innerHTML = this.track.innerHTML;
+    this.track.appendChild(this.hl);
     this.index = Math.max(0, items.findIndex(it => it.current));
     this.isOpen = true;
     // Open on the current choice in place, instead of sliding there from the last list.
@@ -63,24 +65,24 @@ export class Menu {
     toggleClass(this.el, 'open', false);
   }
 
-  render(dir) {
+  render() {
     const max = Math.max(0, this.items.length - SLOTS);
     const scroll = Math.max(0, Math.min(max, this.index - MIDDLE));
     setTransform(this.track, 'translateY(' + (-scroll * PITCH) + 'px)');
-    setTransform(this.hl, 'translateY(' + (this.index - scroll) * PITCH + 'px)');
+    // Set together, on one transition, from offsets that cancel: the copy stays on the list's
+    // labels through every frame, even when a held key retargets a slide midway.
+    setTransform(this.hl, 'translateY(' + this.index * PITCH + 'px)');
+    setTransform(this.hlTrack, 'translateY(' + (-this.index * PITCH) + 'px)');
     // The list fades at an edge only while more of it lies beyond.
     toggleClass(this.list, 'more-top', scroll > 0);
     toggleClass(this.list, 'more-bottom', scroll < max);
-    const it = this.items[this.index];
-    this.hlOpt.innerHTML = it ? it.el.innerHTML : '';
-    if (dir) swapIn(this.hlOpt, 0, dir * NUDGE, isFast());
   }
 
   onKey(action) {
     if (action === 'up' || action === 'down') {
       const dir = action === 'down' ? 1 : -1;
       const next = this.index + dir;
-      if (next >= 0 && next < this.items.length) { this.index = next; this.render(dir); }
+      if (next >= 0 && next < this.items.length) { this.index = next; this.render(); }
     } else if (action === 'enter') {
       const it = this.items[this.index];
       this.close();

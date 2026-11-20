@@ -344,12 +344,14 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
 .menu-list.more-top { -webkit-mask-image: linear-gradient(transparent, #000 48px); }
 .menu-list.more-bottom { -webkit-mask-image: linear-gradient(#000 calc(100% - 48px), transparent); }
 .menu-list.more-top.more-bottom { -webkit-mask-image: linear-gradient(transparent, #000 48px, #000 calc(100% - 48px), transparent); }
-/* The focus highlight: a card on its own layer over the options, with a dark copy of the focused one. */
+/*
+ * The focus highlight: a white card on its own layer, last in the list's track. It clips a dark
+ * copy of the whole list, which ui/menu.js keeps pinned over the list's own labels.
+ */
 .menu-hl {
   position: absolute; top: 0; left: 0; width: 512px; height: 72px; border-radius: var(--r-option);
   background: var(--focus-bg);
   will-change: transform; transition: transform var(--t-slide) var(--ease);
-  /* Its label is rewritten on every press; keep that layout inside it. */
   contain: strict;
 }
 .menu-track { position: relative; will-change: transform; transition: transform var(--t-slide) var(--ease); }
@@ -359,11 +361,12 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
   font: var(--f-option); color: var(--soft); white-space: nowrap;
 }
 .menu-opt svg { width: 28px; height: 28px; margin-right: 18px; flex-shrink: 0; }
-.menu-opt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Taller than the 26px face: at line-height 1 the clip cuts the descenders. */
+.menu-opt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; line-height: 34px; }
 .menu-tick { margin-left: auto; padding-left: 18px; }
 .menu-tick svg { display: block; margin: 0; }
 .menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); }
-.menu-hl .menu-opt { color: var(--focus-fg); will-change: transform, opacity; }
+.menu-hl .menu-opt { color: var(--focus-fg); }
 
 .btn-wide {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
