@@ -73,6 +73,8 @@
   --lift: 0 20px 44px rgba(0, 0, 0, 0.55);
   --sheet-edge: -40px 0 80px rgba(0, 0, 0, 0.45);
   --float: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --card: 0 20px 48px rgba(0, 0, 0, 0.5);
+  --knob: 0 4px 12px rgba(0, 0, 0, 0.4);
 
   /* Moving from the first frame, but spread evenly: a steeper start reads as a jump then a creep. */
   --ease: cubic-bezier(0.3, 0.5, 0.3, 1);

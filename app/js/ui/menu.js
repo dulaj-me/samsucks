@@ -46,16 +46,32 @@ export class Menu {
     this.items = [];
     this.index = 0;
     this.isOpen = false;
+    // Out of the layer tree while closed: hidden once the fade out ends.
+    this.idle(true);
+    this.el.addEventListener('transitionend', e => {
+      if (e.target === this.el && e.propertyName === 'opacity' && !this.isOpen) this.idle(true);
+    });
+  }
+
+  idle(on) {
+    toggleClass(this.scrim, 'idle', on);
+    toggleClass(this.el, 'idle', on);
   }
 
   // items: [{ label, icon?, current?, run }]. A list where items set `current` is a
   // choice: the current one is checked and has focus when the menu opens.
+  // { heading } starts a section; it takes a row but never focus.
   open({ title, sub, items }) {
     setText(this.titleEl, title);
     setText(this.subEl, sub);
     this.track.innerHTML = '';
     const choice = items.some(it => it.current != null);
     this.items = items.map(it => {
+      if (it.heading) {
+        const el = h('div', 'menu-opt menu-head', this.track);
+        el.textContent = it.heading;
+        return { el, heading: true };
+      }
       const el = h('div', 'menu-opt', this.track);
       if (!choice && it.icon) el.innerHTML = it.icon;
       h('span', '', el).textContent = it.label;
@@ -65,8 +81,11 @@ export class Menu {
     });
     this.win.forEach(w => { w.k = null; });
     this.track.appendChild(this.hl);
-    this.index = Math.max(0, items.findIndex(it => it.current));
+    const current = items.findIndex(it => it.current);
+    this.index = current >= 0 ? current : Math.max(0, items.findIndex(it => !it.heading));
     this.isOpen = true;
+    // Shown before the layout below, which then starts the slide in from the closed state.
+    this.idle(false);
     // Open on the current choice in place, instead of sliding there from the last list.
     toggleClass(this.list, 'now', true);
     this.render();
@@ -111,8 +130,8 @@ export class Menu {
       if (w.k === k) continue;
       w.k = k;
       const it = this.items[k];
-      show(w.el, !!it);
-      if (!it) continue;
+      show(w.el, !!it && !it.heading);
+      if (!it || it.heading) continue;
       setText(w.label, it.label);
       show(w.tick, !!it.current);
       if (w.icon !== it.icon) {
@@ -144,7 +163,8 @@ export class Menu {
   onKey(action) {
     if (action === 'up' || action === 'down') {
       const dir = action === 'down' ? 1 : -1;
-      const next = this.index + dir;
+      let next = this.index + dir;
+      while (this.items[next] && this.items[next].heading) next += dir;
       if (next >= 0 && next < this.items.length) { this.index = next; this.render(); }
     } else if (action === 'enter') {
       const it = this.items[this.index];

@@ -346,6 +346,7 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
   transition: opacity var(--t-focus) ease, transform var(--t-slide) var(--ease);
 }
 .menu.open { opacity: 1; transform: translateX(0); }
+.menu-scrim.idle, .menu.idle { display: none; }
 .menu-title { height: 40px; font: 650 34px/40px var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-sub { margin-top: 8px; height: 28px; font: 500 22px/28px var(--sans); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-list { position: relative; margin-top: 36px; overflow: hidden; }
@@ -375,6 +376,8 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
 .menu-tick { margin-left: auto; padding-left: 18px; }
 .menu-tick svg { display: block; margin: 0; }
 .menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); }
+/* A section heading, sitting on the first option of its section. */
+.menu-head { align-items: flex-end; padding: 0 0 8px; font: 600 22px/28px var(--sans); color: var(--mute); }
 .menu-hl .menu-opt { position: absolute; top: 0; left: 0; width: 512px; color: var(--focus-fg); }
 .menu-hl.held .menu-track { transition: none; }
 .menu-hl.held .menu-win, .menu-hl:not(.held) .menu-one { visibility: hidden; }
