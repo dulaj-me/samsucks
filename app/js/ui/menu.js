@@ -1,9 +1,12 @@
 // Side sheet of actions for the focused item, or of choices for a filter. Modal: while
 // it's open the owning screen forwards every key to onKey().
-// It moves like rows and the grid: the highlight is its own layer, and one key press moves
-// either the highlight or the list, never both. On a long list the highlight travels to the
-// middle slot, stays there while the list slides, and travels again near the end.
-import { h, setText, setTransform, toggleClass } from '../util/dom.js';
+// It moves like rows: the highlight is a card over the list carrying its own dark copy of
+// the focused option, so list labels never change colour and never re-raster on a press.
+// One key press moves either the highlight or the list, never both. On a long list the
+// highlight travels to the middle slot, stays there while the list slides, and travels
+// again near the end.
+import { h, setText, setTransform, toggleClass, swapIn } from '../util/dom.js';
+import { isFast } from '../input.js';
 import * as icons from './icons.js';
 
 // Options are one fixed height, so every position comes from the index: no layout reads.
@@ -11,6 +14,7 @@ const PITCH = 78;    // 72px option + 6px gap
 const CLIP = 818;    // from below the sub-line to y 1026
 const SLOTS = Math.floor((CLIP + PITCH - 72) / PITCH);
 const MIDDLE = Math.floor((SLOTS - 1) / 2);
+const NUDGE = 8;     // the highlight's new label slides this far into place
 
 export class Menu {
   constructor(parent) {
@@ -20,8 +24,9 @@ export class Menu {
     this.subEl = h('div', 'menu-sub', this.el);
     this.list = h('div', 'menu-list', this.el);
     this.list.style.height = CLIP + 'px';
-    this.hl = h('div', 'menu-hl', this.list);
     this.track = h('div', 'menu-track', this.list);
+    this.hl = h('div', 'menu-hl', this.list);
+    this.hlOpt = h('div', 'menu-opt', this.hl);
     this.items = [];
     this.index = 0;
     this.isOpen = false;
@@ -58,7 +63,7 @@ export class Menu {
     toggleClass(this.el, 'open', false);
   }
 
-  render() {
+  render(dir) {
     const max = Math.max(0, this.items.length - SLOTS);
     const scroll = Math.max(0, Math.min(max, this.index - MIDDLE));
     setTransform(this.track, 'translateY(' + (-scroll * PITCH) + 'px)');
@@ -66,13 +71,16 @@ export class Menu {
     // The list fades at an edge only while more of it lies beyond.
     toggleClass(this.list, 'more-top', scroll > 0);
     toggleClass(this.list, 'more-bottom', scroll < max);
-    this.items.forEach((it, i) => toggleClass(it.el, 'focus', i === this.index));
+    const it = this.items[this.index];
+    this.hlOpt.innerHTML = it ? it.el.innerHTML : '';
+    if (dir) swapIn(this.hlOpt, 0, dir * NUDGE, isFast());
   }
 
   onKey(action) {
     if (action === 'up' || action === 'down') {
-      const next = this.index + (action === 'down' ? 1 : -1);
-      if (next >= 0 && next < this.items.length) { this.index = next; this.render(); }
+      const dir = action === 'down' ? 1 : -1;
+      const next = this.index + dir;
+      if (next >= 0 && next < this.items.length) { this.index = next; this.render(dir); }
     } else if (action === 'enter') {
       const it = this.items[this.index];
       this.close();

@@ -362,9 +362,10 @@ Every colour, radius, shadow, duration and easing lives here. Screen stylesheets
 | `--r-panel` | 20px | new |
 | `--r-chip` | 6px | new (format badges) |
 | `--lift` | 0 20px 44px rgba(0, 0, 0, 0.55) | coral glow `0 0 36px` on `.ring` |
-| `--ease` | cubic-bezier(0.2, 0.8, 0.2, 1) | `--ease`, unchanged |
+| `--ease` | cubic-bezier(0.3, 0.5, 0.3, 1) | `--ease` |
 | `--t-art` | 600ms | inline 600ms (hero), 700ms (ambience) |
-| `--t-slide` | 260ms | inline 260ms and 300ms on tracks |
+| `--t-slide` | 180ms | inline 260ms and 300ms on tracks |
+| `--t-swap` | 180ms | new |
 | `--t-focus` | 200ms | inline 200ms and 220ms on the ring |
 | `--t-held` | 110ms | inline 110ms under `html.fast` |
 
@@ -415,6 +416,8 @@ Geometry that virtualization needs lives in JS (`tile.js`, `row.js`, `grid.js`, 
 | `episode` | 432x243 | detail episode row | yes, plus a two-line summary | 432x243 |
 | `search-poster` | 200x300 | search results | yes | 200x300 |
 | `search-wide` | 356x200 | search episode results | yes | 356x200 |
+| `cast` (provisional) | 200x200 circle, gap 32 | detail Cast | yes, centred: name, then character; initials without a picture | 200x200 |
+| `extra` (provisional) | 432x243, gap 36 | detail Extras | yes: title, then type and length ("Trailer · 2:23"); the clip's own thumb | 432x243 |
 
 Inside every tile frame: the progress groove sits 16 px in from left and right and 14 px from the bottom, 5 px tall; the count pill and the watched badge sit 12 px from the top and right.
 
@@ -424,9 +427,13 @@ Inside every tile frame: the progress groove sits 16 px in from left and right a
 - Row pitch: 464 for a wide row, 500 for a poster row. With either, the next row's heading lands at or below y 1080, so nothing of the next row peeks.
 - Heading at the row's top (40 px line), tiles 64 px below the row's top.
 - Left edge (`LEFT`) 96. Gap 36 between wide tiles (step 468), 32 between posters (step 272), 36 between episode tiles (step 468), 28 in search (steps 228 and 384).
-- The focused tile is anchored at x 96. Tiles to its right sit 16 px further right to clear its lift. Nothing shows left of the anchor.
+- A focus card is fixed at x 96, above the track: the focused item's lifted art, ring and caption. It never moves. The track's own tile at focus, and every tile left of it, stays hidden under the card or outside the clip.
+- Tiles right of the card sit 16 px further right to clear its lift, leaving 23 to 31 px between the ring and the next tile.
+- A peek card left of the ring shows the previous item's edge. Its right edge sits 16 px plus the tile gap left of the anchor, mirroring the next tile's clearance, so the sliver is 48 px for posters, 44 for wide and episode tiles and 52 in search. It is art only, at rest size, and swaps like the focus card. The track itself shows nothing left of the anchor.
+- A row without focus shows neither card; its tiles close both gaps and line up under the heading.
+- These apply to every `Row`: Home, search and detail.
 - Rows above the active row are hidden (opacity 0). A row below the active row that is on screen sits at opacity 0.55.
-- Captions only on wide and episode rows on Home and detail. Poster rows on Home carry none.
+- Captions only on wide and episode rows on Home and detail, and on detail's provisional cast and extra rows. Poster rows carry none.
 
 ### Hero (Home)
 
@@ -440,30 +447,41 @@ Inside every tile frame: the progress groove sits 16 px in from left and right a
 ### Library grid
 
 - Filter bar at y 148, 56 tall, chips 14 px apart, total count right-aligned at the right safe edge.
-- Grid clip from y 252 to 1080 (828 tall), `overflow: hidden`. `HEAD` = 40: the first row's posters start at y 292.
+- Grid clip from y 252 to 1080 (828 tall), `overflow: hidden`. `HEAD` = 36: the first row's posters start at y 288, and the focus ring's top sits 16 px below the clip.
 - 7 columns, 220 wide, gap 30 (step 250), starting at x 96 and ending at x 1816.
 - Row step 442 (poster 330 plus 112 for the caption block and gap).
 - The focused row always sits in the top slot once the grid scrolls. With a 442 step the second slot's captions fall at y 1080, below the fold, so `grid.js`'s keep-focus-second rule changes to keep-focus-first.
+- A focus card sits over the focused cell in the top slot, carrying the ring, the lifted poster and its caption. Posters at or above focus in its column stay hidden under it or above the clip.
+- Up and Down slide the track under the still card and swap its content. Left and Right move the card one column (250 px) and hand its content over: the old poster settles to rest size as it fades, the new one lifts in as the card lands on it.
+- The row leaving at the top fades rather than being cut flat by the clip.
 
 ### Focus geometry
 
-The focused tile scales 1.07 about its centre. The lift (a separate element with the static `--lift` shadow) covers the scaled rect with radius 15 (14 x 1.07). The ring is that rect grown by 8 px on every side with a 4 px border, so a 4 px gap shows between art and ring. Ring radius 23. In whole pixels, relative to the tile's top-left at rest:
+Focus on art is a card (`ui/card.js`) laid over the list's focused slot; track tiles never lift. The card's tile scales 1.07 about its centre. The lift (a separate element with the static `--lift` shadow) covers the scaled rect with radius 15 (14 x 1.07). The ring is that rect grown by 8 px on every side with a 4 px border, so a 4 px gap shows between art and ring. Ring radius 23. In whole pixels, relative to the tile's top-left at rest:
 
-| Kind | Lifted rect | Ring box (x, y, w, h) | Caption shift when focused |
-| --- | --- | --- | --- |
-| `wide` / `episode` | 462x260 | -23, -17, 478, 276 | 9 px down |
-| `poster` | 257x385 | -16, -21, 273, 401 | no caption |
-| `grid` | 235x353 | -16, -20, 251, 369 | 12 px down |
-| `search-poster` | 214x321 | -15, -18, 230, 337 | not on a comp yet |
-| `search-wide` | 381x214 | -20, -15, 397, 230 | not on a comp yet |
+| Kind | Lifted rect | Ring box (x, y, w, h) | Caption shift when focused | Swap travel |
+| --- | --- | --- | --- | --- |
+| `wide` / `episode` | 462x260 | -23, -17, 478, 276 | 9 px down | 43 px |
+| `poster` | 257x385 | -16, -21, 273, 401 | no caption | 24 px |
+| `grid` | 235x353 | -16, -20, 251, 369 | 12 px down | 22 px |
+| `search-poster` | 214x321 | -15, -18, 230, 337 | not on a comp yet | 20 px |
+| `search-wide` | 381x214 | -20, -15, 397, 230 | not on a comp yet | 36 px |
+| `cast` (provisional) | 214x214 | -15, -15, 230, 230 | 7 px down | 20 px |
+| `extra` (provisional) | 462x260 | -23, -17, 478, 276 | 9 px down | 43 px |
 
-Formula: overhang = (1.07 - 1) / 2 x size; ring offset = -(overhang + 8); ring size = size x 1.07 + 16. A focused tile's caption moves down by the bottom overhang. Round once, in JS, with `Math.round`.
+A kind's corner radius lives in `KINDS` (`r`, default 14); the lift's radius is `r` x 1.07 and the ring's 8 px more. The provisional `cast` kind is a circle: frame 100, lift 107, ring 115, so its card, ring and peek are round.
+
+Formula: overhang = (1.07 - 1) / 2 x size; ring offset = -(overhang + 8); ring size = size x 1.07 + 16. A focused tile's caption moves down by the bottom overhang. Swap travel is a tenth of the tile width. Round once, in JS, with `Math.round`.
+
+A card holds two faces of one tile. A face's frame stays still and its content slides inside it, so the frame's rounded corners clip the motion and never travel themselves. The face being replaced sits on top. The caption block sits in its own clip, as wide as the tile and 64 px tall, below the lifted art.
+
+The track tile entering the card moves 16 px toward it on its own as it fades; the one leaving the card appears 16 px short of its slot and moves in. 16 px stays under the smallest clearance it must not cross: 23 px between the ring and the next tile in a `search-wide` row, 20 px between the grid card's caption block and the poster below.
 
 ### Named Rules
 
 **The Safe Frame Rule.** 96 px left and right, 54 px top and bottom. No heading, caption or label in the bottom 54 px (below y 1026). Art may run to the edge; words may not.
 
-**The Headroom Rule.** Every clipped list keeps at least `(1.07 - 1) / 2 x tile height + 12` px between its clip edge and its first row's tile top, so the lifted tile and its ring are never cut. That is 21 px for wide and episode tiles, 24 for grid posters, 25 for Home posters, 23 for search posters. The library ships 40.
+**The Headroom Rule.** Every clipped list keeps at least `(1.07 - 1) / 2 x tile height + 12` px between its clip edge and its first row's tile top, so the lifted tile and its ring are never cut. That is 21 px for wide and episode tiles, 24 for grid posters, 25 for Home posters, 23 for search posters. The library ships 36.
 
 **The No Peek Rule.** Row pitch is chosen so the next row stays below the fold. A heading half on screen at the bottom edge is a defect.
 
@@ -504,8 +522,8 @@ One treatment per component type. White fills on buttons, keys, rows and chips w
 
 | Component | At rest | Focused |
 | --- | --- | --- |
-| Tile (row) | Frame at scale 1, caption `soft` | Scale 1.07 over 200 ms, lift shadow, 4 px ring at a 4 px gap, caption full white. The ring and lift stay fixed at the anchor; the track slides under them |
-| Tile (grid) | as above | as above; the ring moves between columns by transform over 260 ms |
+| Tile (row) | Frame at scale 1, caption `soft` | A focus card over the tile: scale 1.07 over 200 ms, lift shadow, 4 px ring at a 4 px gap, caption full white. The card stays fixed at the anchor; a move swaps its content while the track slides one slot under it |
+| Tile (grid) | as above | as above; Up and Down swap the card's content as the track slides under it, Left and Right move the card one column over 180 ms |
 | Nav entry | `mute` text, no fill | White fill, `on-text` text |
 | Nav icon (search, settings) | `soft` glyph, 30 px, stroke 2.6 | White fill circle, `on-text` glyph |
 | Nav avatar | 2 px ring of `text` at 90% | 4 px `ink` gap plus a 4 px `text` ring outside it; the avatar stays fully visible |
@@ -517,7 +535,7 @@ One treatment per component type. White fills on buttons, keys, rows and chips w
 | PIN key | `ghost`, full-white digit | White fill, `on-text` |
 | Profile face | Circle at scale 1, name `soft` | Scale 1.07, lift shadow, 4 px `ink` gap and 4 px `text` ring; name full white and 8 px lower |
 
-When the nav takes focus, the row's lift and ring disappear and the tile returns to rest.
+When the nav takes focus, the row's focus card and peek fade out over its tiles, which sit at rest.
 
 ### Selected and current
 
@@ -556,7 +574,7 @@ When the nav takes focus, the row's lift and ring disappear and the tile returns
 ### Side sheet (actions menu and pickers)
 - 640 px wide, full height, right-aligned, padding 96 top and bottom and 64 sides, Ember Sheet at 97 percent, sheet-edge shadow, over a full-screen `scrim`.
 - Title 650 34px, sub-line 500 22px `mute` 8 px below, options 36 px below that. Group labels inside a sheet (Audio, Subtitles) are 600 22px `mute`.
-- Options 72 px tall, 6 px apart (pitch 78), 24 px padding, 28 px icons 18 px from the label. The focus highlight is its own 512x72 element on its own layer. The list clip ends at y 1026.
+- Options 72 px tall, 6 px apart (pitch 78), 24 px padding, 28 px icons 18 px from the label. The focus highlight is its own 512x72 element on its own layer, over the list, carrying a dark copy of the focused option, so list labels never change colour. The list clip ends at y 1026.
 
 ### Settings
 - Groups on the left (x 96, y 184, 440 wide) use the sheet option; the current group has a `faint` pill and full-white text.
@@ -612,15 +630,25 @@ Never changes: the Tizen application id `SamSucks01.samsucks`, package `SamSucks
 | --- | --- | --- | --- |
 | Hero art crossfade (two images) | opacity | 600 ms (`--t-art`) | ease |
 | Ambience crossfade (two 2x2 canvases) | opacity | 600 ms (`--t-art`), so colour and picture land together | ease |
-| Focus lift (tile scale, lift opacity, caption shift) | transform, opacity | 200 ms (`--t-focus`) | `--ease` |
-| Row track, rows track, grid track, nav track, grid ring | transform | 260 ms (`--t-slide`) | `--ease` |
-| Any of the above while a key is held | same | 110 ms (`--t-held`) | same |
-| Side sheet in and out | translateX 80 px to 0, opacity 0 to 1 | 260 ms slide, 200 ms fade | `--ease`, ease |
-| Sheet highlight or list (one per key press) | transform | 260 ms | `--ease` |
+| Card lift as its list takes focus (art scale; lift and ring opacity) | transform, opacity | 200 ms (`--t-focus`) | `--ease`; ease |
+| Card fade as its list loses focus | opacity | 200 ms (`--t-focus`) | ease |
+| Row track, rows track, grid track, nav track, grid card | transform | 180 ms (`--t-slide`) | `--ease` |
+| Card swap: old content holds solid for a quarter, slides the swap travel and fades; new content slides in under it, solid | transform, opacity | 180 ms (`--t-swap`) | `--ease` |
+| Card caption swap: old out by 40 percent, new in from 35 percent | transform, opacity | 180 ms (`--t-swap`) | `--ease` |
+| Grid card hand-over (Left, Right): old frame settles to rest scale as its content fades by 40 percent; new frame lifts from 60 percent | transform, opacity | 180 ms (`--t-swap`) | `--ease` |
+| Track tile entering a card: 16 px of its own travel, then gone | transform, opacity | track's 180 ms; fade 45 ms (`--t-swap` / 4) | `--ease`; linear |
+| Track tile leaving a card: 16 px of its own travel, fading in | transform, opacity | track's 180 ms; fade 180 ms | `--ease`; ease-out |
+| Grid row leaving at the top | opacity | 60 ms (`--t-swap` / 3) | linear |
+| Any slide above while a key is held | same | 110 ms (`--t-held`); card swaps are instant | same |
+| Side sheet in and out | translateX 80 px to 0, opacity 0 to 1 | 180 ms slide, 200 ms fade | `--ease`, ease |
+| Sheet highlight or list (one per key press) | transform | 180 ms (`--t-slide`) | `--ease` |
+| Sheet highlight label swap: 8 px nudge in, fade from 0 | transform, opacity | 180 ms (`--t-swap`) | `--ease` |
 | Row dim (0.55) and hide above | opacity | 200 ms (`--t-focus`) | ease |
 | Screen fade | opacity | V2 benches it; dropped if it misses the bench thresholds | ease |
 
-**The One Mover Rule.** In one key press exactly one thing travels: the track or the highlight, never both. In rows the ring is still and the content slides under it.
+`--ease` starts moving on the first frame but spreads the travel: a 78 px sheet step moves 16, 18, 16, 11 and 7 px over its first frames at 51 fps. A steeper start, such as cubic-bezier(0.2, 0.8, 0.2, 1) over 260 ms, puts 80 percent of the travel in the first few frames, which reads as a jump and then a creep.
+
+**The One Mover Rule.** In one key press exactly one thing travels: a track, a card or the sheet highlight. A card's content swaps in place: it shifts only its swap travel, inside a still frame, and never counts as a mover. In rows the card is still and the track slides one slot under it. In the grid, Up and Down slide the track under the still card, and Left and Right move the card. In the sheet, the highlight or the list moves, never both. No poster ever crosses a ring.
 
 ## Do's and Don'ts
 
@@ -641,7 +669,7 @@ These come from the plan's section 6.1 and decide the look as much as any colour
 ### Do:
 - **Do** let the focused title's art and its ambience set the colour of the screen; keep chrome in Lamplight and its transparency steps.
 - **Do** show focus on art by scale 1.07, the static lift shadow and a 4 px Lamplight ring at a 4 px gap; on controls by a full white fill with `on-text` (#151413) text.
-- **Do** keep the row ring fixed at x 96 and slide the content under it.
+- **Do** keep the row's focus card fixed at x 96: swap its content and slide the track under it, so no poster crosses the ring.
 - **Do** mark selected or current items with full-white text (on a `faint` pill) or a check, never with a fill step alone.
 - **Do** keep 96 px side margins, the nav at y 56, and every heading, caption and label above y 1026.
 - **Do** leave `(1.07 - 1) / 2 x tile height + 12` px of headroom above the first row of any clipped list.

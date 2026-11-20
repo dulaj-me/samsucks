@@ -7,7 +7,6 @@ import { progress, episodeLabel, episodeCode, timeLeft, duration, clock } from '
 import * as icons from './icons.js';
 
 // gap: space between tiles in a row. r: corner radius, when not the usual 14px.
-// text: caption width, when wider than the art, centred under it.
 export const KINDS = {
   wide: { w: 432, h: 243, gap: 36 },
   poster: { w: 240, h: 360, gap: 32 },
@@ -15,7 +14,7 @@ export const KINDS = {
   episode: { w: 432, h: 243, gap: 36 },
   'search-poster': { w: 200, h: 300, gap: 28 },
   'search-wide': { w: 356, h: 200, gap: 28 },
-  cast: { w: 200, h: 200, gap: 32, r: 100, text: 224 },
+  cast: { w: 200, h: 200, gap: 32, r: 100 },
   extra: { w: 432, h: 243, gap: 36 },
 };
 
@@ -77,13 +76,8 @@ export function createTile(kind, { caption = false } = {}) {
   let cap = null;
   let sub = null;
   if (caption) {
-    const text = h('div', 'tile-text', el);
-    if (size.text) {
-      text.style.width = size.text + 'px';
-      text.style.marginLeft = (size.w - size.text) / 2 + 'px';
-    } else {
-      text.style.width = size.w + 'px';
-    }
+    const text = h('div', 'tile-text tile-text-' + kind, el);
+    text.style.width = size.w + 'px';
     cap = h('div', 'tile-cap', text);
     sub = h('div', 'tile-sub', text);
   }

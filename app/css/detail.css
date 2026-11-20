@@ -41,8 +41,6 @@
 /* Cast, Extras and More like this. Rows stack inside; the first one peeks under the buttons. */
 .detail-rows { position: relative; margin: 60px 0 0 -96px; width: 1920px; height: 0; }
 .detail-rows .row.current:not(.active) { opacity: 0.55; }
-/* base.css's dim rule outranks its .row.above; Home's clip hides that, this list has none. */
-.detail-rows .row.above { opacity: 0; }
 /* A held key shortens the track's slide; the fade keeps pace so a hidden heading never lingers on the bottom edge. */
 html.fast .detail-rows .row { transition-duration: var(--t-held); }
 .detail-ghost { position: absolute; top: 64px; border-radius: var(--r-tile); background: var(--ghost); }

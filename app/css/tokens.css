@@ -74,9 +74,11 @@
   --sheet-edge: -40px 0 80px rgba(0, 0, 0, 0.45);
   --float: 0 12px 32px rgba(0, 0, 0, 0.45);
 
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Moving from the first frame, but spread evenly: a steeper start reads as a jump then a creep. */
+  --ease: cubic-bezier(0.3, 0.5, 0.3, 1);
   --t-art: 600ms;
-  --t-slide: 260ms;
+  --t-slide: 180ms;
+  --t-swap: 180ms;
   --t-focus: 200ms;
   --t-held: 110ms;
 
