@@ -108,6 +108,8 @@ export function useAmbience(initial) {
   let colors = initial || null;
   return {
     set(c) { colors = c || null; shared.set(colors); },
+    // For a screen that is not on top: its colors wait for restore().
+    remember(c) { colors = c || null; },
     restore() { shared.set(colors); },
   };
 }

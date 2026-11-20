@@ -10,18 +10,24 @@ import { openItemMenu, isWatched } from '../ui/itemmenu.js';
 import * as icons from '../ui/icons.js';
 import * as store from '../util/store.js';
 import { session } from '../session.js';
-import { prefetch } from '../ui/images.js';
+import { prefetch, warm } from '../ui/images.js';
 import { isFast } from '../input.js';
 import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
-import { metaLine } from '../util/format.js';
+import { toast } from '../ui/toast.js';
 
 const PAGE = 140;
-// `chip` is the label in the bar, short so the band fits the Filter chip at its widest.
+const GRID_TOP = 252;
+// Where the first row's posters start: the grid's top plus its headroom (HEAD in ui/grid.js).
+const FIRST_ROW = 288;
+// How long the letter landed on stays up after a letter jump.
+const LETTER_MS = 900;
+// The longest a filter change waits on the new first rows' posters before it cuts to them.
+const SWAP_WAIT = 500;
 const SORTS = [
   { id: 'titleSort', label: 'A–Z' },
-  { id: 'addedAt:desc', label: 'Recently added', chip: 'Added' },
-  { id: 'originallyAvailableAt:desc', label: 'Release date', chip: 'Released' },
+  { id: 'addedAt:desc', label: 'Recently added' },
+  { id: 'originallyAvailableAt:desc', label: 'Release date' },
   { id: 'audienceRating:desc', label: 'Rating' },
 ];
 // The Filter chip's menu. Each id is both the section's directory of values and the
@@ -43,12 +49,12 @@ function tag(d) {
 export function LibraryScreen(section) {
   const el = h('div', 'screen library');
   const ambience = useAmbience();
-  // The nav's current entry names the library, so the line below it is about the focus.
+  h('div', 'top-veil', el);
   const topnav = new TopNav(el, section.key);
-  const focusInfo = h('div', 'lib-focus', el);
-  const head = h('div', 'lib-head', el);
-  const count = h('div', 'lib-count', head);
+  const head = h('div', 'lib-bar', el);
   const empty = h('div', 'lib-empty', el);
+  const emptyMsg = h('div', 'lib-msg', empty);
+  const emptyHint = h('div', 'lib-hint', empty);
   show(empty, false);
 
   const isShow = section.type === 'show';
@@ -73,29 +79,44 @@ export function LibraryScreen(section) {
   let items = [];
   let letters = [];          // [{ title: 'A', start: 0 }]
   let generation = 0;
-  let isEmpty = false;       // the current filters matched nothing
+  let isEmpty = false;       // the grid has nothing to show: no matches, an empty library or an error
+  let wayOut = null;         // the bar's chip out of that: 'clear' or 'retry'
+  let loading = false;       // the first page is on its way, behind the skeleton
+  let swapping = false;      // new filters' first page is on its way; the old grid stays up
   let zone = 'grid';
   let inPicker = false;      // the menu shows one category's values
 
   const sortIndex = () => Math.max(0, SORTS.findIndex(s => s.id === f.sort));
   const anyFilter = () => f.unwatched || CATEGORIES.some(c => f[c.id]);
 
-  function chip(run) {
+  // A label, its value and a chevron ("Sort  Recently added"); or a glyph, then a label.
+  function chip(run, picker) {
     const c = { el: h('div', 'pill', head), run };
-    c.label = h('span', '', c.el);
+    if (picker) {
+      c.label = h('span', '', c.el);
+      c.value = h('b', '', c.el);
+      c.el.insertAdjacentHTML('beforeend', icons.chevron);
+    } else {
+      c.icon = h('span', 'lib-lead', c.el);
+      c.label = h('span', '', c.el);
+    }
     return c;
   }
-  const filterChip = chip(openFilters);
-  filterChip.label.className = 'lib-filter';
+  const filterChip = chip(openFilters, true);
+  filterChip.value.className = 'lib-value';
   const unwatchedChip = chip(() => { f.unwatched = !f.unwatched; filtersChanged(); });
   setText(unwatchedChip.label, 'Unwatched');
-  unwatchedChip.icon = h('span', '', unwatchedChip.el);
-  const sortChip = chip(openSorts);
+  const sortChip = chip(openSorts, true);
+  setText(sortChip.label, 'Sort');
+  // The way out of an empty or failed grid, shown only then: Clear filters or Try again.
+  const actionChip = chip(null);
+  show(actionChip.el, false);
+  const count = h('div', 'lib-count', head);
   let bar = [filterChip, unwatchedChip, sortChip];
   let barIndex = 0;
 
   const grid = new Grid({
-    top: 252, height: 828, total: 0,
+    top: GRID_TOP, height: 828, total: 0,
     getItem: i => items[i],
     onFocus: (item, index) => {
       // Warm posters for the row just past the recycled pool.
@@ -105,18 +126,26 @@ export function LibraryScreen(section) {
           if (items[i]) prefetch(session.server.image(items[i].thumb, grid.size.w, grid.size.h));
         }
       }
-      if (!item) { setText(focusInfo, ''); return; }
-      setText(focusInfo, item.title + '   ' + metaLine(item));
-      // The backdrop is shared: a late answer must not tint the screen on top.
-      if (visible) ambience.set(item.UltraBlurColors);
+      if (item) tint(item.UltraBlurColors);
     },
     onSelect: item => openItem(item),
   });
   // Set after construction: the constructor asks for data before `grid` exists.
   grid.onNeed = (start, end) => {
+    // Pages for the new filters would land in the old grid's slots.
+    if (swapping) return;
     for (let p = Math.floor(start / PAGE); p <= Math.floor(end / PAGE); p++) loadPage(p);
   };
   el.appendChild(grid.el);
+  const skeleton = h('div', 'lib-skeleton', el);
+  for (let i = 0; i < grid.cols * 2; i++) {
+    const x = 96 + (i % grid.cols) * grid.stepX;
+    const y = FIRST_ROW + Math.floor(i / grid.cols) * grid.stepY;
+    place(h('div', 'lib-skel', skeleton), x, y, grid.size.w, grid.size.h);
+    place(h('div', 'lib-skel lib-skel-line', skeleton), x, y + grid.size.h + 20, 150, 20);
+  }
+  const letter = h('div', 'lib-letter', el);
+  let letterTimer = 0;
   const menu = new Menu(el);
 
   // The same filters go to the items and to the first characters, or letter jump lands on the wrong rows.
@@ -134,17 +163,36 @@ export function LibraryScreen(section) {
     try {
       const res = await session.server.items(section.key, p * PAGE, PAGE, Object.assign({ sort: f.sort }, filters()));
       if (gen !== generation) return;
+      const cut = swapping;
+      if (cut) {
+        await warm(res.items.slice(0, grid.cols * 2).map(it => session.server.image(it.thumb, grid.size.w, grid.size.h)), SWAP_WAIT);
+        if (gen !== generation) return;
+        swapping = false;
+        items = [];
+        grid.index = 0;
+      }
       res.items.forEach((it, i) => { items[p * PAGE + i] = it; });
       pages.set(p, true);
+      if (p === 0) setLoading(false);
       showTotal(res.total);
+      // A cut lands on the first poster without sliding the old grid there.
+      if (cut) toggleClass(grid.el, 'cut', true);
       if (grid.total !== res.total) grid.setTotal(res.total);
       else grid.refresh();
+      if (cut) {
+        grid.el.getBoundingClientRect();
+        toggleClass(grid.el, 'cut', false);
+      }
       if (p === 0 && res.items[0]) grid.onFocus(grid.current());
     } catch (e) {
       if (gen !== generation) return;
       pages.delete(p);
       error('library page failed', section.title, p, e);
-      if (p === 0) showEmpty("Couldn't load this library.");
+      // The old grid no longer matches the chips.
+      if (p === 0 && swapping) { swapping = false; clearGrid(); }
+      // A refetch after a title left keeps the posters it has; the next move asks again.
+      if (p === 0 && grid.total) toast("Couldn't refresh " + section.title + '.');
+      else if (p === 0) showEmpty("Couldn't load " + section.title, 'Check that ' + session.server.name + ' is on, then try again.', 'retry');
     }
     // The four filter lists wait for the first page, so they never hold up its posters.
     if (p === 0) ensureLists();
@@ -157,15 +205,71 @@ export function LibraryScreen(section) {
 
   function showTotal(total) {
     setText(count, total + (isShow ? ' show' : ' movie') + (total === 1 ? '' : 's'));
-    if (!total) showEmpty(anyFilter() ? 'Nothing matches these filters. Press Back to clear them.' : 'This library is empty.');
+    if (total) return;
+    if (anyFilter()) showEmpty(noMatches(), 'Clear the filters to see the whole library.', 'clear');
+    else showEmpty('Nothing in ' + section.title + ' yet', "Add titles to it in Plex and they'll show up here.");
   }
 
-  function showEmpty(text) {
+  // "No unwatched war movies from the 1990s"
+  function noMatches() {
+    const words = ['No'];
+    if (f.unwatched) words.push('unwatched');
+    if (f.genre) words.push(f.genre.title.toLowerCase());
+    words.push(isShow ? 'shows' : 'movies');
+    if (f.decade) words.push('from the ' + f.decade.title);
+    if (f.contentRating) words.push('rated ' + f.contentRating.title);
+    if (f.collection) words.push('in ' + f.collection.title);
+    return words.join(' ');
+  }
+
+  // way: the chip that leads out, 'clear' or 'retry'.
+  function showEmpty(msg, hint, way) {
     isEmpty = true;
-    setText(empty, text);
+    setLoading(false);
+    // No title has focus, so the room takes no title's colours.
+    tint(null);
+    setText(emptyMsg, msg);
+    setText(emptyHint, hint);
     show(empty, true);
-    setText(focusInfo, '');
+    setAction(way);
     if (zone === 'grid') setZone('bar');
+  }
+
+  // The chip goes last in the bar. It takes focus only from outside the bar, so a page landing
+  // never moves focus off a chip the user is on.
+  function setAction(way) {
+    wayOut = way || null;
+    bar = bar.filter(c => c !== actionChip);
+    toggleClass(actionChip.el, 'focus', false);
+    show(actionChip.el, !!wayOut);
+    if (wayOut) {
+      actionChip.icon.innerHTML = wayOut === 'clear' ? icons.remove : icons.restart;
+      setText(actionChip.label, wayOut === 'clear' ? 'Clear filters' : 'Try again');
+      actionChip.run = wayOut === 'clear' ? clearFilters : () => { reload(); setZone('grid'); };
+      bar.push(actionChip);
+      if (zone !== 'bar') barIndex = bar.length - 1;
+    }
+    barIndex = Math.min(barIndex, bar.length - 1);
+    renderBar();
+  }
+
+  // The skeleton stands in for the grid, and its focus card, until the first page lands.
+  function setLoading(on) {
+    loading = on;
+    toggleClass(el, 'loading', on);
+  }
+
+  // The backdrop is shared: while another screen is on top, only remember the colours.
+  function tint(colors) {
+    if (visible) ambience.set(colors);
+    else ambience.remember(colors);
+  }
+
+  function flashLetter(text) {
+    setText(letter, text);
+    toggleClass(letter, 'on', true);
+    clearTimeout(letterTimer);
+    letterTimer = setTimeout(() => toggleClass(letter, 'on', false), LETTER_MS);
   }
 
   async function loadLetters() {
@@ -184,20 +288,31 @@ export function LibraryScreen(section) {
     } catch (e) { /* letter jump just won't work */ }
   }
 
+  // A failed list is not an empty one: it never removes the Filter chip, and the next
+  // ensureLists() (opening Filter, or the first page landing again) fetches it again.
   async function loadLists() {
     const all = await Promise.all(CATEGORIES.map(c =>
       session.server.get('/library/sections/' + section.key + '/' + c.id, { type }, { maxAge: 300000 })
         .then(mc => (mc.Directory || []).map(tag), e => {
           error('library filter list failed', section.title, c.id, e);
-          return [];
+          return null;
         })));
     if (!alive) return;
+    const failed = all.some(l => !l);
+    if (failed) listsLoading = null;
+    if (all.every(l => !l)) {
+      if (menuWaits && menu.isOpen) {
+        menu.open({ title: 'Filter', sub: "Couldn't load the filters", items: [{ label: 'Try again', icon: icons.restart, run: openFilters }] });
+      }
+      menuWaits = false;
+      return;
+    }
     lists = {};
-    CATEGORIES.forEach((c, i) => { lists[c.id] = all[i]; });
+    CATEGORIES.forEach((c, i) => { lists[c.id] = all[i] || []; });
     if (menuWaits && menu.isOpen) openFilters();
     menuWaits = false;
-    // A failed list looks empty too; a remembered value keeps the chip so it can be cleared.
-    if (CATEGORIES.some(c => lists[c.id].length || f[c.id])) return;
+    // A remembered value keeps the chip so it can be cleared.
+    if (failed || CATEGORIES.some(c => lists[c.id].length || f[c.id])) return;
     const focused = bar[barIndex];
     head.removeChild(filterChip.el);
     bar = bar.filter(c => c !== filterChip);
@@ -205,18 +320,30 @@ export function LibraryScreen(section) {
     renderBar();
   }
 
-  function reload() {
+  // keep: a filter change over posters leaves them up until the new first page and its first
+  // rows' posters are in, then cuts. Anything else (opening, retrying, leaving an empty
+  // result) shows the skeleton.
+  function reload(keep) {
     generation++;
     pages = new Map();
+    swapping = !!keep && grid.total > 0 && !isEmpty;
+    if (!swapping) {
+      isEmpty = false;
+      show(empty, false);
+      setAction(null);
+      setLoading(true);
+      clearGrid();
+    }
+    loadPage(0);
+    loadLetters();
+  }
+
+  function clearGrid() {
     items = [];
-    isEmpty = false;
-    show(empty, false);
     setText(count, '');
     grid.total = 0;
     grid.index = 0;
     grid.refresh();
-    loadPage(0);
-    loadLetters();
   }
 
   function filtersChanged() {
@@ -224,19 +351,19 @@ export function LibraryScreen(section) {
     saved[storeKey] = f;
     store.set('libFilters', saved);
     renderChips();
-    reload();
+    reload(true);
   }
 
   // Only a filter change touches the labels. A focus move toggles .focus and nothing that
   // lays out, or the band repaints far beyond the chip.
   function renderChips() {
-    const values = CATEGORIES.filter(c => f[c.id]).map(c => f[c.id].title);
-    setText(filterChip.label, values.length ? values.join(' · ') : 'Filter');
-    toggleClass(filterChip.el, 'current', values.length > 0);
+    const set = CATEGORIES.filter(c => f[c.id]);
+    setText(filterChip.label, set.length === 1 ? set[0].title : 'Filter');
+    setText(filterChip.value, set.length ? set.map(c => f[c.id].title).join(' · ') : 'All');
+    toggleClass(filterChip.el, 'current', set.length > 0);
     unwatchedChip.icon.innerHTML = f.unwatched ? icons.check : icons.uncheck;
     toggleClass(unwatchedChip.el, 'current', f.unwatched);
-    const sort = SORTS[sortIndex()];
-    setText(sortChip.label, 'Sort: ' + (sort.chip || sort.label));
+    setText(sortChip.value, SORTS[sortIndex()].label);
   }
 
   function renderBar() {
@@ -245,10 +372,11 @@ export function LibraryScreen(section) {
 
   function openFilters() {
     inPicker = false;
+    // Fetches again only when the last try failed.
+    ensureLists();
     if (!lists) {
       menuWaits = true;
       menu.open({ title: 'Filter', sub: section.title, items: [{ label: 'Loading…', run() {} }] });
-      ensureLists();
       return;
     }
     const entries = CATEGORIES.filter(c => lists[c.id].length || f[c.id]).map(c => ({
@@ -292,12 +420,13 @@ export function LibraryScreen(section) {
   reload();
 
   function jump(dir) {
+    if (!grid.total || swapping) return;
     if (letters.length) {
       const i = grid.index;
       let li = letters.findIndex((l, k) => i >= l.start && (k === letters.length - 1 || i < letters[k + 1].start));
       li = Math.max(0, Math.min(letters.length - 1, li + dir));
       grid.focusIndex(letters[li].start);
-      setText(focusInfo, letters[li].title);
+      flashLetter(letters[li].title);
     } else {
       grid.focusIndex(grid.index + dir * grid.cols * 3);
     }
@@ -325,6 +454,8 @@ export function LibraryScreen(section) {
   function removeItem(it) {
     if (!alive) return;
     if (!f.unwatched) { refreshItem(it); return; }
+    // The first page for new filters is already on its way.
+    if (swapping) return;
     const i = indexOf(it);
     if (i < 0) return;
     items.splice(i, 1);
@@ -353,10 +484,12 @@ export function LibraryScreen(section) {
     for (const c of CATEGORIES) f[c.id] = null;
   }
 
+  // The whole library comes back, so focus goes to it.
   function clearFilters() {
     clearCategories();
     f.unwatched = false;
     filtersChanged();
+    setZone('grid');
   }
 
   function barKey(action) {
@@ -367,11 +500,12 @@ export function LibraryScreen(section) {
         return true;
       }
       case 'up': setZone('nav'); return true;
-      case 'down': if (!isEmpty) setZone('grid'); return true;
+      case 'down': if (!isEmpty && !loading) setZone('grid'); return true;
       case 'enter': bar[barIndex].run(); return true;
       case 'yellow': setSort((sortIndex() + 1) % SORTS.length); return true;
+      // Back clears filters that matched nothing; after an error it leaves, filters kept.
       case 'back':
-        if (!isEmpty || !anyFilter()) return false;
+        if (wayOut !== 'clear') return false;
         clearFilters();
         return true;
     }
@@ -381,7 +515,7 @@ export function LibraryScreen(section) {
   return {
     el,
     name: 'library',
-    destroy() { alive = false; generation++; },
+    destroy() { alive = false; generation++; clearTimeout(letterTimer); },
     onShow() {
       visible = true;
       ambience.restore();
@@ -426,4 +560,11 @@ export function LibraryScreen(section) {
       return false;
     },
   };
+}
+
+function place(el, x, y, w, hgt) {
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.width = w + 'px';
+  el.style.height = hgt + 'px';
 }
