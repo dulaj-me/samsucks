@@ -5,8 +5,10 @@
 .hero-info { position: absolute; left: 96px; top: 184px; width: 820px; }
 .hero-logo-box { height: 196px; display: flex; align-items: flex-end; }
 .hero-logo { display: block; max-width: 600px; max-height: 196px; object-fit: contain; object-position: left bottom; }
+/* At 0.98 the last line's descenders hang 7px past its line box. The padding shows them, as on
+   Detail; the margin keeps the text where it sat. */
 .hero-title {
-  width: 820px; font: var(--f-display); font-stretch: 104%; letter-spacing: -0.025em;
+  width: 820px; padding-bottom: 10px; margin-bottom: -10px; font: var(--f-display); font-stretch: 104%; letter-spacing: -0.025em;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance;
 }
 .hero-meta {
