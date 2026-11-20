@@ -145,6 +145,8 @@ export function HomeScreen() {
   let reportedPaint = false;
   let loads = 0;
   let alive = true;
+  // The ambience is shared: a reload landing under another screen must not tint it.
+  let visible = true;
   const fulls = new Map();
   // The last hubs Plex sent, and Continue Watching titles whose removal it hasn't answered yet.
   let lastHubs = [];
@@ -180,7 +182,7 @@ export function HomeScreen() {
   }
 
   function showHero(item) {
-    if (!item) return;
+    if (!item || !visible) return;
     heroItem = item;
     const server = session.server;
     const logoPath = clearLogo(item);
@@ -226,13 +228,22 @@ export function HomeScreen() {
     });
   }
 
-  function renderRows() {
+  // instant: the rows moved under focus without a key press, as a row came or went above it.
+  // The rows themselves jump, so the track jumps with them and the focused row stays put.
+  function renderRows(instant) {
     rows.forEach((r, i) => {
       r.setActive(zone === 'rows' && i === rowIndex);
       toggleClass(r.el, 'current', i === rowIndex);
       toggleClass(r.el, 'above', i < rowIndex);
     });
-    setTransform(track, 'translateY(' + (-(offsets[rowIndex] || 0)) + 'px)');
+    const tf = 'translateY(' + (-(offsets[rowIndex] || 0)) + 'px)';
+    const jump = instant && track.style.transform && track.style.transform !== tf;
+    if (jump) toggleClass(track, 'now', true);
+    setTransform(track, tf);
+    if (jump) {
+      track.getBoundingClientRect();
+      toggleClass(track, 'now', false);
+    }
   }
 
   function makeRow(hb) {
@@ -243,6 +254,7 @@ export function HomeScreen() {
       onSelect: it => (it.seeAll ? openHub(it.hub) : openItem(it)),
     });
     row.hubId = hb.hubIdentifier;
+    row.metadata = hb.Metadata;
     return row;
   }
 
@@ -253,24 +265,32 @@ export function HomeScreen() {
     const hubs = removing.size ? without(raw, removing) : raw;
     const cur = rows[rowIndex];
     const focusedKey = keepKey || (cur && cur.current() && cur.current().ratingKey);
-    const old = new Map(rows.map(r => [r.hubId, r]));
+    // Each old row is reused at most once, so a hub id Plex sends twice can't orphan one.
+    const spare = rows.slice();
     rows = hubs.map(hb => {
-      const row = old.get(hb.hubIdentifier);
-      if (!row) return makeRow(hb);
-      old.delete(hb.hubIdentifier);
-      row.setItems(rowItems(hb), row === cur ? focusedKey : null);
+      const k = spare.findIndex(r => r.hubId === hb.hubIdentifier);
+      if (k < 0) return makeRow(hb);
+      const row = spare.splice(k, 1)[0];
+      // Untouched hubs keep their rows as they are: a remove refills only Continue Watching.
+      if (row.metadata !== hb.Metadata) {
+        row.metadata = hb.Metadata;
+        row.setTitle(hb.title);
+        row.setItems(rowItems(hb), row === cur ? focusedKey : null);
+      }
       return row;
     });
-    old.forEach(r => track.removeChild(r.el));
+    spare.forEach(r => track.removeChild(r.el));
     // Later rows paint over earlier ones, so a row's lift shadow stays under the row below.
     if (rows.some((r, i) => track.children[i] !== r.el)) rows.forEach(r => track.appendChild(r.el));
     const kept = rows.indexOf(cur);
     // A row that left hands its place to the one below; past the last row, focus goes up one.
     rowIndex = kept >= 0 ? kept : Math.min(rowIndex, Math.max(0, rows.length - 1));
     layoutRows();
-    renderRows();
+    renderRows(true);
     show(skeleton, false);
     setText(empty, rows.length ? '' : EMPTY);
+    // A hero still waiting on a held key would land on a title from before this refresh.
+    clearTimeout(heroTimer);
     const item = rows[rowIndex] && heroOf(rows[rowIndex]);
     if (item) showHero(item);
     if (!reportedPaint && rows.length) {
@@ -290,6 +310,7 @@ export function HomeScreen() {
     removing.add(key);
     setHubs(lastHubs, near && near.ratingKey);
     removeFromContinueWatching(item).then(() => {
+      if (!alive) return;
       removing.delete(key);
       // Gone for good: a later setHubs from these, before the reload lands, keeps it out.
       lastHubs = without(lastHubs, new Set([key]));
@@ -297,9 +318,10 @@ export function HomeScreen() {
       load();
     }, e => {
       error('remove from continue watching failed', e);
+      if (!alive) return;
       toast('Couldn\'t remove that from Continue Watching.');
       removing.delete(key);
-      if (alive) setHubs(lastHubs);
+      setHubs(lastHubs);
       load();
     });
   }
@@ -358,7 +380,10 @@ export function HomeScreen() {
     el,
     name: 'home',
     onShow() {
+      visible = true;
       ambience.restore();
+      const item = rows[rowIndex] && heroOf(rows[rowIndex]);
+      if (item) showHero(item);
       topnav.render();
       // Coming back from playback: progress and Continue Watching changed.
       if (Date.now() - loadedAt > 5000) load();
@@ -412,6 +437,12 @@ export function HomeScreen() {
           return false;
       }
       return false;
+    },
+    onHide() {
+      visible = false;
+      clearTimeout(heroTimer);
+      clearTimeout(artTimer);
+      clearTimeout(badgeTimer);
     },
     destroy() {
       alive = false;

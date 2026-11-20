@@ -31,6 +31,7 @@
 }
 
 .home-rows { position: absolute; left: 0; width: 1920px; bottom: 0; overflow: hidden; }
+.rows-track.now { transition: none; }
 .home-empty { position: absolute; left: 96px; top: 680px; width: 1200px; font: var(--f-message); }
 
 /* Ghost shapes at the geometry of the hero and the first row. */
