@@ -8,11 +8,12 @@ import * as icons from './icons.js';
 
 // gap: space between tiles in a row. r: corner radius, when not the usual 14px.
 // lines: caption lines the title may wrap to before it ellipsises (default 1).
+// sum: lines of summary under the caption (default none).
 export const KINDS = {
   wide: { w: 432, h: 243, gap: 36 },
   poster: { w: 240, h: 360, gap: 32 },
   grid: { w: 220, h: 330, gap: 30 },
-  episode: { w: 432, h: 243, gap: 36 },
+  episode: { w: 432, h: 243, gap: 36, sum: 2 },
   'search-poster': { w: 200, h: 300, gap: 28 },
   'search-wide': { w: 356, h: 200, gap: 28 },
   cast: { w: 200, h: 200, gap: 32, r: 100, lines: 2 },
@@ -27,11 +28,13 @@ const EXTRA_TYPES = {
 export const LIFT = 1.07;
 const RADIUS = 14;
 const CAP_LINE = 28; // one caption title line: 23px at 1.2, rounded up
+const SUM_LINE = 28; // .tile-sum's line box
+const SUM_GAP = 8;
 
 // How much taller than one title line a kind's caption block is. Fixed per kind, so a
 // list's geometry never depends on the text it shows.
-export function captionExtra({ lines = 1 }) {
-  return (lines - 1) * CAP_LINE;
+export function captionExtra({ lines = 1, sum = 0 }) {
+  return (lines - 1) * CAP_LINE + (sum ? SUM_GAP + sum * SUM_LINE : 0);
 }
 
 // The focused tile scales about its centre. The lift covers the scaled rect; the ring is
@@ -85,6 +88,7 @@ export function createTile(kind, { caption = false } = {}) {
   frame.appendChild(seeAllArrow());
   let cap = null;
   let sub = null;
+  let sum = null;
   if (caption) {
     const text = h('div', 'tile-text tile-text-' + kind, el);
     text.style.width = size.w + 'px';
@@ -94,8 +98,12 @@ export function createTile(kind, { caption = false } = {}) {
       cap.style.webkitLineClamp = String(size.lines);
     }
     sub = h('div', 'tile-sub', text);
+    if (size.sum) {
+      sum = h('div', 'tile-sum', text);
+      sum.style.webkitLineClamp = String(size.sum);
+    }
   }
-  return { el, img, ph, count, seen, bar, fill, cap, sub, kind, size, item: undefined };
+  return { el, img, ph, count, seen, bar, fill, cap, sub, sum, kind, size, item: undefined };
 }
 
 function artFor(item, kind) {
@@ -112,6 +120,7 @@ function artFor(item, kind) {
 
 function titleFor(item, kind) {
   if (item.type === 'episode' && kind !== 'episode') return item.grandparentTitle || item.title;
+  if (kind === 'episode' && item.index != null) return item.index + '. ' + item.title;
   return item.title;
 }
 
@@ -122,7 +131,7 @@ function subFor(item, kind) {
     if (item.type === 'episode') return [episodeCode(item), timeLeft(item)].filter(Boolean).join('  ·  ');
     return timeLeft(item) || [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
   }
-  if (kind === 'episode') return episodeLabel(item) + (item.duration ? '  ·  ' + Math.round(item.duration / 60000) + 'm' : '');
+  if (kind === 'episode') return [duration(item.duration), timeLeft(item)].filter(Boolean).join('  ·  ');
   // Shows keep the year alone: Plex's childCount counts Specials as a season.
   if (kind === 'grid' && item.type === 'movie') return [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
   if (item.type === 'episode') return episodeLabel(item) + '  ' + item.title;
@@ -145,7 +154,7 @@ export function fillTile(tile, item) {
     show(tile.bar, false);
     show(tile.count, false);
     show(tile.seen, false);
-    if (tile.cap) { setText(tile.cap, ''); setText(tile.sub, ''); }
+    clearCaption(tile);
     return;
   }
   if (item.seeAll) { fillSeeAll(tile, item); return; }
@@ -176,7 +185,15 @@ export function fillTile(tile, item) {
   if (tile.cap) {
     setText(tile.cap, titleFor(item, kind));
     setText(tile.sub, subFor(item, kind));
+    if (tile.sum) setText(tile.sum, item.summary || '');
   }
+}
+
+function clearCaption(tile) {
+  if (!tile.cap) return;
+  setText(tile.cap, '');
+  setText(tile.sub, '');
+  if (tile.sum) setText(tile.sum, '');
 }
 
 let arrowTemplate = null;
@@ -195,5 +212,5 @@ function fillSeeAll(tile, item) {
   show(tile.count, false);
   show(tile.seen, false);
   setText(tile.ph, item.title);
-  if (tile.cap) { setText(tile.cap, ''); setText(tile.sub, ''); }
+  clearCaption(tile);
 }

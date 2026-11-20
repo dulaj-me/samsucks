@@ -70,14 +70,14 @@ export function clearLogo(item) {
   return img ? img.url : '';
 }
 
-// Year, rating, runtime (seasons for a show), and two genres where the hub has them.
-function facts(item) {
+// Year, rating, runtime (seasons for a show), and up to `genres` genres where the item has them.
+export function facts(item, genres = 2) {
   const year = item.type === 'episode' ? (item.originallyAvailableAt || '').slice(0, 4) : item.year;
   const length = item.type === 'show' && item.childCount
     ? item.childCount + (item.childCount === 1 ? ' season' : ' seasons')
     : duration(item.duration);
-  const genres = (item.Genre || []).slice(0, 2).map(g => g.tag).join(', ');
-  return [year, item.contentRating, length, genres].filter(Boolean);
+  const kinds = (item.Genre || []).slice(0, genres).map(g => g.tag).join(', ');
+  return [year, item.contentRating, length, kinds].filter(Boolean);
 }
 
 // Resolution, then Dolby Vision or HDR, then Atmos, from the first media's streams.

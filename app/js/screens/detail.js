@@ -1,21 +1,23 @@
 // Detail page for a movie, show, season (opens its show) or episode. Below the header: a
 // show's seasons and episodes, then Cast, Extras and More like this.
+// The header holds still and fades once focus goes below it; the block below slides up under
+// a compact title line, which fades in turn in the rows. One transform per press: the block,
+// a row, or a row list's track.
 import { h, setText, setTransform, toggleClass, show } from '../util/dom.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { Row } from '../ui/row.js';
 import { RowList } from '../ui/rowlist.js';
-import { KINDS, captionExtra } from '../ui/tile.js';
+import { KINDS, captionExtra, focusGeometry } from '../ui/tile.js';
 import { Menu } from '../ui/menu.js';
 import { isWatched, toggleWatched, openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
-import { metaLine, clock, episodeLabel } from '../util/format.js';
-import { clearLogo, badges } from './home.js';
+import { episodeLabel, episodeCode, timeLeft } from '../util/format.js';
+import { clearLogo, badges, facts } from './home.js';
 import * as icons from '../ui/icons.js';
 import * as router from '../router.js';
 import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
 
-const SHIFT = 400; // how far the body slides up to reveal seasons/episodes
 // Rows start once the art has faded in. Without art, or if it never arrives, they wait this long.
 const OPEN_FALLBACK = 1500;
 
@@ -30,6 +32,20 @@ function formatBadges(item) {
 
 // A row's height as Row computes it: heading, tiles, caption block, gap to the next row.
 const rowHeight = (kind, caption) => 64 + KINDS[kind].h + (caption ? 81 + captionExtra(KINDS[kind]) : 0) + 76;
+
+// The block below the buttons, in screen y: it peeks at BELOW_TOP and slides to SHIFTED_TOP,
+// under the compact title line. Inside it, a show's seasons, its untitled episodes row (tiles
+// 84 under the seasons), then the rows. Fixed numbers, so a press reads no layout.
+const BELOW_TOP = 864;
+const SHIFTED_TOP = 236;
+// The active row's top. Any lower and the next row's captions cross y 1026 (the Safe Frame),
+// so the compact line makes way.
+const ROWS_LAND = 140;
+const EPISODES_TOP = 67;
+const EPISODES_H = rowHeight('episode', true) - 64 - focusGeometry(KINDS.episode).ring.y;
+// 16 more than the episodes row, so the first row's captions sit past the bottom edge while
+// the episodes have focus.
+const SHOW_ROWS_TOP = EPISODES_TOP + EPISODES_H + 16;
 
 // Stands in for a row while it loads: static ghost shapes at its geometry. Unlike a Row it
 // has no pooled tiles, layers or images, so it costs next to nothing to show.
@@ -59,31 +75,53 @@ const TRIM = 'Media,Genre,Country,Director,Writer,Role,Producer,Guid,Rating,Comm
 export function DetailScreen(initial, { autoplay = false } = {}) {
   const el = h('div', 'screen detail');
   const ambience = useAmbience(initial.UltraBlurColors);
-  const art = new HeroArt(el, 'hero-art detail-art');
-  const body = h('div', 'detail-body', el);
-  const head = h('div', 'detail-head', body);
-  const logoBox = h('div', 'detail-logo-box', head);
+  const art = new HeroArt(el, 'hero-art detail-art hero-dissolve');
+  h('div', 'top-veil', el);
+
+  const compact = h('div', 'detail-compact', el);
+  const compactLogo = h('img', 'detail-compact-logo', compact);
+  const compactTitle = h('div', 'detail-compact-title', compact);
+  const compactSide = h('div', 'detail-compact-side', compact);
+
+  const info = h('div', 'detail-info', el);
+  const logoBox = h('div', 'detail-logo-box', info);
   const logo = h('img', 'detail-logo', logoBox);
   const title = h('h1', 'detail-title', logoBox);
-  const sub = h('div', 'detail-sub', head);
-  const meta = h('div', 'detail-meta', head);
-  const metaText = h('span', '', meta);
+  const meta = h('div', 'detail-meta', info);
+  // A fixed set of nodes, filled in place, as on Home.
+  const metaFacts = [];
+  const metaDots = [];
+  for (let i = 0; i < 4; i++) {
+    if (i) metaDots.push(h('i', 'hero-dot', meta));
+    metaFacts.push(h('span', '', meta));
+  }
   const metaBadges = [0, 1, 2].map(() => h('span', 'badge', meta));
-  const tags = h('div', 'detail-tags', head);
-  const summary = h('p', 'detail-summary', head);
-  const buttonsEl = h('div', 'detail-buttons', head);
-  const seasonsEl = h('div', 'detail-seasons', body);
-  const episodesWrap = h('div', 'detail-episodes', body);
+  const tagline = h('div', 'detail-tagline', info);
+  const summary = h('p', 'detail-summary', info);
+  const credits = h('div', 'detail-credits', info);
+  const credit = lead => {
+    const line = h('div', '', credits);
+    line.appendChild(document.createTextNode(lead));
+    return { line, names: h('b', '', line) };
+  };
+  const directed = credit('Directed by ');
+  const starring = credit('Starring ');
+  const buttonsEl = h('div', 'detail-actions', el);
+
+  const below = h('div', 'detail-below', el);
+  const seasonsEl = h('div', 'detail-seasons', below);
+  const episodesWrap = h('div', 'detail-episodes', below);
   const rowlist = new RowList({ ahead: 1 });
   rowlist.el.classList.add('detail-rows');
-  body.appendChild(rowlist.el);
+  below.appendChild(rowlist.el);
   h('div', 'detail-hint', el).textContent = 'Hold OK for options';
   const menu = new Menu(el);
 
-  // Movies and episodes have no seasons, so their rows follow the buttons.
+  // Movies and episodes have no seasons, so their rows follow the buttons. A show keeps the
+  // seasons' room until they load.
   const showLike = initial.type === 'show' || initial.type === 'season';
-  show(seasonsEl, showLike);
-  show(episodesWrap, showLike);
+  let rowsTop = 0;
+  placeBelow(showLike);
 
   let item = initial;
   let buttons = [];
@@ -91,6 +129,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   let seasons = [];
   let seasonIndex = 0;
   let episodes = null;
+  let episodesAsk = 0; // the latest season asked for; older answers are dropped
   let slots = [];
   let rowsBuilt = false;
   let loaded = false;
@@ -104,25 +143,33 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   function renderHeader() {
     const server = session.server;
     const logoPath = clearLogo(item);
-    const showTitle = item.type === 'episode' ? item.grandparentTitle : item.title;
+    const name = item.type === 'episode' ? item.grandparentTitle : item.title;
+    [logo, compactLogo].forEach(img => show(img, !!logoPath));
+    [title, compactTitle].forEach(t => show(t, !logoPath));
     if (logoPath) {
-      logo.src = server.image(logoPath, 720, 240, { format: 'png' });
-      logo.style.display = '';
-      title.style.display = 'none';
+      logo.src = server.image(logoPath, 640, 220, { format: 'png' });
+      compactLogo.src = server.image(logoPath, 360, 110, { format: 'png' });
     } else {
-      logo.style.display = 'none';
-      title.style.display = '';
-      setText(title, showTitle);
+      setText(title, name);
+      setText(compactTitle, name);
     }
-    setText(sub, item.type === 'episode' ? episodeLabel(item) + '   ' + item.title : (item.tagline || ''));
-    setText(metaText, metaLine(item));
+    const f = facts(item, item.type === 'movie' ? 3 : 2);
+    // Genres come last; they give way before the badges do.
+    const genres = (item.Genre || []).length ? f.length - 1 : -1;
+    metaFacts.forEach((el, i) => { show(el, i < f.length); setText(el, f[i]); toggleClass(el, 'detail-genres', i === genres); });
+    metaDots.forEach((el, i) => show(el, i + 1 < f.length));
     const b = formatBadges(item);
     metaBadges.forEach((el, i) => { show(el, i < b.length); setText(el, b[i]); });
-    const genres = (item.Genre || []).slice(0, 3).map(g => g.tag);
-    const people = (item.Director || []).slice(0, 1).map(d => 'Directed by ' + d.tag)
-      .concat((item.Role || []).length ? ['Starring ' + item.Role.slice(0, 3).map(r => r.tag).join(', ')] : []);
-    setText(tags, genres.concat(people).join('   ·   '));
+    const line = item.type === 'episode' ? episodeCode(item) + '  ' + item.title : (item.tagline || '');
+    show(tagline, !!line);
+    setText(tagline, line);
     setText(summary, item.summary || '');
+    const director = (item.Director || [])[0];
+    const stars = (item.Role || []).slice(0, 3).map(r => r.tag).join(', ');
+    show(directed.line, !!director);
+    setText(directed.names, director ? director.tag : '');
+    show(starring.line, !!stars);
+    setText(starring.names, stars);
     ambience.set(item.UltraBlurColors);
     const artPath = item.type === 'episode' ? (item.grandparentArt || item.art) : item.art;
     art.set(server.image(artPath, 1920, 1080));
@@ -141,19 +188,21 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     buttonsEl.innerHTML = '';
     buttons = [];
     const t = target();
-    const add = (icon, label, run) => {
+    // note: the trailing secondary text, such as "39m left".
+    const add = (icon, label, run, note) => {
       const b = h('div', 'btn', buttonsEl);
       b.innerHTML = icon;
       h('span', '', b).textContent = label;
+      if (note) h('small', '', b).textContent = note;
       buttons.push({ el: b, run });
     };
     if (t) {
-      const prefix = isShowLike() ? episodeLabel(t) + '  ' : '';
+      const code = isShowLike() ? ' ' + episodeCode(t) : '';
       if (t.viewOffset) {
-        add(icons.play, prefix + 'Resume ' + clock(t.viewOffset), () => playItem(t, { offset: t.viewOffset }));
+        add(icons.play, 'Resume' + code, () => playItem(t, { offset: t.viewOffset }), timeLeft(t));
         add(icons.restart, 'From the start', () => playItem(t, { offset: 0 }));
       } else {
-        add(icons.play, isShowLike() ? 'Play ' + prefix : 'Play', () => playItem(t, { offset: 0 }));
+        add(icons.play, 'Play' + code, () => playItem(t, { offset: 0 }));
       }
     }
     const watched = isWatched(item);
@@ -165,10 +214,17 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     renderFocus();
   }
 
+  function placeBelow(hasSeasons) {
+    show(seasonsEl, hasSeasons);
+    show(episodesWrap, hasSeasons);
+    rowsTop = hasSeasons ? SHOW_ROWS_TOP : 0;
+    rowlist.el.style.top = rowsTop + 'px';
+  }
+
   function renderSeasons() {
     seasonsEl.innerHTML = '';
     seasons.forEach(s => {
-      s.el = h('div', 'pill', seasonsEl);
+      s.el = h('div', 'nav-item', seasonsEl);
       s.el.textContent = s.title;
       if (s.leafCount && isWatched(s)) s.el.insertAdjacentHTML('beforeend', icons.check);
     });
@@ -184,8 +240,6 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   }
 
   function renderFocus() {
-    // The one layout read, taken before this function writes anything.
-    const listTop = zone === 'rows' ? rowlist.el.offsetTop : 0;
     buttons.forEach((b, i) => toggleClass(b.el, 'focus', zone === 'buttons' && i === buttonIndex));
     seasons.forEach((s, i) => {
       toggleClass(s.el, 'focus', zone === 'seasons' && i === seasonIndex);
@@ -193,9 +247,8 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
     });
     if (episodes) episodes.row.setActive(zone === 'episodes');
     rowlist.setActive(zone === 'rows');
-    // Below the fold the active row lands where the header starts; the header fades out.
-    const y = zone === 'rows' ? -listTop : zone === 'buttons' ? 0 : -SHIFT;
-    setTransform(body, 'translateY(' + y + 'px)');
+    const y = zone === 'buttons' ? 0 : zone === 'rows' ? ROWS_LAND - BELOW_TOP - rowsTop : SHIFTED_TOP - BELOW_TOP;
+    setTransform(below, 'translateY(' + y + 'px)');
     toggleClass(el, 'shifted', zone !== 'buttons');
     toggleClass(el, 'deep', zone === 'rows');
     toggleClass(el, 'has-rows', rowlist.rows.length > 0);
@@ -298,8 +351,9 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
   // --- Loading ---------------------------------------------------------
 
   async function loadEpisodes(season, keepKey) {
+    const ask = ++episodesAsk;
     const kids = await session.server.children(season.ratingKey);
-    if (!alive) return;
+    if (!alive || ask !== episodesAsk) return;
     if (!episodes) {
       const row = new Row({
         kind: 'episode', caption: true, items: kids,
@@ -311,6 +365,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       episodes.items = kids;
       episodes.row.setItems(kids, keepKey);
     }
+    setText(compactSide, season.title + '  ·  ' + kids.length + (kids.length === 1 ? ' episode' : ' episodes'));
     if (!keepKey) {
       // Land on the first unwatched episode.
       const next = kids.findIndex(k => !k.viewCount || k.viewOffset);
@@ -336,6 +391,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
         const deckSeason = item.onDeck ? seasons.findIndex(s => s.ratingKey === item.onDeck.parentRatingKey) : -1;
         const pref = preferSeason ? seasons.findIndex(s => s.ratingKey === preferSeason) : -1;
         seasonIndex = pref >= 0 ? pref : (deckSeason >= 0 ? deckSeason : 0);
+        placeBelow(seasons.length > 0);
         renderSeasons();
         if (seasons[seasonIndex]) await loadEpisodes(seasons[seasonIndex]);
       }
@@ -371,6 +427,7 @@ export function DetailScreen(initial, { autoplay = false } = {}) {
       if (full) item = full;
       seasons = kids.filter(s => s.type === 'season');
       seasonIndex = Math.min(seasonIndex, seasons.length - 1);
+      placeBelow(seasons.length > 0);
       renderSeasons();
       renderButtons();
       if (seasons[seasonIndex]) await loadEpisodes(seasons[seasonIndex], keep && keep.ratingKey);
