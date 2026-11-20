@@ -320,6 +320,10 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
 .pill.current { background: var(--faint); border-color: transparent; color: var(--text); }
 .pill.focus { background: var(--focus-bg); border-color: var(--text); color: var(--focus-fg); }
 .pill svg { width: 20px; height: 20px; margin-left: 10px; vertical-align: -4px; }
+/* A chip's value after its label ("Sort  Recently added"). */
+.pill b { margin-left: 10px; font-weight: 640; color: var(--soft); }
+.pill.current b { font-weight: 700; color: var(--text); }
+.pill.focus b { color: var(--focus-fg); }
 
 /* The side sheet (ui/menu.js), over a scrim that dims the screen. */
 .menu-scrim {

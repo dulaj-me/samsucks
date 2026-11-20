@@ -1,17 +1,37 @@
-/* A fixed box, so a focus change repaints only this text and lays out nothing else. */
-.lib-focus {
-  position: absolute; top: 146px; left: 96px; width: 700px;
-  font: 500 26px var(--body); color: var(--cream);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 /*
- * Count and filter chips. A chip's width follows its label, which changes only with its filter.
- * 3px below centered: the ★ in the focus line comes from a fallback font that pushes its baseline down.
+ * The filter bar: chips from the left, the total at the right safe edge. A chip's width follows
+ * its label, which changes only with its filter; a focus move lays out nothing.
  */
-.lib-head { position: absolute; top: 139px; right: 96px; display: flex; align-items: baseline; white-space: nowrap; }
-.lib-count { margin-right: 20px; }
-/* Capped so a 5-digit count and every chip at its longest stay clear of .lib-focus. */
-.lib-filter { display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
-.lib-head .pill:last-child { margin-right: 0; }
-.lib-empty { position: absolute; top: 236px; left: 96px; }
-.lib-count, .lib-empty { font: 500 26px var(--body); color: var(--dim); }
+.lib-bar {
+  position: absolute; left: 96px; right: 96px; top: 148px; height: 56px;
+  display: flex; align-items: center; white-space: nowrap;
+}
+.lib-bar .pill { flex-shrink: 0; }
+/* Capped so every chip at its longest and a 5-digit total still fit the bar. */
+.lib-value { display: inline-block; max-width: 420px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+.lib-lead svg { margin: 0 10px 0 0; }
+.lib-count { margin-left: auto; padding-left: 32px; font: 520 23px/1 var(--sans); color: var(--mute); }
+
+.lib-empty { position: absolute; left: 96px; top: 300px; width: 1200px; }
+.lib-msg { font: var(--f-message); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-hint { margin-top: 10px; font: var(--f-body); color: var(--soft); }
+
+/* Static ghosts at the grid's geometry, shown instead of the grid while its first page loads. */
+.lib-skeleton { display: none; }
+.library.loading .lib-skeleton { display: block; }
+.library.loading .grid { visibility: hidden; }
+.lib-skel { position: absolute; background: var(--ghost); border-radius: var(--r-tile); }
+.lib-skel-line { border-radius: 10px; }
+
+/*
+ * The letter a letter jump landed on, until LETTER_MS passes. Centred below the top slot, so it
+ * never covers the focus card in any column. Fixed box, own layer.
+ */
+.lib-letter {
+  position: absolute; left: 880px; top: 824px; width: 160px; height: 160px; border-radius: var(--r-panel);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--toast); box-shadow: var(--float);
+  font: var(--f-display); font-stretch: 104%; color: var(--text);
+  opacity: 0; will-change: opacity; transition: opacity var(--t-focus) ease; contain: strict;
+}
+.lib-letter.on { opacity: 1; }
