@@ -138,7 +138,7 @@ html.playing .ambience { display: none; }
   will-change: transform, opacity;
   transition: opacity var(--t-focus) ease;
 }
-.row:not(.active):not(.current) { opacity: 0.55; }
+.row:not(.active):not(.current):not(.above) { opacity: 0.55; }
 .row.above { opacity: 0; }
 .row-title { height: 40px; margin-left: 96px; font: var(--f-row); color: var(--text); white-space: nowrap; }
 /* Clips at the lifted tile's left edge: nothing shows left of the anchor. */
@@ -148,42 +148,66 @@ html.playing .ambience { display: none; }
   will-change: transform; transition: transform var(--t-slide) var(--ease);
 }
 
-/* The lift's static shadow and the ring around the focused tile, under it. */
+/* The lift's static shadow and the ring around a card's lifted tile, under it. */
 .focus-box {
   position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0;
-  will-change: transform, opacity;
-  transition: opacity var(--t-focus) ease, transform var(--t-slide) var(--ease);
+  will-change: opacity; transition: opacity var(--t-focus) ease;
 }
-.row.active .focus-box, .focus-box.on { opacity: 1; }
+.row.active .focus-box, .grid.active .focus-box { opacity: 1; }
 .lift { position: absolute; border-radius: 15px; box-shadow: var(--lift); }
 .ring { position: absolute; border: 4px solid var(--text); border-radius: 23px; }
 
 .tile { position: absolute; top: 0; left: 0; }
 
+
 /*
- * Row tiles never lift; the card at the anchor does. Each row tile is one layer, caption
- * included, so the one entering or leaving the card fades as a whole. A tile at or left of
- * focus (.gone) hides; its offset rides the track's curve, so its net move is row.js's SHORT.
+ * Track tiles in rows and the grid never lift; a card does. Each is one layer, caption
+ * included, so the one entering or leaving the card fades as a whole. Hidden at focus and
+ * behind it (.gone), a tile waits offset so that, riding the track's curve, its net travel
+ * on a move is the list's SHORT: it moves, then fades.
  */
-.row-slot { position: absolute; top: 0; left: 0; }
-.row-track .tile { will-change: transform, opacity; }
-.row-track .tile-frame { will-change: auto; transition: none; }
+.row-slot, .grid-slot { position: absolute; top: 0; left: 0; }
+.row-track .tile, .grid-track .tile { will-change: transform, opacity; }
 .row.active .row-track .tile.gone { opacity: 0; transform: translateX(var(--gone-x)); }
-.row.live .row-track .tile { transition: transform var(--t-slide) var(--ease), opacity var(--t-swap) ease; }
-/* Appears in place over the focused tile when the row takes focus, then lifts; fades out as it leaves. */
-.row-card {
+.grid.active .grid-track .tile.gone { opacity: 0; transform: translateY(var(--gone-y)); }
+.row.live .row-track .tile, .grid.vmove .grid-track .tile {
+  transition: transform var(--t-slide) var(--ease), opacity var(--t-swap) ease-out;
+}
+.row-slot.fresh .tile, .grid-row.fresh .tile { transition: none !important; }
+/* Gone tiles sit under the rest, so the next one slides over the one fading into the card. */
+.row-track .tile.gone, .grid-track .tile.gone { z-index: -1; }
+.row.live .row-track .tile.gone, .grid.vmove .grid-track .tile.gone {
+  transition: transform var(--t-slide) var(--ease), opacity calc(var(--t-swap) / 2) ease-in calc(var(--t-swap) / 6);
+}
+/* Across the grid the card travels, its content handed over: the poster it reaches hides
+   once covered, then drops to its waiting offset. */
+.grid.hmove .grid-track .tile.gone { transition: opacity 0s linear var(--t-slide), transform 0s linear var(--t-slide); }
+html.fast .grid.hmove .grid-track .tile.gone { transition-delay: var(--t-held); }
+
+/*
+ * A card (ui/card.js): two faces of one tile, clipped to its frame. The face being replaced
+ * sits on top, so it slides and fades over the new one. Appears in place when its list
+ * takes focus, then lifts; fades out as focus leaves.
+ */
+.card {
   position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0;
-  will-change: opacity; transition: opacity var(--t-focus) ease;
+  will-change: transform, opacity; transition: opacity var(--t-focus) ease;
 }
-.row.active .row-card { opacity: 1; transition: none; }
-.row-card .tile { will-change: transform, opacity; }
-.row-card .tile-cap { color: var(--text); }
-.row.active .row-card .tile-frame { transform: scale(1.07); }
-.row.active .row-card .tile-text { transform: translateY(var(--cap-shift)); }
-.tile-frame {
-  position: relative; border-radius: var(--r-tile); overflow: hidden; background: var(--well);
-  will-change: transform; transition: transform var(--t-focus) var(--ease);
-}
+.row.active .card { opacity: 1; transition: none; }
+.grid .card { transition: opacity var(--t-focus) ease, transform var(--t-slide) var(--ease); }
+.grid.active .card { opacity: 1; transition: transform var(--t-slide) var(--ease); }
+.row.idle .card { visibility: hidden; }
+.card-art, .card-cap { position: absolute; overflow: hidden; }
+.card-art { border-radius: var(--r-tile); }
+.card-lifted .card-art { border-radius: 15px; }
+.card-face { opacity: 0; z-index: 1; will-change: transform, opacity; }
+.card-face.shown { opacity: 1; z-index: 0; }
+.card-cap .tile-text { position: absolute; top: 0; left: 0; margin: 0; }
+.card .tile-cap { color: var(--text); }
+.card-lifted .tile-frame { will-change: transform; transition: transform var(--t-focus) var(--ease); }
+.row.active .card-lifted .tile-frame, .grid.active .card-lifted .tile-frame { transform: scale(1.07); }
+
+.tile-frame { position: relative; border-radius: var(--r-tile); overflow: hidden; background: var(--well); }
 .tile-ph {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   display: flex; align-items: flex-end; padding: 18px;
@@ -211,7 +235,6 @@ html.playing .ambience { display: none; }
   display: flex; align-items: center; justify-content: center; background: var(--veil); color: var(--text);
 }
 .tile-seen svg { width: 20px; height: 20px; display: block; }
-/* No transition: captions share their row's layer, and animating them would re-raster it twice per press. */
 .tile-text { margin-top: 16px; }
 .tile-cap {
   font: var(--f-caption); color: var(--soft);
@@ -222,13 +245,8 @@ html.playing .ambience { display: none; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Grid focus: the tile lifts about its centre and its caption drops clear (--cap-shift, set by the grid). */
-.tile.focus .tile-frame { transform: scale(1.07); }
-.tile.focus .tile-text { transform: translateY(var(--cap-shift)); }
-.tile.focus .tile-cap { color: var(--text); }
-
-html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .focus-box, html.fast .nav-track,
-html.fast .tile-frame, html.fast .row.live .row-track .tile, html.fast .menu-track, html.fast .menu-hl {
+html.fast .row-track, html.fast .rows-track, html.fast .grid-track, html.fast .nav-track, html.fast .grid .card,
+html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, html.fast .menu-track, html.fast .menu-hl {
   transition-duration: var(--t-held);
 }
 

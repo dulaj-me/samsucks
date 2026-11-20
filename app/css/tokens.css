@@ -78,7 +78,7 @@
   --ease: cubic-bezier(0.3, 0.5, 0.3, 1);
   --t-art: 600ms;
   --t-slide: 180ms;
-  --t-swap: 120ms;
+  --t-swap: 180ms;
   --t-focus: 200ms;
   --t-held: 110ms;
 

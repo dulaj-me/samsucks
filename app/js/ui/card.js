@@ -1,0 +1,140 @@
+// One item at a fixed spot, swapped in place. It holds two faces: on a swap the old one
+// slides a few px the way the list travels and fades, while the new one slides in behind
+// it from the other side. Both are clipped to the frame, so nothing draws outside it.
+// Rows and the grid put a lifted, ringed card over their focus; a row also keeps an
+// unlifted one for the previous item's edge at its left.
+import { h, toggleClass } from '../util/dom.js';
+import { createTile, fillTile, createFocusBox, focusGeometry, KINDS, LIFT } from './tile.js';
+
+const CAP_H = 64;    // the caption block: a 23px line, 5px, a 22px line at 1.2
+const HOLD = 0.25;   // the old face stays solid this far into a swap, so its slide reads
+const ZERO = 'translate(0, 0)';
+
+let timing = null;
+function swapTiming() {
+  if (!timing) {
+    const css = getComputedStyle(document.documentElement);
+    timing = {
+      duration: parseFloat(css.getPropertyValue('--t-swap')) || 180,
+      ease: css.getPropertyValue('--ease').trim() || 'ease-out',
+    };
+  }
+  return timing;
+}
+
+export class Card {
+  // x, y: the tile's top-left at rest, in the parent's coordinates.
+  constructor(parent, kind, x, y, { caption = false, lifted = true } = {}) {
+    const size = KINDS[kind];
+    const g = focusGeometry(size);
+    // How far content travels on a swap: a tenth of the tile's width.
+    this.travel = Math.round(size.w / 10);
+    this.drop = lifted ? g.caption : 0;
+    this.el = h('div', 'card' + (lifted ? ' card-lifted' : ''), parent);
+    if (lifted) createFocusBox(this.el, size, x, y);
+
+    const r = lifted ? g.lift : { x: 0, y: 0, w: size.w, h: size.h };
+    const art = h('div', 'card-art', this.el);
+    place(art, x + r.x, y + r.y, r.w, r.h);
+    let cap = null;
+    if (caption) {
+      cap = h('div', 'card-cap', this.el);
+      place(cap, x, y + size.h + 16 + (lifted ? g.caption : 0), size.w, CAP_H);
+    }
+    this.faces = [0, 1].map(() => {
+      const t = createTile(kind, { caption });
+      t.el.style.left = -r.x + 'px';
+      t.el.style.top = -r.y + 'px';
+      art.appendChild(t.el);
+      t.parts = [t.el];
+      if (cap) {
+        const text = t.cap.parentNode;
+        cap.appendChild(text);
+        t.parts.push(text);
+      }
+      t.parts.forEach(p => p.classList.add('card-face'));
+      t.anims = [];
+      return t;
+    });
+    this.cur = 0;
+  }
+
+  // In place, no motion.
+  show(item) {
+    const face = this.faces[this.cur];
+    stop(face);
+    fillTile(face, item || null);
+    setShown(face, !!item);
+  }
+
+  // dx, dy: the direction the content travels, -1, 0 or 1 on each axis.
+  swap(item, dx, dy, instant) {
+    const x = dx * this.travel;
+    const y = dy * this.travel;
+    const from = 'translate(' + -x + 'px, ' + -y + 'px)';
+    const to = 'translate(' + x + 'px, ' + y + 'px)';
+    // Art crossfades over the other face; captions hand over instead, as overlapping
+    // lines of text read as a smudge.
+    this.flip(item, instant, [
+      [{ transform: ZERO, opacity: 1 }, { opacity: 1, offset: HOLD }, { transform: to, opacity: 0 }],
+      [{ transform: ZERO, opacity: 1 }, { opacity: 0, offset: 0.4 }, { transform: to, opacity: 0 }],
+    ], [
+      [{ transform: from, opacity: 0 }, { opacity: 1, offset: 0.6 }, { transform: ZERO, opacity: 1 }],
+      [{ transform: from, opacity: 0 }, { opacity: 0, offset: 0.35 }, { transform: ZERO, opacity: 1 }],
+    ]);
+  }
+
+  // For a card that itself travels to the new item: the old content settles to rest size and
+  // fades as it leaves, and the new one lifts in as it lands on the matching poster.
+  handOver(item, instant) {
+    const rest = 'scale(' + (1 / LIFT).toFixed(4) + ')';
+    const up = 'translateY(' + -this.drop + 'px)';
+    this.flip(item, instant, [
+      [{ transform: ZERO, opacity: 1 }, { transform: rest, opacity: 0, offset: 0.4 }, { transform: rest, opacity: 0 }],
+      [{ transform: ZERO, opacity: 1 }, { transform: up, opacity: 0, offset: 0.4 }, { transform: up, opacity: 0 }],
+    ], [
+      [{ transform: rest, opacity: 0 }, { transform: rest, opacity: 0, offset: 0.6 }, { transform: ZERO, opacity: 1 }],
+      [{ transform: up, opacity: 0 }, { transform: up, opacity: 0, offset: 0.6 }, { transform: ZERO, opacity: 1 }],
+    ]);
+  }
+
+  // Shows item on the other face. frames: [art, caption] keyframes for the old face, then the new.
+  flip(item, instant, outFrames, inFrames) {
+    const out = this.faces[this.cur];
+    if (out.item === (item || null)) return;
+    this.cur ^= 1;
+    const inn = this.faces[this.cur];
+    stop(out);
+    stop(inn);
+    fillTile(inn, item || null);
+    const had = out.parts[0].classList.contains('shown');
+    setShown(out, false);
+    setShown(inn, !!item);
+    if (instant || !inn.el.animate) return;
+    const { duration, ease } = swapTiming();
+    const run = (face, set) => {
+      face.anims = face.parts.map((p, i) => {
+        set[i][0].easing = ease;
+        return p.animate(set[i], { duration });
+      });
+    };
+    if (had) run(out, outFrames);
+    if (item) run(inn, inFrames);
+  }
+}
+
+function place(el, x, y, w, hgt) {
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.width = w + 'px';
+  el.style.height = hgt + 'px';
+}
+
+function stop(face) {
+  face.anims.forEach(a => a.cancel());
+  face.anims = [];
+}
+
+function setShown(face, on) {
+  face.parts.forEach(p => toggleClass(p, 'shown', on));
+}

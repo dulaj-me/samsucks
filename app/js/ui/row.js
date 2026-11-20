@@ -1,22 +1,25 @@
 // Horizontal, virtualized row. A card fixed at the left anchor shows the focused item: it
-// never moves. A move swaps the card's content with a short nudge while the track slides
-// one slot under it, so no poster is ever seen travelling through the ring.
-import { h, setText, setTransform, toggleClass, swapIn } from '../util/dom.js';
-import { createTile, fillTile, createFocusBox, focusGeometry, KINDS } from './tile.js';
+// never moves. A move swaps the card's content while the track slides one slot under it,
+// so no poster is ever seen travelling through the ring. Left of the ring, a second card
+// shows the edge of the previous item, swapped the same way.
+import { h, setText, setTransform, toggleClass } from '../util/dom.js';
+import { createTile, fillTile, focusGeometry, KINDS } from './tile.js';
+import { Card } from './card.js';
 import { isFast } from '../input.js';
 
 const LEFT = 96;
 const TILES_TOP = 64;  // below the row's top; the heading's 40px line sits above
 const CAPTION_H = 81;  // caption block plus the drop of the focused one
 const BELOW = 76;      // so a wide row pitches 464 and a poster row 500 (DESIGN.md)
-// Tiles right of the focused one sit this much further right, clear of its lift. A row
-// without focus closes the gap, so its tiles line up under its heading.
+// Tiles right of the focused one sit this much further right, clear of its lift, and the
+// previous item's edge this much further left. A row without focus closes both gaps, so
+// its tiles line up under its heading.
 const AFTER = 16;
-const BEHIND = 1;      // tiles kept left of focus, hidden by the clip, so a move left slides one in
+const BEHIND = 1;      // tiles kept left of focus, hidden, so a move left has one to bring in
 // How far the item entering or leaving the card travels on its own. Under the ring's
 // clearance to the next slot (23 px for search-wide), so it never shows inside the ring.
 const SHORT = 16;
-const NUDGE = 12;      // the card's new content slides this far into place
+const IDLE_MS = 300;   // past --t-focus: an unfocused row's cards stop painting once faded
 
 export class Row {
   constructor({ title, kind = 'poster', items = [], caption = false, onFocus, onSelect }) {
@@ -30,8 +33,7 @@ export class Row {
     this.onSelect = onSelect;
 
     const geo = focusGeometry(this.size);
-    this.el = h('section', 'row');
-    this.el.style.setProperty('--cap-shift', geo.caption + 'px');
+    this.el = h('section', 'row idle');
     // A tile at or left of focus waits here, one slot right less SHORT, hidden. Moving with
     // the track on the same curve, its net travel on a move is SHORT alone.
     this.el.style.setProperty('--gone-x', (this.step - SHORT) + 'px');
@@ -39,7 +41,7 @@ export class Row {
     setText(this.titleEl, title || '');
     const top = title ? TILES_TOP : -geo.ring.y;
 
-    // Starts at the lifted tile's left edge: whatever is left of the anchor stays out of sight.
+    // Starts at the lifted tile's left edge: the track shows nothing left of the anchor.
     const clip = h('div', 'row-clip', this.el);
     const clipLeft = LEFT + geo.lift.x;
     const clipTop = top + geo.ring.y;
@@ -51,12 +53,10 @@ export class Row {
     this.track.style.left = (LEFT - clipLeft + AFTER) + 'px';
     this.track.style.top = (top - clipTop) + 'px';
 
-    this.card = h('div', 'row-card', this.el);
-    createFocusBox(this.card, this.size, LEFT, top);
-    this.cardTile = createTile(kind, { caption });
-    this.cardTile.el.style.left = LEFT + 'px';
-    this.cardTile.el.style.top = top + 'px';
-    this.card.appendChild(this.cardTile.el);
+    // The previous item's right edge sits AFTER plus a gap left of the anchor, mirroring the
+    // next item's clearance on the right.
+    this.peek = new Card(this.el, kind, LEFT - AFTER - this.size.gap - this.size.w, top, { lifted: false });
+    this.card = new Card(this.el, kind, LEFT, top, { caption });
 
     this.height = top + this.size.h + (caption ? CAPTION_H : 0) + BELOW;
 
@@ -84,6 +84,7 @@ export class Row {
     }
     for (const t of this.pool) { t.index = -1; t.item = undefined; }
     this.render();
+    this.showCards();
   }
 
   setTitle(title) {
@@ -94,14 +95,27 @@ export class Row {
     return this.items[this.index];
   }
 
-  // The card stands in for the focused tile only while the row has focus. Tiles animate only
-  // after the first move (.live), so taking focus swaps tile for card in place.
+  // The cards stand in for the focused tile and the previous one only while the row has
+  // focus. Tiles animate only after the first move (.live), so taking focus is in place.
   setActive(on) {
-    if (on !== this.active) toggleClass(this.el, 'live', false);
+    if (on === this.active) return;
     this.active = on;
+    toggleClass(this.el, 'live', false);
     toggleClass(this.el, 'active', on);
-    if (on) fillTile(this.cardTile, this.current() || null);
+    clearTimeout(this.idleTimer);
+    if (on) {
+      toggleClass(this.el, 'idle', false);
+      this.showCards();
+    } else {
+      this.idleTimer = setTimeout(() => toggleClass(this.el, 'idle', true), IDLE_MS);
+    }
     this.slide();
+  }
+
+  showCards() {
+    if (!this.active) return;
+    this.card.show(this.current());
+    this.peek.show(this.items[this.index - 1]);
   }
 
   slide() {
@@ -112,6 +126,7 @@ export class Row {
     if (!this.items.length) return;
     this.index = Math.max(0, Math.min(this.items.length - 1, i));
     this.render();
+    this.showCards();
     if (this.onFocus) this.onFocus(this.current(), this);
   }
 
@@ -122,7 +137,11 @@ export class Row {
     this.index = next;
     toggleClass(this.el, 'live', true);
     this.render();
-    if (this.active) swapIn(this.cardTile.el, dx * NUDGE, 0, isFast());
+    if (this.active) {
+      const fast = isFast();
+      this.card.swap(this.current(), -dx, 0, fast);
+      this.peek.swap(this.items[this.index - 1], -dx, 0, fast);
+    }
     if (this.onFocus) this.onFocus(this.current(), this);
     return true;
   }
@@ -136,6 +155,8 @@ export class Row {
     const last = Math.min(this.items.length, first + this.poolSize);
     for (let i = first; i < last; i++) {
       const tile = this.pool[i % this.poolSize];
+      // A recycled tile takes its state without transitions.
+      toggleClass(tile.slot, 'fresh', tile.index !== i);
       if (tile.index !== i) {
         tile.index = i;
         setTransform(tile.slot, 'translateX(' + i * this.step + 'px)');
@@ -151,7 +172,6 @@ export class Row {
         tile.slot.style.visibility = 'hidden';
       }
     }
-    if (this.active) fillTile(this.cardTile, this.current() || null);
     this.slide();
   }
 }
