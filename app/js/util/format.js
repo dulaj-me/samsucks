@@ -19,6 +19,18 @@ export function episodeLabel(item) {
   return 'S' + (item.parentIndex || 0) + ' · E' + (item.index || 0);
 }
 
+// "S4 E2", the short form for captions and the hero.
+export function episodeCode(item) {
+  if (item.type !== 'episode') return '';
+  return 'S' + (item.parentIndex || 0) + ' E' + (item.index || 0);
+}
+
+// "8m left" for anything partly watched, else ''.
+export function timeLeft(item) {
+  if (!item.viewOffset || !item.duration) return '';
+  return duration(Math.max(60000, item.duration - item.viewOffset)) + ' left';
+}
+
 // The line under a title: "2019 · PG-13 · 2h 4m" style.
 export function metaLine(item) {
   const parts = [];

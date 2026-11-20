@@ -1,16 +1,23 @@
 // Vertical, virtualized poster grid for whole libraries.
 // Each row is its own compositor layer, so scrolling only re-rasterizes the one
-// row that gets recycled with new posters. The track moves by transform; the
-// focus ring moves horizontally on its own layer.
+// row that gets recycled with new posters. The focused row always sits in the top
+// slot: Up and Down slide the track under a still ring, Left and Right move the
+// ring. One thing moves per key press.
 import { h, setTransform, toggleClass } from '../util/dom.js';
-import { createTile, fillTile, KINDS } from './tile.js';
+import { createTile, fillTile, createFocusBox, focusGeometry, KINDS } from './tile.js';
+
+const LEFT = 96;
+// Clear space between the clip's top and the first row's posters, so the lifted
+// tile and its ring are never cut (DESIGN.md, Headroom Rule). At most rowGap minus the
+// 74px caption block, or the row above's sub-line shows at the clip's top edge.
+const HEAD = 36;
 
 export class Grid {
-  constructor({ cols = 7, kind = 'grid', gapX = 41, gapY = 28, captionH = 70, top = 0, height = 1080, getItem, total = 0, onFocus, onSelect, onNeed }) {
+  constructor({ cols = 7, kind = 'grid', rowGap = 112, top = 0, height = 1080, getItem, total = 0, onFocus, onSelect, onNeed }) {
     this.cols = cols;
     this.size = KINDS[kind];
-    this.stepX = this.size.w + gapX;
-    this.stepY = this.size.h + captionH + gapY;
+    this.stepX = this.size.w + this.size.gap;
+    this.stepY = this.size.h + rowGap;
     this.getItem = getItem;
     this.total = total;
     this.onFocus = onFocus;
@@ -18,14 +25,19 @@ export class Grid {
     this.onNeed = onNeed;
     this.index = 0;
     this.scrollRow = 0;
+    // Starts with focus, as the screens that own a grid open on it.
+    this.active = true;
+    this.focused = null;
 
     this.el = h('div', 'grid');
     this.el.style.top = top + 'px';
     this.el.style.height = height + 'px';
+    this.el.style.setProperty('--cap-shift', focusGeometry(this.size).caption + 'px');
+    this.ring = createFocusBox(this.el, this.size, LEFT, HEAD);
+    toggleClass(this.ring, 'on', true);
     this.track = h('div', 'grid-track', this.el);
-    this.ring = h('div', 'ring on', this.track);
-    this.ring.style.width = (this.size.w + 16) + 'px';
-    this.ring.style.height = (this.size.h + 16) + 'px';
+    this.track.style.left = LEFT + 'px';
+    this.track.style.top = HEAD + 'px';
 
     this.visibleRows = Math.ceil(height / this.stepY) + 1;
     this.poolRows = this.visibleRows + 2;
@@ -57,9 +69,11 @@ export class Grid {
     return this.getItem(this.index);
   }
 
-  // The ring shows only while the grid has focus.
+  // The ring and the lift show only while the grid has focus.
   setActive(on) {
+    this.active = on;
     toggleClass(this.ring, 'on', on);
+    this.markFocus();
   }
 
   // Data for some rows arrived: re-fill whatever is on screen.
@@ -98,10 +112,21 @@ export class Grid {
     if (item && this.onSelect) this.onSelect(item, this.index);
   }
 
+  markFocus() {
+    let tile = null;
+    if (this.active && this.index < this.total) {
+      const slot = this.rows[Math.floor(this.index / this.cols) % this.poolRows];
+      if (slot.row === Math.floor(this.index / this.cols)) tile = slot.tiles[this.index % this.cols];
+    }
+    if (tile === this.focused) return;
+    if (this.focused) toggleClass(this.focused.el, 'focus', false);
+    if (tile) toggleClass(tile.el, 'focus', true);
+    this.focused = tile;
+  }
+
   render() {
     const focusRow = Math.floor(this.index / this.cols);
-    // Keep the focused row second from the top (first row at the very top).
-    this.scrollRow = Math.max(0, focusRow - 1);
+    this.scrollRow = focusRow;
     const firstRow = Math.max(0, this.scrollRow - 1);
     const lastRow = Math.min(this.rowCount, firstRow + this.poolRows);
 
@@ -131,7 +156,7 @@ export class Grid {
     if (this.onNeed) this.onNeed(firstRow * this.cols, lastRow * this.cols + this.cols * 4);
 
     setTransform(this.track, 'translateY(' + (-this.scrollRow * this.stepY) + 'px)');
-    const col = this.index % this.cols;
-    setTransform(this.ring, 'translate(' + (col * this.stepX - 8) + 'px,' + (focusRow * this.stepY - 8) + 'px)');
+    setTransform(this.ring, 'translateX(' + (this.index % this.cols) * this.stepX + 'px)');
+    this.markFocus();
   }
 }

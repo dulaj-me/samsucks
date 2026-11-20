@@ -1,16 +1,16 @@
-// The nav line on every top-level screen: brand, Home, one entry per library, search,
-// settings, and a fixed slot at the right. The entries sit on a track that slides inside
-// a fixed clip, so any number of libraries fits. The owning screen forwards keys while
-// the nav has focus and takes Down back itself.
+// The nav line on every top-level screen: brand, Home, one entry per library, then search,
+// settings and a fixed slot at the right. Home and the libraries sit on a track that slides
+// inside a fixed clip, so any number of libraries fits. The owning screen forwards keys
+// while the nav has focus and takes Down back itself.
 // The slot is the profile entry when the Plex Home has 2+ users, else the server name.
 import { h, setTransform, toggleClass } from '../util/dom.js';
 import { session, hasProfiles, onUsersChange } from '../session.js';
 import * as icons from './icons.js';
-import { avatar } from '../screens/profiles.js';
+import { avatar } from './avatar.js';
 import { goHome, openLibrary, openSearch, openSettings, openProfiles } from '../nav.js';
 
 const PAD = 80; // wider than the 64px edge fade in base.css
-const AVATAR = 36;
+const AVATAR = 52;
 
 // Found through the DOM so a destroyed screen's nav is never kept alive.
 onUsersChange(() => {
@@ -26,11 +26,11 @@ export class TopNav {
     this.current = current;
     this.el = h('header', 'topbar', parent);
     const brand = h('div', 'brand', this.el);
-    h('img', 'brand-mark', brand).src = 'img/mascot.png';
-    const brandText = h('div', 'brand-text', brand);
-    h('img', 'brand-wordmark', brandText).src = 'img/wordmark.png';
+    brand.innerHTML = icons.mark;
+    h('span', '', brand).textContent = 'kinescope';
     this.clip = h('nav', 'nav', this.el);
     this.track = h('div', 'nav-track', this.clip);
+    this.icons = h('div', 'nav-icons', this.el);
     this.who = h('div', '', this.el);
     this.el._nav = this;
     this.items = [];
@@ -39,7 +39,7 @@ export class TopNav {
     this.active = false;
     this.fillProfile();
     this.setSections(known);
-    // Inter swaps in after first paint and changes the label widths.
+    // The font swaps in after first paint and changes the label widths.
     if (document.fonts) document.fonts.ready.then(() => this.render());
   }
 
@@ -47,12 +47,12 @@ export class TopNav {
     const onEntry = this.onEntry();
     known = sections;
     this.track.innerHTML = '';
+    this.icons.innerHTML = '';
     this.items = [{ label: 'Home', id: 'home' }]
       .concat(sections.map(s => ({ label: s.title, id: s.key, section: s })))
       .concat([{ label: 'Search', id: 'search', icon: icons.search }, { label: 'Settings', id: 'settings', icon: icons.gear }]);
-    this.items.forEach((n, i) => {
-      if (n.icon && !this.items[i - 1].icon) h('i', 'nav-sep', this.track);
-      n.el = h('div', 'nav-item' + (n.icon ? ' nav-icon' : ''), this.track);
+    this.items.forEach(n => {
+      n.el = h('div', 'nav-item' + (n.icon ? ' nav-icon' : ''), n.icon ? this.icons : this.track);
       if (n.icon) n.el.innerHTML = n.icon;
       else h('span', '', n.el).textContent = n.label;
       toggleClass(n.el, 'current', n.id === this.current);
@@ -76,10 +76,9 @@ export class TopNav {
     this.multi = multi;
     this.whoKey = key;
     this.who.innerHTML = '';
-    this.who.className = multi ? 'nav-item profile-entry' : 'topbar-who';
+    this.who.className = multi ? 'profile-entry' : 'topbar-who';
     if (multi) {
       avatar(this.who, u, AVATAR);
-      h('span', '', this.who).textContent = u.title || '';
     } else {
       this.who.textContent = key;
     }
@@ -102,13 +101,13 @@ export class TopNav {
   }
 
   // Slide the track just enough to keep the focused entry (the current one while the
-  // nav isn't focused) clear of the edge fades.
+  // nav isn't focused) clear of the edge fades. Search and settings sit outside the track.
   scrollIntoView() {
     const room = this.clip.clientWidth;
     if (!room) return; // hidden screen: nothing to measure
     const max = Math.max(0, this.track.offsetWidth - room);
     const n = this.items[this.active ? this.index : this.currentIndex()];
-    if (n) {
+    if (n && !n.icon) {
       const left = n.el.offsetLeft;
       const right = left + n.el.offsetWidth;
       if (left - PAD < this.scroll) this.scroll = left - PAD;
@@ -154,7 +153,7 @@ export class TopNav {
     if (!n || n.id === this.current) return;
     if (n.id === 'search') { openSearch(); return; }
     if (n.id === 'settings') { openSettings(); return; }
-    // When this screen shows again, focus sits on its own entry, the one with the dot.
+    // When this screen shows again, focus sits on its own entry, the current one.
     this.index = this.currentIndex();
     this.render();
     if (n.id === 'home') goHome();

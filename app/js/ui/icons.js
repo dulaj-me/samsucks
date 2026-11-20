@@ -1,4 +1,6 @@
 // Inline SVG icons (stroke/fill use currentColor).
+// The brand mark: a rounded screen on a stand, its picture a dot (DESIGN.md).
+export const mark = '<svg viewBox="0 0 34 34"><rect x="2" y="5" width="30" height="21" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 31h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="17" cy="15.5" r="3.5" fill="currentColor"/></svg>';
 export const play = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
 export const pause = '<svg viewBox="0 0 24 24"><rect fill="currentColor" x="5" y="4" width="5" height="16" rx="1.2"/><rect fill="currentColor" x="14" y="4" width="5" height="16" rx="1.2"/></svg>';
 export const restart = '<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></svg>';

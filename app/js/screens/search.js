@@ -130,7 +130,7 @@ export function SearchScreen() {
     let y = 0;
     rows = hubs.map(hub => {
       const row = new Row({
-        title: hub.title, kind: hub.type === 'episode' ? 'episode' : 'poster',
+        title: hub.title, kind: hub.type === 'episode' ? 'search-wide' : 'search-poster',
         caption: true, items: hub.Metadata, onSelect: item => { remember(); openItem(item); },
       });
       setTransform(row.el, 'translateY(' + y + 'px)');

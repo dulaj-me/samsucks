@@ -5,27 +5,13 @@ import { session, refreshUsers, resolveProfile, useProfile, signOut } from '../s
 import { connect, getUser } from '../plex/auth.js';
 import * as router from '../router.js';
 import { useAmbience } from '../ui/backdrop.js';
+import { avatar } from '../ui/avatar.js';
 import { error, warn } from '../util/log.js';
 
 const AVATAR = 80;
 const PIN_LENGTH = 4;
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'del'];
 const COLS = 3;
-
-// Plex avatars are plex.tv URLs; the server's transcoder sizes them like any other image.
-// The initial underneath shows for profiles without a picture and when loading fails.
-export function avatar(parent, user, size) {
-  const box = h('div', 'avatar', parent);
-  box.style.width = size + 'px';
-  box.style.height = size + 'px';
-  h('span', 'avatar-letter', box).textContent = ((user && user.title) || '?').charAt(0).toUpperCase();
-  if (user && user.thumb && session.server) {
-    const img = h('img', 'avatar-img', box);
-    img.onerror = () => img.remove();
-    img.src = session.server.image(user.thumb, size, size);
-  }
-  return box;
-}
 
 function restart() {
   // app.js rebuilds the stack from Home, so no screen of the old profile survives.

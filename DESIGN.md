@@ -488,7 +488,7 @@ Depth comes from the picture, not from material. Surfaces are flat at rest; the 
 
 **The Static Shadow Rule.** A shadow is painted once and never animates. The lift's shadow sits on a separate element that appears or fades by opacity; depth on focus comes from scale.
 
-**The Dissolve Rule.** The hero dissolves into its own ambience through a static mask. The shipping app A/B-tested hero masks on the TV at 1344x756 at no cost. V1 benches the full-screen size; if it costs frames, the fallback is a stretched raster alpha, not a gradient overlay.
+**The Dissolve Rule.** The hero dissolves into its own ambience through a static mask. The shipping app A/B-tested hero masks on the TV at 1344x756 at no cost. Full screen cost Home a p95 frame step on the QN90C, and a stretched raster alpha cost the same, so the masked box covers only the visible 1498x713 (x from 422, y to 713) and the art keeps its full-screen framing inside it.
 
 ## Shapes
 

@@ -1,0 +1,6 @@
+kinescope-sans.woff2 is a Modified Version of Mona Sans (https://github.com/github/mona-sans),
+Copyright (c) 2023, GitHub, licensed under the SIL Open Font License 1.1 (LICENSE-MonaSans.txt).
+
+Changes: Latin subset, weight axis limited to 400-700, width axis limited to 100-108.
+Because "Mona Sans" is a Reserved Font Name, the modified font is renamed "Kinescope Sans",
+as clause 3 of the license requires.

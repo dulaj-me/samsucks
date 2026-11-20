@@ -95,14 +95,14 @@ export function LibraryScreen(section) {
   let barIndex = 0;
 
   const grid = new Grid({
-    top: 200, height: 880, total: 0,
+    top: 252, height: 828, total: 0,
     getItem: i => items[i],
     onFocus: (item, index) => {
       // Warm posters for the row just past the recycled pool.
       if (!isFast()) {
         const start = (Math.floor(index / grid.cols) + grid.poolRows - 1) * grid.cols;
         for (let i = start; i < start + grid.cols; i++) {
-          if (items[i]) prefetch(session.server.image(items[i].thumb, 216, 324));
+          if (items[i]) prefetch(session.server.image(items[i].thumb, grid.size.w, grid.size.h));
         }
       }
       if (!item) { setText(focusInfo, ''); return; }

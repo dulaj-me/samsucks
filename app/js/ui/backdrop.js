@@ -9,11 +9,16 @@
 import { h } from '../util/dom.js';
 
 const FALLBACK = { topLeft: '1b1f2b', topRight: '0f1118', bottomLeft: '2a1414', bottomRight: '0b0d12' };
-const DIM = 0.78; // keep text readable on bright posters
+// Each channel goes 30% toward its own grey, then dims to 42%: the room takes the art's
+// colours without competing with the text over it.
+const GRAY = 0.3;
+const DIM = 0.42;
 
 function rgb(hex) {
   const n = parseInt(hex || '0b0d12', 16);
-  return [(n >> 16 & 255) * DIM, (n >> 8 & 255) * DIM, (n & 255) * DIM];
+  const c = [n >> 16 & 255, n >> 8 & 255, n & 255];
+  const avg = (c[0] + c[1] + c[2]) / 3;
+  return c.map(v => (v + (avg - v) * GRAY) * DIM);
 }
 
 function createLayer(parent, className) {

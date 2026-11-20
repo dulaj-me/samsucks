@@ -7,13 +7,12 @@ import { signIn, useServer, session } from '../session.js';
 import * as router from '../router.js';
 import { error, log } from '../util/log.js';
 import { useAmbience } from '../ui/backdrop.js';
+import * as icons from '../ui/icons.js';
 
 export function LoginScreen({ onDone }) {
   const el = h('div', 'screen login');
-  const ambience = useAmbience({ topLeft: '3a1518', topRight: '161922', bottomLeft: '1b1f2b', bottomRight: '2a1012' });
-  const left = h('div', 'login-art', el);
-  const art = h('img', '', left);
-  art.src = 'img/mascot-512.png';
+  const ambience = useAmbience({ topLeft: '6e4a33', topRight: '2c2b33', bottomLeft: '3e2c22', bottomRight: '1c1d26' });
+  h('div', 'brand', h('header', 'topbar', el)).innerHTML = icons.mark + 'kinescope';
   const panel = h('div', 'login-panel', el);
   h('h1', 'login-title', panel).textContent = 'Sign in to Plex';
   const steps = h('ol', 'login-steps', panel);

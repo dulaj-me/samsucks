@@ -1,31 +1,35 @@
 // Home: hero for the focused item, the nav, and Plex's home hubs as rows.
 // The last hub payload is cached per server and user so a cold start paints instantly.
-import { h, setText, setTransform, toggleClass } from '../util/dom.js';
+import { h, setText, setTransform, toggleClass, show } from '../util/dom.js';
 import { Row } from '../ui/row.js';
 import { useAmbience, HeroArt } from '../ui/backdrop.js';
 import { TopNav } from '../ui/topnav.js';
 import { Menu } from '../ui/menu.js';
 import { openItemMenu } from '../ui/itemmenu.js';
 import { session } from '../session.js';
-import { metaLine } from '../util/format.js';
+import { duration, progress, episodeCode, timeLeft } from '../util/format.js';
 import { isFast } from '../input.js';
 import * as store from '../util/store.js';
 import { openItem, playItem } from '../nav.js';
 import { error, log } from '../util/log.js';
 
-const ROWS_TOP = 600;
+// The active row's top. Its pitch keeps the next row's heading below the fold.
+const ROWS_TOP = 616;
+// Format badges need the full metadata, fetched once focus has settled on a title.
+const BADGES_DELAY = 400;
 
 function slimHub(hub) {
   // Keep the cache small: only fields the home screen renders.
   const keep = ['ratingKey', 'key', 'type', 'title', 'grandparentTitle', 'parentTitle', 'year', 'thumb', 'art',
     'grandparentThumb', 'grandparentArt', 'parentThumb', 'index', 'parentIndex', 'duration', 'viewOffset',
     'viewCount', 'leafCount', 'viewedLeafCount', 'childCount', 'contentRating', 'audienceRating', 'summary',
-    'originallyAvailableAt', 'UltraBlurColors', 'grandparentRatingKey', 'parentRatingKey', 'Image'];
+    'originallyAvailableAt', 'UltraBlurColors', 'grandparentRatingKey', 'parentRatingKey', 'Image', 'Genre'];
   return {
     hubIdentifier: hub.hubIdentifier, title: hub.title, type: hub.type,
     Metadata: hub.Metadata.map(m => {
       const o = {};
       for (const k of keep) if (m[k] !== undefined) o[k] = m[k];
+      if (o.Genre) o.Genre = o.Genre.slice(0, 2).map(g => ({ tag: g.tag }));
       return o;
     }),
   };
@@ -41,24 +45,66 @@ export function clearLogo(item) {
   return img ? img.url : '';
 }
 
+// Year, rating, runtime (seasons for a show), and two genres where the hub has them.
+function facts(item) {
+  const year = item.type === 'episode' ? (item.originallyAvailableAt || '').slice(0, 4) : item.year;
+  const length = item.type === 'show' && item.childCount
+    ? item.childCount + (item.childCount === 1 ? ' season' : ' seasons')
+    : duration(item.duration);
+  const genres = (item.Genre || []).slice(0, 2).map(g => g.tag).join(', ');
+  return [year, item.contentRating, length, genres].filter(Boolean);
+}
+
+// Resolution, then Dolby Vision or HDR, then Atmos, from the first media's streams.
+function badges(full) {
+  const m = ((full && full.Media) || [])[0];
+  if (!m) return [];
+  const streams = (m.Part && m.Part[0] && m.Part[0].Stream) || [];
+  const video = streams.find(s => s.streamType === 1) || {};
+  const out = [];
+  if (m.videoResolution === '4k') out.push('4K');
+  if (video.DOVIPresent) out.push('DOLBY VISION');
+  else if (video.colorTrc === 'smpte2084' || video.colorTrc === 'arib-std-b67') out.push('HDR');
+  if (/atmos/i.test(m.audioProfile || '') || streams.some(s => s.streamType === 2 && /atmos/i.test(s.displayTitle || ''))) out.push('ATMOS');
+  return out;
+}
+
 const userKey = () => (session.user && session.user.uuid) || '';
 
 export function HomeScreen() {
   const el = h('div', 'screen home');
   const ambience = useAmbience();
-  const hero = new HeroArt(el, 'hero-art home-art');
+  const hero = new HeroArt(el, 'hero-art home-art hero-dissolve');
+  h('div', 'top-veil', el);
 
   const topnav = new TopNav(el, 'home');
 
   const info = h('div', 'hero-info', el);
-  const heroLogo = h('img', 'hero-logo', info);
-  const heroTitle = h('h1', 'hero-title', info);
+  const logoBox = h('div', 'hero-logo-box', info);
+  const heroLogo = h('img', 'hero-logo', logoBox);
+  const heroTitle = h('h1', 'hero-title', logoBox);
   const heroMeta = h('div', 'hero-meta', info);
+  // A fixed set of nodes, filled in place: a focus change creates nothing.
+  const metaFacts = [];
+  const metaDots = [];
+  for (let i = 0; i < 4; i++) {
+    if (i) metaDots.push(h('i', 'hero-dot', heroMeta));
+    metaFacts.push(h('span', '', heroMeta));
+  }
+  const metaBadges = [0, 1, 2].map(() => h('span', 'badge', heroMeta));
+  const heroEp = h('div', 'hero-ep', info);
+  const epTitle = h('span', 'hero-ep-title', heroEp);
+  const epCode = h('span', 'hero-ep-code', heroEp);
+  const epTrack = h('i', 'hero-ep-track', heroEp);
+  const epFill = h('b', '', epTrack);
+  const epLeft = h('span', 'hero-ep-left', heroEp);
   const heroSummary = h('p', 'hero-summary', info);
+  show(heroEp, false);
 
   const rowsClip = h('div', 'home-rows', el);
   rowsClip.style.top = ROWS_TOP + 'px';
   const track = h('div', 'rows-track', rowsClip);
+  const skeleton = h('div', 'home-skeleton', el);
   const empty = h('div', 'home-empty', el);
   const menu = new Menu(el);
 
@@ -69,38 +115,74 @@ export function HomeScreen() {
   let loadedAt = 0;
   let heroTimer = 0;
   let artTimer = 0;
+  let badgeTimer = 0;
+  let heroItem = null;
   let reportedPaint = false;
   let loads = 0;
   let alive = true;
+  const fulls = new Map();
 
   function setZone(z) {
     zone = z;
     topnav.setActive(z === 'nav');
-    toggleClass(el, 'in-nav', z === 'nav');
+  }
+
+  function setMeta(item, extra) {
+    const f = facts(item);
+    const b = extra || [];
+    metaFacts.forEach((el, i) => { show(el, i < f.length); setText(el, f[i]); });
+    metaDots.forEach((el, i) => show(el, i + 1 < f.length));
+    metaBadges.forEach((el, i) => { show(el, i < b.length); setText(el, b[i]); });
+  }
+
+  function showBadges(item) {
+    clearTimeout(badgeTimer);
+    const key = item.ratingKey;
+    if (fulls.has(key)) { setMeta(item, fulls.get(key)); return; }
+    const server = session.server;
+    // Not through the server's cache: it never evicts, and `fulls` already keeps just the badges.
+    badgeTimer = setTimeout(() => {
+      if (fulls.has(key)) { if (alive && heroItem === item) setMeta(item, fulls.get(key)); return; }
+      server.get('/library/metadata/' + key).then(mc => {
+        const b = badges((mc.Metadata || [])[0]);
+        fulls.set(key, b);
+        if (alive && heroItem === item && b.length) setMeta(item, b);
+      }, e => error('hero badges failed', e));
+    }, BADGES_DELAY);
   }
 
   function showHero(item) {
     if (!item) return;
-    const logoPath = clearLogo(item);
+    heroItem = item;
     const server = session.server;
-    if (logoPath && item.type !== 'episode') {
-      heroLogo.src = server.image(logoPath, 640, 200, { format: 'png' });
-      heroLogo.style.display = '';
-      heroTitle.style.display = 'none';
-    } else {
-      heroLogo.style.display = 'none';
-      heroTitle.style.display = '';
-      setText(heroTitle, item.type === 'episode' ? item.grandparentTitle : item.title);
-    }
-    setText(heroMeta, (item.type === 'episode' ? item.title + '  ·  ' : '') + metaLine(item));
+    const logoPath = clearLogo(item);
+    show(heroLogo, !!logoPath);
+    show(heroTitle, !logoPath);
+    if (logoPath) heroLogo.src = server.image(logoPath, 600, 196, { format: 'png' });
+    else setText(heroTitle, item.type === 'episode' ? item.grandparentTitle : item.title);
+
+    setMeta(item, fulls.get(item.ratingKey));
+    const p = progress(item);
+    const episode = item.type === 'episode';
+    show(heroEp, episode || p > 0);
+    show(epTitle, episode);
+    show(epCode, episode);
+    if (episode) { setText(epTitle, item.title); setText(epCode, episodeCode(item)); }
+    show(epTrack, p > 0);
+    show(epLeft, p > 0);
+    if (p > 0) { setTransform(epFill, 'scaleX(' + p.toFixed(3) + ')'); setText(epLeft, timeLeft(item)); }
     setText(heroSummary, item.summary || '');
+
     ambience.set(item.UltraBlurColors);
     clearTimeout(artTimer);
-    artTimer = setTimeout(() => hero.set(server.image(heroArtPath(item), 1344, 756)), isFast() ? 350 : 120);
+    // Only once focus rests: swapping full-size art at browsing speed cost Home a frame step on the TV.
+    artTimer = setTimeout(() => hero.set(server.image(heroArtPath(item), 1920, 1080)), isFast() ? 350 : 300);
+    showBadges(item);
   }
 
   function onFocusItem(item) {
     clearTimeout(heroTimer);
+    clearTimeout(badgeTimer);
     // While a key is held, skip the text repaint until the user settles.
     if (isFast()) heroTimer = setTimeout(() => showHero(item), 160);
     else showHero(item);
@@ -119,6 +201,7 @@ export function HomeScreen() {
   function renderRows() {
     rows.forEach((r, i) => {
       r.setActive(zone === 'rows' && i === rowIndex);
+      toggleClass(r.el, 'current', i === rowIndex);
       toggleClass(r.el, 'above', i < rowIndex);
     });
     setTransform(track, 'translateY(' + (-(offsets[rowIndex] || 0)) + 'px)');
@@ -134,7 +217,7 @@ export function HomeScreen() {
       rows = hubs.map(hb => {
         const wide = /continue|ondeck/i.test(hb.hubIdentifier);
         const row = new Row({
-          title: hb.title, kind: wide ? 'wide' : 'poster', items: hb.Metadata,
+          title: hb.title, kind: wide ? 'wide' : 'poster', caption: wide, items: hb.Metadata,
           onFocus: onFocusItem, onSelect: item => openItem(item),
         });
         row.hubId = hb.hubIdentifier;
@@ -145,6 +228,7 @@ export function HomeScreen() {
       layoutRows();
     }
     renderRows();
+    show(skeleton, false);
     setText(empty, rows.length ? '' : 'Nothing here yet. Add some media to your Plex server.');
     const cur = rows[rowIndex] && rows[rowIndex].current();
     if (cur) showHero(cur);
@@ -170,15 +254,36 @@ export function HomeScreen() {
     } catch (e) {
       if (stale()) return;
       error('home load failed', e);
-      if (!rows.length) setText(empty, 'Couldn\'t load from ' + server.name + '. Press OK to retry.');
+      if (!rows.length) {
+        show(skeleton, false);
+        setText(empty, 'Couldn\'t load from ' + server.name + '. Press OK to retry.');
+      }
+    }
+  }
+
+  // First launch on this server and profile: the shapes of Home until the hubs arrive.
+  function buildSkeleton() {
+    const line = (parent, cls, w) => { h('div', 'skel ' + cls, parent).style.width = w + 'px'; };
+    line(skeleton, 'skel-title', 420);
+    line(skeleton, 'skel-meta', 360);
+    line(skeleton, 'skel-sum1', 700);
+    line(skeleton, 'skel-sum2', 540);
+    line(skeleton, 'skel-head', 300);
+    for (let i = 0; i < 4; i++) {
+      const tile = h('div', 'skel-tile', skeleton);
+      tile.style.left = (96 + i * 468) + 'px';
+      line(tile, 'skel-frame', 432);
+      line(tile, 'skel-cap', 220);
     }
   }
 
   const cached = store.get('homeCache');
   if (cached && session.server && cached.server === session.server.id && cached.user === userKey()) {
+    show(skeleton, false);
     topnav.setSections(cached.sections || []);
     setHubs(cached.hubs || []);
   } else {
+    buildSkeleton();
     topnav.setSections([]);
   }
   load();
@@ -232,6 +337,7 @@ export function HomeScreen() {
       alive = false;
       clearTimeout(heroTimer);
       clearTimeout(artTimer);
+      clearTimeout(badgeTimer);
     },
   };
 }

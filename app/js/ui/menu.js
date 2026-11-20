@@ -1,22 +1,29 @@
 // Side sheet of actions for the focused item, or of choices for a filter. Modal: while
-// it's open the owning screen forwards every key to onKey(). A list longer than the
-// sheet scrolls by transform inside a fixed clip.
+// it's open the owning screen forwards every key to onKey().
+// It moves like rows and the grid: the highlight is its own layer, and one key press moves
+// either the highlight or the list, never both. On a long list the highlight travels to the
+// middle slot, stays there while the list slides, and travels again near the end.
 import { h, setText, setTransform, toggleClass } from '../util/dom.js';
 import * as icons from './icons.js';
 
-// Keeps unchecked choices aligned with the checked one.
-const BLANK = '<svg viewBox="0 0 24 24"></svg>';
+// Options are one fixed height, so every position comes from the index: no layout reads.
+const PITCH = 78;    // 72px option + 6px gap
+const CLIP = 818;    // from below the sub-line to y 1026
+const SLOTS = Math.floor((CLIP + PITCH - 72) / PITCH);
+const MIDDLE = Math.floor((SLOTS - 1) / 2);
 
 export class Menu {
   constructor(parent) {
+    this.scrim = h('div', 'menu-scrim', parent);
     this.el = h('div', 'menu', parent);
     this.titleEl = h('div', 'menu-title', this.el);
     this.subEl = h('div', 'menu-sub', this.el);
     this.list = h('div', 'menu-list', this.el);
+    this.list.style.height = CLIP + 'px';
+    this.hl = h('div', 'menu-hl', this.list);
     this.track = h('div', 'menu-track', this.list);
     this.items = [];
     this.index = 0;
-    this.scroll = 0;
     this.isOpen = false;
   }
 
@@ -29,42 +36,37 @@ export class Menu {
     const choice = items.some(it => it.current != null);
     this.items = items.map(it => {
       const el = h('div', 'menu-opt', this.track);
-      const icon = choice ? (it.current ? icons.check : BLANK) : it.icon;
-      if (icon) el.innerHTML = icon;
+      if (!choice && it.icon) el.innerHTML = it.icon;
       h('span', '', el).textContent = it.label;
+      if (it.current) h('i', 'menu-tick', el).innerHTML = icons.check;
       return Object.assign({ el }, it);
     });
     this.index = Math.max(0, items.findIndex(it => it.current));
-    this.scroll = 0;
     this.isOpen = true;
-    // Open at the focused choice instead of sliding there from the last list's scroll.
-    toggleClass(this.track, 'now', true);
+    // Open on the current choice in place, instead of sliding there from the last list.
+    toggleClass(this.list, 'now', true);
     this.render();
-    this.track.getBoundingClientRect();
-    toggleClass(this.track, 'now', false);
+    this.list.getBoundingClientRect();
+    toggleClass(this.list, 'now', false);
+    toggleClass(this.scrim, 'open', true);
     toggleClass(this.el, 'open', true);
   }
 
   close() {
     this.isOpen = false;
+    toggleClass(this.scrim, 'open', false);
     toggleClass(this.el, 'open', false);
   }
 
   render() {
-    this.scrollIntoView(); // measure before the class writes below dirty the style
+    const max = Math.max(0, this.items.length - SLOTS);
+    const scroll = Math.max(0, Math.min(max, this.index - MIDDLE));
+    setTransform(this.track, 'translateY(' + (-scroll * PITCH) + 'px)');
+    setTransform(this.hl, 'translateY(' + (this.index - scroll) * PITCH + 'px)');
+    // The list fades at an edge only while more of it lies beyond.
+    toggleClass(this.list, 'more-top', scroll > 0);
+    toggleClass(this.list, 'more-bottom', scroll < max);
     this.items.forEach((it, i) => toggleClass(it.el, 'focus', i === this.index));
-  }
-
-  // Keep the focused option's neighbors in view, so more of the list always shows.
-  scrollIntoView() {
-    const room = this.list.clientHeight;
-    if (!room || !this.items.length) return;
-    const first = (this.items[this.index - 1] || this.items[this.index]).el;
-    const last = (this.items[this.index + 1] || this.items[this.index]).el;
-    if (first.offsetTop < this.scroll) this.scroll = first.offsetTop;
-    else if (last.offsetTop + last.offsetHeight > this.scroll + room) this.scroll = last.offsetTop + last.offsetHeight - room;
-    this.scroll = Math.max(0, Math.min(this.track.offsetHeight - room, this.scroll));
-    setTransform(this.track, 'translateY(' + (-this.scroll) + 'px)');
   }
 
   onKey(action) {

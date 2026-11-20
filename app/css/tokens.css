@@ -1,35 +1,101 @@
-@font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url(../fonts/inter-latin-400-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url(../fonts/inter-latin-500-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url(../fonts/inter-latin-600-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url(../fonts/inter-latin-700-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(../fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(../fonts/barlow-condensed-latin-700-normal.woff2) format('woff2'); }
-
-/*
- * Every color the stylesheets use. Base colors are r, g, b triplets so any alpha can be
- * derived with rgba(var(--x-rgb), a), and a palette swap happens here only.
- */
-:root {
-  --bg-rgb: 11, 13, 18;
-  --cream-rgb: 255, 247, 230;
-  --coral-rgb: 255, 76, 66;
-  --black-rgb: 0, 0, 0;
-  --white-rgb: 255, 255, 255;
-
-  --bg: rgb(var(--bg-rgb));
-  --raised: #181B23;
-  --coral: rgb(var(--coral-rgb));
-  --cream: rgb(var(--cream-rgb));
-  --dim: rgba(var(--cream-rgb), 0.62);
-  --faint: rgba(var(--cream-rgb), 0.10);
-  --black: rgb(var(--black-rgb));
-  --white: rgb(var(--white-rgb));
-  --key-yellow: #F5C518;
-  --hud: #9f9;
-
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --display: 'Barlow Condensed', 'SamsungOneUI', sans-serif;
-  --body: 'Inter', 'SamsungOneUI', sans-serif;
+/* One variable file for every string: Mona Sans, subset and renamed (fonts/NOTICE-KinescopeSans.txt). */
+@font-face {
+  font-family: 'Kinescope Sans';
+  font-weight: 400 700;
+  font-stretch: 100% 108%;
+  font-display: swap;
+  src: url(../fonts/kinescope-sans.woff2) format('woff2');
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/*
+ * Every color, type face, radius, shadow and duration the stylesheets use (DESIGN.md).
+ * Chrome carries no hue: Lamplight and its transparency steps over the art.
+ */
+:root {
+  --text-rgb: 245, 243, 239;
+  --veil-rgb: 12, 11, 11;
+  --sheet-rgb: 21, 20, 19;
+
+  --ink: #0C0B0B;
+  --sheet: #151413;
+  --text: #F5F3EF;
+  --soft: rgba(var(--text-rgb), 0.78);
+  --mute: rgba(var(--text-rgb), 0.68);
+  --line: rgba(var(--text-rgb), 0.42);
+  --rail: rgba(var(--text-rgb), 0.24);
+  --hair: rgba(var(--text-rgb), 0.16);
+  --faint: rgba(var(--text-rgb), 0.14);
+  --well: rgba(var(--text-rgb), 0.08);
+  --ghost: rgba(var(--text-rgb), 0.07);
+  --veil: rgba(var(--veil-rgb), 0.72);
+  --track: rgba(var(--veil-rgb), 0.55);
+  --scrim: rgba(var(--veil-rgb), 0.5);
+  --count: rgba(var(--veil-rgb), 0.76);
+  --panel: rgba(var(--sheet-rgb), 0.97);
+  --toast: rgba(var(--sheet-rgb), 0.94);
+  --on-text: #151413;
+  --on-text-dim: rgba(var(--sheet-rgb), 0.62);
+  --danger: #FF8A7A;
+  --avatar-copper: #C9825B;
+  --avatar-ink: #2A160C;
+  --hud: #9f9;
+
+  /* Focus on controls: a white fill. DESIGN.md has the fallback if it blooms. */
+  --focus-bg: var(--text);
+  --focus-fg: var(--on-text);
+  --focus-fg-dim: var(--on-text-dim);
+
+  --sans: 'Kinescope Sans', 'SamsungOneUI', sans-serif;
+  --f-display: 700 96px/0.98 var(--sans);
+  --f-page: 680 56px/1.05 var(--sans);
+  --f-row: 620 29px/40px var(--sans);
+  --f-meta: 520 25px/1.2 var(--sans);
+  --f-body: 440 24px/36px var(--sans);
+  --f-caption: 600 23px/1.2 var(--sans);
+  --f-caption-sub: 500 22px/1.2 var(--sans);
+  --f-small: 500 22px/1.25 var(--sans);
+  --f-badge: 640 19px/1 var(--sans);
+  --f-nav: 560 25px/1 var(--sans);
+  --f-button: 620 26px/1 var(--sans);
+  --f-chip: 560 23px/1 var(--sans);
+  --f-option: 540 26px/1 var(--sans);
+  --f-setting: 600 27px/1 var(--sans);
+  --f-message: 600 32px/1.3 var(--sans);
+  --f-brand: 650 32px/1 var(--sans);
+
+  --r-bar: 3px;
+  --r-chip: 6px;
+  --r-tile: 14px;
+  --r-option: 16px;
+  --r-row: 18px;
+  --r-panel: 20px;
+
+  --lift: 0 20px 44px rgba(0, 0, 0, 0.55);
+  --sheet-edge: -40px 0 80px rgba(0, 0, 0, 0.45);
+  --float: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-art: 600ms;
+  --t-slide: 260ms;
+  --t-focus: 200ms;
+  --t-held: 110ms;
+
+  /*
+   * Old names, still read by the screen stylesheets V2 has not restyled yet. Each line goes
+   * when its last user does. Coral maps to Lamplight: the chrome has no accent.
+   */
+  --bg: var(--ink);
+  --bg-rgb: var(--veil-rgb);
+  --cream: var(--text);
+  --cream-rgb: var(--text-rgb);
+  --dim: var(--mute);
+  --raised: var(--sheet);
+  --coral: var(--text);
+  --coral-rgb: var(--text-rgb);
+  --white: var(--text);
+  --black: #000;
+  --black-rgb: 0, 0, 0;
+  --display: var(--sans);
+  --body: var(--sans);
+}
+

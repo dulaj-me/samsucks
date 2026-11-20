@@ -1,9 +1,0 @@
-/* Toast, built on .btn. Plain styling until V2 folds it into base.css. */
-.toast {
-  position: absolute; left: 0; right: 0; bottom: 72px; z-index: 60;
-  width: fit-content; margin: 0 auto;
-  background: var(--raised); pointer-events: none;
-  opacity: 0; transform: translateY(24px); will-change: transform, opacity;
-  transition: opacity 200ms ease, transform 260ms var(--ease);
-}
-.toast.on { opacity: 1; transform: none; }

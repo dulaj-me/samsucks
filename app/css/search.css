@@ -19,8 +19,7 @@
 .key { padding: 0; margin: 0; justify-content: center; }
 
 /*
- * Results and recent searches share the area right of the keyboard. Rows keep the tile before
- * focus peeking in their first 96px, so the clip starts just past the keys.
+ * Results and recent searches share the area right of the keyboard; the clip starts just past the keys.
  */
 .search-status { position: absolute; top: 196px; left: 720px; font: 500 26px var(--body); color: var(--dim); }
 .search-rows { position: absolute; top: 230px; left: 624px; right: 0; bottom: 0; overflow: hidden; }

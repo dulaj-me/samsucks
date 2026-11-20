@@ -71,8 +71,7 @@ export function SettingsScreen() {
       { label: 'Version', value: VERSION + (DEV ? ' (dev)' : '') },
       { label: 'Based on', value: 'SamSUCKS by rfaile313' },
       { label: 'License', value: 'GNU GPL v3.0, no warranty' },
-      { label: 'Inter font', value: 'SIL Open Font License 1.1' },
-      { label: 'Barlow Condensed font', value: 'SIL Open Font License 1.1' },
+      { label: 'Kinescope Sans font', value: 'Based on Mona Sans by GitHub, SIL OFL 1.1' },
       { label: 'QR codes', value: 'qrcode-generator by Kazuhiko Arase, MIT License' },
     ]],
     ['Advanced', [
