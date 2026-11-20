@@ -7,6 +7,7 @@ import { progress, episodeLabel, episodeCode, timeLeft, duration, clock } from '
 import * as icons from './icons.js';
 
 // gap: space between tiles in a row. r: corner radius, when not the usual 14px.
+// lines: caption lines the title may wrap to before it ellipsises (default 1).
 export const KINDS = {
   wide: { w: 432, h: 243, gap: 36 },
   poster: { w: 240, h: 360, gap: 32 },
@@ -14,7 +15,7 @@ export const KINDS = {
   episode: { w: 432, h: 243, gap: 36 },
   'search-poster': { w: 200, h: 300, gap: 28 },
   'search-wide': { w: 356, h: 200, gap: 28 },
-  cast: { w: 200, h: 200, gap: 32, r: 100 },
+  cast: { w: 200, h: 200, gap: 32, r: 100, lines: 2 },
   extra: { w: 432, h: 243, gap: 36 },
 };
 
@@ -25,6 +26,13 @@ const EXTRA_TYPES = {
 
 export const LIFT = 1.07;
 const RADIUS = 14;
+const CAP_LINE = 28; // one caption title line: 23px at 1.2, rounded up
+
+// How much taller than one title line a kind's caption block is. Fixed per kind, so a
+// list's geometry never depends on the text it shows.
+export function captionExtra({ lines = 1 }) {
+  return (lines - 1) * CAP_LINE;
+}
 
 // The focused tile scales about its centre. The lift covers the scaled rect; the ring is
 // that rect grown by 8px a side (a 4px border at a 4px gap), its corners 8px rounder so the
@@ -81,6 +89,10 @@ export function createTile(kind, { caption = false } = {}) {
     const text = h('div', 'tile-text tile-text-' + kind, el);
     text.style.width = size.w + 'px';
     cap = h('div', 'tile-cap', text);
+    if (size.lines > 1) {
+      cap.classList.add('tile-cap-wrap');
+      cap.style.webkitLineClamp = String(size.lines);
+    }
     sub = h('div', 'tile-sub', text);
   }
   return { el, img, ph, count, seen, bar, fill, cap, sub, kind, size, item: undefined };
