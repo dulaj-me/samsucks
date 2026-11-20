@@ -493,9 +493,9 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     // Hide a second early so the button doesn't flash up right as the marker ends.
     const m = markers.find(x => !x.dismissed && ms >= x.startTimeOffset && ms < x.endTimeOffset - 1000) || null;
     if (m === skipFor) return;
-    // The card outlasts the file's final credits, not credits that a post-credits scene follows.
-    // Seeking never gets here with the card up: the seek opens the OSD, which hides it.
-    if (upnextMode === 'credits' && !creditsMarker.final) hideUpNext();
+    // The card outlasts the file's final credits, but not credits a post-credits scene follows,
+    // and never a position before the credits (a seek can land there with the card up).
+    if (upnextMode === 'credits' && !(creditsMarker.final && ms >= creditsMarker.startTimeOffset)) hideUpNext();
     skipFor = m;
     // An episode's credits get the up-next card instead, once the next episode is known.
     const episodeCredits = !!m && m.type === 'credits' && item.type === 'episode';
@@ -505,7 +505,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     if (!episodeCredits) { setText(skipBtn, 'Mark Watched'); return; }
     lookupNext().then(ep => {
       if (skipFor !== m || ending || !alive) return;
-      if (seekTarget != null) { skipFor = null; return; } // decide again where the seek lands
+      // Not while the viewer is seeking, paused, away, or in the controls or track panel; the
+      // next timeupdate decides again.
+      const busy = seekTarget != null || paused || document.hidden ||
+        el.classList.contains('osd-on') || !panel.classList.contains('hidden');
+      if (busy) { skipFor = null; return; }
       if (ep) { nextItem = ep; showUpNext('credits'); return; }
       setText(skipBtn, 'Mark Watched');
       toggleClass(skipBtn, 'hidden', false);
@@ -654,6 +658,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
   }
 
   async function finished() {
+    if (ending) return; // Play now already reported stopped and is opening the next episode
     ending = true;
     started = false;
     // A seek still waiting to commit would reopen the closed player and end it twice.
@@ -693,8 +698,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     upnextIndex = 0;
     renderUpnextFocus();
     toggleClass(el, 'ended', mode === 'end');
+    toggleClass(el, 'upnext-on', true);
     upnext.classList.remove('hidden');
-    if (!autoplayNext()) { setText(upnextLabel, 'Next episode'); return; }
+    // Credits that a scene follows get no countdown, or autoplay would skip the scene.
+    const countdown = autoplayNext() && (mode === 'end' || creditsMarker.final);
+    if (!countdown) { setText(upnextLabel, 'Next episode'); return; }
     let left = UPNEXT_SECONDS;
     setText(upnextLabel, 'Up next in ' + left);
     upnextTimer = setInterval(() => {
@@ -719,6 +727,7 @@ export function PlayerScreen(initial, { offset = null } = {}) {
     stopCountdown();
     upnextMode = null;
     upnext.classList.add('hidden');
+    toggleClass(el, 'upnext-on', false);
   }
 
   // For the rest of this file: seeking back into the credits doesn't bring the card back.
@@ -745,7 +754,11 @@ export function PlayerScreen(initial, { offset = null } = {}) {
         else if (credits) watchCredits();
         else exit();
         return true;
-      case 'play': case 'playpause': playNext(); return true;
+      case 'play': playNext(); return true;
+      // Over the credits, play/pause still pauses; togglePause opens the OSD, which hides the card.
+      case 'playpause': if (credits) togglePause(); else playNext(); return true;
+      case 'pause': if (credits) togglePause(); return true;
+      case 'info': if (credits) showOsd(); return true;
       case 'back': if (credits) watchCredits(); else exit(); return true;
       case 'stop': exit(); return true;
     }
