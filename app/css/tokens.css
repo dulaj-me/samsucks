@@ -1,10 +1,10 @@
-/* One variable file for every string: Latin subset, wght 400-700, wdth 100-108. */
+/* One variable file for every string: Mona Sans, subset and renamed (fonts/NOTICE-KinescopeSans.txt). */
 @font-face {
-  font-family: 'Mona Sans';
+  font-family: 'Kinescope Sans';
   font-weight: 400 700;
   font-stretch: 100% 108%;
   font-display: swap;
-  src: url(../fonts/mona-sans-latin-wdth-wght.woff2) format('woff2');
+  src: url(../fonts/kinescope-sans.woff2) format('woff2');
 }
 
 /*
@@ -49,7 +49,7 @@
   --focus-fg-dim: var(--on-text-dim);
   --focus-line: transparent;
 
-  --sans: 'Mona Sans', 'SamsungOneUI', sans-serif;
+  --sans: 'Kinescope Sans', 'SamsungOneUI', sans-serif;
   --f-display: 700 96px/0.98 var(--sans);
   --f-page: 680 56px/1.05 var(--sans);
   --f-row: 620 29px/40px var(--sans);

@@ -34,7 +34,7 @@ MARK = ('<rect x="2" y="5" width="30" height="21" rx="6" fill="none" stroke="cur
 
 def wordmark(size):
     """'kinescope' at 650, width 108%, -0.01em, as one SVG path: (d, width, ascent)."""
-    tt = TTFont(root / 'app/fonts/mona-sans-latin-wdth-wght.woff2')
+    tt = TTFont(root / 'app/fonts/kinescope-sans.woff2')
     tt.flavor = None
     buf = io.BytesIO()
     tt.save(buf)
