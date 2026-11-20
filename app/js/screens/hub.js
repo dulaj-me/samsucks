@@ -1,6 +1,6 @@
 // One Home hub in full: a poster grid opened from the See all tile at the end of its row,
 // loaded page by page through the hub's key, as a library is.
-import { h, setText, show } from '../util/dom.js';
+import { h, setText, show, toggleClass } from '../util/dom.js';
 import { Grid } from '../ui/grid.js';
 import { useAmbience } from '../ui/backdrop.js';
 import { Menu } from '../ui/menu.js';
@@ -11,10 +11,13 @@ import { openItem, playItem } from '../nav.js';
 import { error } from '../util/log.js';
 
 const PAGE = 140;
+// Where the first row's posters start: the grid's top plus its headroom (HEAD in ui/grid.js).
+const FIRST_ROW = 288;
 const NOUNS = { movie: 'movie', show: 'show', episode: 'episode', season: 'season' };
 
 export function HubScreen(hub) {
-  const el = h('div', 'screen hub');
+  // .loading until the first page lands: a skeleton stands in for the grid and its focus card.
+  const el = h('div', 'screen hub loading');
   const ambience = useAmbience();
   const head = h('div', 'hub-head', el);
   setText(h('h1', 'hub-title', head), hub.title);
@@ -25,7 +28,7 @@ export function HubScreen(hub) {
   const noteBtn = h('div', 'btn focus', note);
   show(note, false);
 
-  // Until the first page lands, wells stand in for as many titles as the row had.
+  // The grid opens at the size the row had, so the first page lands without a resize.
   const seed = (hub.Metadata || []).length;
   let alive = true;
   let visible = true;
@@ -33,6 +36,12 @@ export function HubScreen(hub) {
   let items = [];
   let generation = 0;
   let noteRun = null;        // what OK does while a message stands in for the grid
+  let loading = true;        // the first page is on its way; the grid takes no keys
+
+  function setLoading(on) {
+    loading = on;
+    toggleClass(el, 'loading', on);
+  }
 
   const grid = new Grid({
     top: 252, height: 828, total: seed,
@@ -45,6 +54,14 @@ export function HubScreen(hub) {
     for (let p = Math.floor(start / PAGE); p <= Math.floor(end / PAGE); p++) loadPage(p);
   };
   el.appendChild(grid.el);
+  // Static ghosts at the grid's geometry, as in a library: up to two rows, as many as the row had.
+  const skeleton = h('div', 'hub-skeleton', el);
+  for (let i = 0; i < Math.min(seed || grid.cols * 2, grid.cols * 2); i++) {
+    const x = 96 + (i % grid.cols) * grid.stepX;
+    const y = FIRST_ROW + Math.floor(i / grid.cols) * grid.stepY;
+    place(h('div', 'hub-skel', skeleton), x, y, grid.size.w, grid.size.h);
+    place(h('div', 'hub-skel hub-skel-line', skeleton), x, y + grid.size.h + 20, 150, 20);
+  }
   const menu = new Menu(el);
 
   async function loadPage(p) {
@@ -57,11 +74,12 @@ export function HubScreen(hub) {
       if (!alive || gen !== generation) return;
       const total = mc.totalSize != null ? mc.totalSize : mc.size || 0;
       if (!total) {
-        showNote('Nothing in ' + hub.title + ' right now.', 'It may have changed since Home loaded.', 'Back to Home', router.back);
+        showNote('Nothing in ' + hub.title + ' right now', 'It may have changed since Home loaded.', 'Back to Home', router.back);
         return;
       }
       (mc.Metadata || []).forEach((it, i) => { items[p * PAGE + i] = it; });
       pages.set(p, true);
+      setLoading(false);
       setText(count, total + ' ' + (NOUNS[hub.type] || 'title') + (total === 1 ? '' : 's'));
       if (grid.total !== total) grid.setTotal(total);
       else grid.refresh();
@@ -71,7 +89,7 @@ export function HubScreen(hub) {
       if (!alive || gen !== generation) return;
       pages.delete(p);
       error('hub page failed', hub.title, p, e);
-      if (p === 0) showNote('Couldn\'t load ' + hub.title + '.', 'Check that ' + session.server.name + ' is on, then try again.', 'Try again', reload);
+      if (p === 0) showNote('Couldn\'t load ' + hub.title, 'Check that ' + session.server.name + ' is on, then try again.', 'Try again', reload);
     }
   }
 
@@ -82,6 +100,7 @@ export function HubScreen(hub) {
     setText(noteBtn, label);
     setText(count, '');
     noteRun = run;
+    setLoading(false);
     show(note, true);
     grid.setActive(false);
     grid.setTotal(0);
@@ -93,6 +112,7 @@ export function HubScreen(hub) {
     items = [];
     noteRun = null;
     show(note, false);
+    setLoading(true);
     grid.index = 0;
     grid.setTotal(seed);
     grid.setActive(true);
@@ -130,6 +150,7 @@ export function HubScreen(hub) {
         if (action === 'enter' || action === 'hold') { noteRun(); return true; }
         return action !== 'back';
       }
+      if (loading) return action !== 'back';
       switch (action) {
         case 'left': grid.move(-1, 0); return true;
         case 'right': grid.move(1, 0); return true;
@@ -144,4 +165,11 @@ export function HubScreen(hub) {
       return false;
     },
   };
+}
+
+function place(el, x, y, w, hgt) {
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.width = w + 'px';
+  el.style.height = hgt + 'px';
 }
