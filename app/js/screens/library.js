@@ -82,7 +82,7 @@ export function LibraryScreen(section) {
   let isEmpty = false;       // the grid has nothing to show: no matches, an empty library or an error
   let wayOut = null;         // the bar's chip out of that: 'clear' or 'retry'
   let loading = false;       // the first page is on its way, behind the skeleton
-  // Every move retries a failed refetch; one toast per outage, until a page loads again.
+  // Every move retries a failed refetch: one toast per outage, until a request gets through.
   let refreshWarned = false;
   let swapping = false;      // new filters' first page is on its way; the old grid stays up
   let zone = 'grid';
@@ -553,7 +553,8 @@ export function LibraryScreen(section) {
           const it = grid.current();
           // Read before the change: an unwatched title marked watched no longer matches.
           const leaves = f.unwatched && it && !isWatched(it);
-          openItemMenu(menu, it, { changed: leaves ? removeItem : refreshItem });
+          // changed runs once the mark got through, so the server is back.
+          openItemMenu(menu, it, { changed: x => { refreshWarned = false; (leaves ? removeItem : refreshItem)(x); } });
           return true;
         }
         case 'play': case 'playpause': if (grid.current()) playItem(grid.current()); return true;
