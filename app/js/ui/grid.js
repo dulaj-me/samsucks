@@ -162,6 +162,7 @@ export class Grid {
           }
         }
       }
+      toggleClass(slot.el, 'above', r < focusRow);
       for (let c = 0; c < this.cols; c++) toggleClass(slot.tiles[c].el, 'gone', c === focusCol && r <= focusRow);
     }
     for (const slot of this.rows) {

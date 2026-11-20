@@ -164,7 +164,7 @@ html.playing .ambience { display: none; }
  * Track tiles in rows and the grid never lift; a card does. Each is one layer, caption
  * included, so the one entering or leaving the card fades as a whole. Hidden at focus and
  * behind it (.gone), a tile waits offset so that, riding the track's curve, its net travel
- * on a move is the list's SHORT: it moves, then fades.
+ * on a move is the list's SHORT.
  */
 .row-slot, .grid-slot { position: absolute; top: 0; left: 0; }
 .row-track .tile, .grid-track .tile { will-change: transform, opacity; }
@@ -174,10 +174,11 @@ html.playing .ambience { display: none; }
   transition: transform var(--t-slide) var(--ease), opacity var(--t-swap) ease-out;
 }
 .row-slot.fresh .tile, .grid-row.fresh .tile { transition: none !important; }
-/* Gone tiles sit under the rest, so the next one slides over the one fading into the card. */
+/* The tile entering the card sits under the next one and fades fast: the next one overlaps it
+   within a frame or two, and its art showing in the next one's corners reads as square corners. */
 .row-track .tile.gone, .grid-track .tile.gone { z-index: -1; }
 .row.live .row-track .tile.gone, .grid.vmove .grid-track .tile.gone {
-  transition: transform var(--t-slide) var(--ease), opacity calc(var(--t-swap) / 2) ease-in calc(var(--t-swap) / 6);
+  transition: transform var(--t-slide) var(--ease), opacity calc(var(--t-swap) / 4) linear;
 }
 /* Across the grid the card travels, its content handed over: the poster it reaches hides
    once covered, then drops to its waiting offset. */
@@ -185,9 +186,9 @@ html.playing .ambience { display: none; }
 html.fast .grid.hmove .grid-track .tile.gone { transition-delay: var(--t-held); }
 
 /*
- * A card (ui/card.js): two faces of one tile, clipped to its frame. The face being replaced
- * sits on top, so it slides and fades over the new one. Appears in place when its list
- * takes focus, then lifts; fades out as focus leaves.
+ * A card (ui/card.js): two faces of one tile. The face being replaced sits on top, so it fades
+ * over the new one. Each face's content slides inside its own still, rounded frame. Appears in
+ * place when its list takes focus, then lifts; fades out as focus leaves.
  */
 .card {
   position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0;
@@ -197,12 +198,18 @@ html.fast .grid.hmove .grid-track .tile.gone { transition-delay: var(--t-held); 
 .grid .card { transition: opacity var(--t-focus) ease, transform var(--t-slide) var(--ease); }
 .grid.active .card { opacity: 1; transition: transform var(--t-slide) var(--ease); }
 .row.idle .card { visibility: hidden; }
-.card-art, .card-cap { position: absolute; overflow: hidden; }
-.card-art { border-radius: var(--r-tile); }
-.card-lifted .card-art { border-radius: 15px; }
-.card-face { opacity: 0; z-index: 1; will-change: transform, opacity; }
-.card-face.shown { opacity: 1; z-index: 0; }
-.card-cap .tile-text { position: absolute; top: 0; left: 0; margin: 0; }
+.card-art { position: absolute; }
+.card-cap { position: absolute; overflow: hidden; }
+.card .tile.card-face { z-index: 1; }
+.card .tile.card-face.shown { z-index: 0; }
+.card .tile-frame { background: none; }
+.card-inner {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--well); will-change: transform, opacity;
+}
+.card .tile:not(.shown) .card-inner { opacity: 0; }
+.card-cap .tile-text { position: absolute; top: 0; left: 0; margin: 0; will-change: transform, opacity; }
+.card-cap .tile-text:not(.shown) { opacity: 0; }
 .card .tile-cap { color: var(--text); }
 .card-lifted .tile-frame { will-change: transform; transition: transform var(--t-focus) var(--ease); }
 .row.active .card-lifted .tile-frame, .grid.active .card-lifted .tile-frame { transform: scale(1.07); }
@@ -257,7 +264,14 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
   position: absolute;
   will-change: transform; transition: transform var(--t-slide) var(--ease);
 }
-.grid-row { position: absolute; top: 0; left: 0; will-change: transform; }
+/* The row leaving at the top fades rather than being cut flat by the clip, which reads as
+   square corners. */
+.grid-row {
+  position: absolute; top: 0; left: 0; will-change: transform, opacity;
+  transition: opacity calc(var(--t-swap) / 3) linear;
+}
+.grid-row.above { opacity: 0; }
+.grid-row.fresh { transition: none; }
 .grid .tile-cap { font-size: 22px; }
 
 /* ---------- buttons, chips, menu, settings rows ---------- */

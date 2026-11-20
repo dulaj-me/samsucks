@@ -1,6 +1,7 @@
 // One item at a fixed spot, swapped in place. It holds two faces: on a swap the old one
-// slides a few px the way the list travels and fades, while the new one slides in behind
-// it from the other side. Both are clipped to the frame, so nothing draws outside it.
+// slides a few px the way the list travels and fades, uncovering the new one sliding in
+// under it from the other side. Each face's frame stays put and its content slides inside
+// it, so the frame's rounded corners clip the motion and never travel themselves.
 // Rows and the grid put a lifted, ringed card over their focus; a row also keeps an
 // unlifted one for the previous item's edge at its left.
 import { h, toggleClass } from '../util/dom.js';
@@ -9,6 +10,7 @@ import { createTile, fillTile, createFocusBox, focusGeometry, KINDS, LIFT } from
 const CAP_H = 64;    // the caption block: a 23px line, 5px, a 22px line at 1.2
 const HOLD = 0.25;   // the old face stays solid this far into a swap, so its slide reads
 const ZERO = 'translate(0, 0)';
+const LIFTED = 'scale(' + LIFT + ')';
 
 let timing = null;
 function swapTiming() {
@@ -33,9 +35,9 @@ export class Card {
     this.el = h('div', 'card' + (lifted ? ' card-lifted' : ''), parent);
     if (lifted) createFocusBox(this.el, size, x, y);
 
-    const r = lifted ? g.lift : { x: 0, y: 0, w: size.w, h: size.h };
     const art = h('div', 'card-art', this.el);
-    place(art, x + r.x, y + r.y, r.w, r.h);
+    art.style.left = x + 'px';
+    art.style.top = y + 'px';
     let cap = null;
     if (caption) {
       cap = h('div', 'card-cap', this.el);
@@ -43,16 +45,18 @@ export class Card {
     }
     this.faces = [0, 1].map(() => {
       const t = createTile(kind, { caption });
-      t.el.style.left = -r.x + 'px';
-      t.el.style.top = -r.y + 'px';
+      t.el.classList.add('card-face');
       art.appendChild(t.el);
-      t.parts = [t.el];
+      t.frame = t.img.parentNode;
+      t.inner = h('div', 'card-inner');
+      while (t.frame.firstChild) t.inner.appendChild(t.frame.firstChild);
+      t.frame.appendChild(t.inner);
+      t.text = null;
       if (cap) {
-        const text = t.cap.parentNode;
-        cap.appendChild(text);
-        t.parts.push(text);
+        t.text = t.cap.parentNode;
+        t.text.classList.add('card-face');
+        cap.appendChild(t.text);
       }
-      t.parts.forEach(p => p.classList.add('card-face'));
       t.anims = [];
       return t;
     });
@@ -73,33 +77,38 @@ export class Card {
     const y = dy * this.travel;
     const from = 'translate(' + -x + 'px, ' + -y + 'px)';
     const to = 'translate(' + x + 'px, ' + y + 'px)';
-    // Art crossfades over the other face; captions hand over instead, as overlapping
-    // lines of text read as a smudge.
-    this.flip(item, instant, [
-      [{ transform: ZERO, opacity: 1 }, { opacity: 1, offset: HOLD }, { transform: to, opacity: 0 }],
-      [{ transform: ZERO, opacity: 1 }, { opacity: 0, offset: 0.4 }, { transform: to, opacity: 0 }],
-    ], [
-      [{ transform: from, opacity: 0 }, { opacity: 1, offset: 0.6 }, { transform: ZERO, opacity: 1 }],
-      [{ transform: from, opacity: 0 }, { opacity: 0, offset: 0.35 }, { transform: ZERO, opacity: 1 }],
+    // The old art fades over the new, which stays solid so no background shows between
+    // them. Captions hand over instead, as overlapping lines of text read as a smudge.
+    this.flip(item, instant, face => [
+      [face.inner, [{ transform: ZERO, opacity: 1 }, { opacity: 1, offset: HOLD }, { transform: to, opacity: 0 }]],
+      [face.text, [{ transform: ZERO, opacity: 1 }, { opacity: 0, offset: 0.4 }, { transform: to, opacity: 0 }]],
+    ], (face, covered) => [
+      [face.inner, covered
+        ? [{ transform: from, opacity: 1 }, { transform: ZERO, opacity: 1 }]
+        : [{ transform: from, opacity: 0 }, { opacity: 1, offset: 0.6 }, { transform: ZERO, opacity: 1 }]],
+      [face.text, [{ transform: from, opacity: 0 }, { opacity: 0, offset: 0.35 }, { transform: ZERO, opacity: 1 }]],
     ]);
   }
 
   // For a card that itself travels to the new item: the old content settles to rest size and
   // fades as it leaves, and the new one lifts in as it lands on the matching poster.
   handOver(item, instant) {
-    const rest = 'scale(' + (1 / LIFT).toFixed(4) + ')';
+    const rest = 'scale(1)';
     const up = 'translateY(' + -this.drop + 'px)';
-    this.flip(item, instant, [
-      [{ transform: ZERO, opacity: 1 }, { transform: rest, opacity: 0, offset: 0.4 }, { transform: rest, opacity: 0 }],
-      [{ transform: ZERO, opacity: 1 }, { transform: up, opacity: 0, offset: 0.4 }, { transform: up, opacity: 0 }],
-    ], [
-      [{ transform: rest, opacity: 0 }, { transform: rest, opacity: 0, offset: 0.6 }, { transform: ZERO, opacity: 1 }],
-      [{ transform: up, opacity: 0 }, { transform: up, opacity: 0, offset: 0.6 }, { transform: ZERO, opacity: 1 }],
+    this.flip(item, instant, face => [
+      [face.frame, [{ transform: LIFTED }, { transform: rest, offset: 0.4 }, { transform: rest }]],
+      [face.inner, [{ opacity: 1 }, { opacity: 0, offset: 0.4 }, { opacity: 0 }]],
+      [face.text, [{ transform: ZERO, opacity: 1 }, { transform: up, opacity: 0, offset: 0.4 }, { transform: up, opacity: 0 }]],
+    ], face => [
+      [face.frame, [{ transform: rest }, { transform: rest, offset: 0.6 }, { transform: LIFTED }]],
+      [face.inner, [{ opacity: 0 }, { opacity: 0, offset: 0.6 }, { opacity: 1 }]],
+      [face.text, [{ transform: up, opacity: 0 }, { transform: up, opacity: 0, offset: 0.6 }, { transform: ZERO, opacity: 1 }]],
     ]);
   }
 
-  // Shows item on the other face. frames: [art, caption] keyframes for the old face, then the new.
-  flip(item, instant, outFrames, inFrames) {
+  // Shows item on the other face. outAnims and inAnims list [element, keyframes] for a face;
+  // inAnims learns whether the old face covers the new one as it starts.
+  flip(item, instant, outAnims, inAnims) {
     const out = this.faces[this.cur];
     if (out.item === (item || null)) return;
     this.cur ^= 1;
@@ -107,19 +116,19 @@ export class Card {
     stop(out);
     stop(inn);
     fillTile(inn, item || null);
-    const had = out.parts[0].classList.contains('shown');
+    const had = out.el.classList.contains('shown');
     setShown(out, false);
     setShown(inn, !!item);
     if (instant || !inn.el.animate) return;
     const { duration, ease } = swapTiming();
-    const run = (face, set) => {
-      face.anims = face.parts.map((p, i) => {
-        set[i][0].easing = ease;
-        return p.animate(set[i], { duration });
+    const run = (face, list) => {
+      face.anims = list.filter(([el]) => el).map(([el, frames]) => {
+        frames[0].easing = ease;
+        return el.animate(frames, { duration });
       });
     };
-    if (had) run(out, outFrames);
-    if (item) run(inn, inFrames);
+    if (had) run(out, outAnims(out));
+    if (item) run(inn, inAnims(inn, had));
   }
 }
 
@@ -136,5 +145,6 @@ function stop(face) {
 }
 
 function setShown(face, on) {
-  face.parts.forEach(p => toggleClass(p, 'shown', on));
+  toggleClass(face.el, 'shown', on);
+  if (face.text) toggleClass(face.text, 'shown', on);
 }
