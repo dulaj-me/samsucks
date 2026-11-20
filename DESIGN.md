@@ -416,6 +416,8 @@ Geometry that virtualization needs lives in JS (`tile.js`, `row.js`, `grid.js`, 
 | `episode` | 432x243 | detail episode row | yes, plus a two-line summary | 432x243 |
 | `search-poster` | 200x300 | search results | yes | 200x300 |
 | `search-wide` | 356x200 | search episode results | yes | 356x200 |
+| `cast` (provisional) | 200x200 circle, gap 32 | detail Cast | yes, centred: name, then character; initials without a picture | 200x200 |
+| `extra` (provisional) | 432x243, gap 36 | detail Extras | yes: title, then type and length ("Trailer · 2:23"); the clip's own thumb | 432x243 |
 
 Inside every tile frame: the progress groove sits 16 px in from left and right and 14 px from the bottom, 5 px tall; the count pill and the watched badge sit 12 px from the top and right.
 
@@ -431,7 +433,7 @@ Inside every tile frame: the progress groove sits 16 px in from left and right a
 - A row without focus shows neither card; its tiles close both gaps and line up under the heading.
 - These apply to every `Row`: Home, search and detail.
 - Rows above the active row are hidden (opacity 0). A row below the active row that is on screen sits at opacity 0.55.
-- Captions only on wide and episode rows on Home and detail. Poster rows on Home carry none.
+- Captions only on wide and episode rows on Home and detail, and on detail's provisional cast and extra rows. Poster rows carry none.
 
 ### Hero (Home)
 
@@ -464,6 +466,10 @@ Focus on art is a card (`ui/card.js`) laid over the list's focused slot; track t
 | `grid` | 235x353 | -16, -20, 251, 369 | 12 px down | 22 px |
 | `search-poster` | 214x321 | -15, -18, 230, 337 | not on a comp yet | 20 px |
 | `search-wide` | 381x214 | -20, -15, 397, 230 | not on a comp yet | 36 px |
+| `cast` (provisional) | 214x214 | -15, -15, 230, 230 | 7 px down | 20 px |
+| `extra` (provisional) | 462x260 | -23, -17, 478, 276 | 9 px down | 43 px |
+
+A kind's corner radius lives in `KINDS` (`r`, default 14); the lift's radius is `r` x 1.07 and the ring's 8 px more. The provisional `cast` kind is a circle: frame 100, lift 107, ring 115, so its card, ring and peek are round.
 
 Formula: overhang = (1.07 - 1) / 2 x size; ring offset = -(overhang + 8); ring size = size x 1.07 + 16. A focused tile's caption moves down by the bottom overhang. Swap travel is a tenth of the tile width. Round once, in JS, with `Math.round`.
 

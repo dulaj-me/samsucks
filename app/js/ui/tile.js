@@ -3,10 +3,10 @@
 import { h, setText, show, setTransform } from '../util/dom.js';
 import { load } from './images.js';
 import { session } from '../session.js';
-import { progress, episodeLabel, episodeCode, timeLeft, duration } from '../util/format.js';
+import { progress, episodeLabel, episodeCode, timeLeft, duration, clock } from '../util/format.js';
 import * as icons from './icons.js';
 
-// gap: space between tiles in a row.
+// gap: space between tiles in a row. r: corner radius, when not the usual 14px.
 export const KINDS = {
   wide: { w: 432, h: 243, gap: 36 },
   poster: { w: 240, h: 360, gap: 32 },
@@ -14,19 +14,29 @@ export const KINDS = {
   episode: { w: 432, h: 243, gap: 36 },
   'search-poster': { w: 200, h: 300, gap: 28 },
   'search-wide': { w: 356, h: 200, gap: 28 },
+  cast: { w: 200, h: 200, gap: 32, r: 100 },
+  extra: { w: 432, h: 243, gap: 36 },
+};
+
+const EXTRA_TYPES = {
+  trailer: 'Trailer', behindTheScenes: 'Behind the scenes', deletedScene: 'Deleted scene',
+  featurette: 'Featurette', interview: 'Interview', sceneOrSample: 'Scene', short: 'Short',
 };
 
 export const LIFT = 1.07;
+const RADIUS = 14;
 
 // The focused tile scales about its centre. The lift covers the scaled rect; the ring is
-// that rect grown by 8px a side (a 4px border at a 4px gap). Offsets are from the tile's
-// top-left at rest; caption is how far the caption drops to clear the scaled frame.
-export function focusGeometry({ w, h }) {
+// that rect grown by 8px a side (a 4px border at a 4px gap), its corners 8px rounder so the
+// gap stays even. Offsets are from the tile's top-left at rest; caption is how far the
+// caption drops to clear the scaled frame.
+export function focusGeometry({ w, h, r = RADIUS }) {
   const ox = (LIFT - 1) / 2 * w;
   const oy = (LIFT - 1) / 2 * h;
+  const lr = Math.round(r * LIFT);
   return {
-    lift: { x: -Math.round(ox), y: -Math.round(oy), w: Math.round(w * LIFT), h: Math.round(h * LIFT) },
-    ring: { x: -Math.round(ox + 8), y: -Math.round(oy + 8), w: Math.round(w * LIFT + 16), h: Math.round(h * LIFT + 16) },
+    lift: { x: -Math.round(ox), y: -Math.round(oy), w: Math.round(w * LIFT), h: Math.round(h * LIFT), r: lr },
+    ring: { x: -Math.round(ox + 8), y: -Math.round(oy + 8), w: Math.round(w * LIFT + 16), h: Math.round(h * LIFT + 16), r: lr + 8 },
     caption: Math.round(oy),
   };
 }
@@ -41,6 +51,7 @@ export function createFocusBox(parent, size, x, y) {
     el.style.top = (y + r.y) + 'px';
     el.style.width = r.w + 'px';
     el.style.height = r.h + 'px';
+    el.style.borderRadius = r.r + 'px';
   };
   place(h('div', 'lift', box), g.lift);
   place(h('div', 'ring', box), g.ring);
@@ -53,6 +64,7 @@ export function createTile(kind, { caption = false } = {}) {
   const frame = h('div', 'tile-frame', el);
   frame.style.width = size.w + 'px';
   frame.style.height = size.h + 'px';
+  if (size.r) frame.style.borderRadius = size.r + 'px';
   const img = h('img', 'tile-img', frame);
   const ph = h('div', 'tile-ph', frame);
   img.alt = '';
@@ -64,7 +76,7 @@ export function createTile(kind, { caption = false } = {}) {
   let cap = null;
   let sub = null;
   if (caption) {
-    const text = h('div', 'tile-text', el);
+    const text = h('div', 'tile-text tile-text-' + kind, el);
     text.style.width = size.w + 'px';
     cap = h('div', 'tile-cap', text);
     sub = h('div', 'tile-sub', text);
@@ -73,6 +85,8 @@ export function createTile(kind, { caption = false } = {}) {
 }
 
 function artFor(item, kind) {
+  // An extra's art is its movie's backdrop; the thumb is its own frame.
+  if (kind === 'extra') return item.thumb || item.art;
   if (kind === 'wide' || kind === 'episode' || kind === 'search-wide') {
     if (item.type === 'episode') return item.thumb || item.art;
     return item.art || item.thumb;
@@ -88,6 +102,8 @@ function titleFor(item, kind) {
 }
 
 function subFor(item, kind) {
+  if (kind === 'cast') return item.role || '';
+  if (kind === 'extra') return [EXTRA_TYPES[item.subtype], item.duration ? clock(item.duration) : ''].filter(Boolean).join('  ·  ');
   if (kind === 'wide') {
     if (item.type === 'episode') return [episodeCode(item), timeLeft(item)].filter(Boolean).join('  ·  ');
     return timeLeft(item) || [item.year, duration(item.duration)].filter(Boolean).join('  ·  ');
@@ -96,6 +112,11 @@ function subFor(item, kind) {
   if (item.type === 'episode') return episodeLabel(item) + '  ' + item.title;
   if (item.type === 'season') return item.leafCount ? item.leafCount + ' episodes' : '';
   return item.year || '';
+}
+
+// A face without a picture shows its initials.
+function initials(name) {
+  return (name || '').split(/\s+/).filter(Boolean).map(w => w.charAt(0)).slice(0, 2).join('').toUpperCase();
 }
 
 export function fillTile(tile, item) {
@@ -115,7 +136,7 @@ export function fillTile(tile, item) {
   const path = artFor(item, kind);
   // The web layer is 1920x1080, so tile size is exactly the pixels we need.
   load(tile.img, server ? server.image(path, tile.size.w, tile.size.h) : '');
-  setText(tile.ph, titleFor(item, kind));
+  setText(tile.ph, kind === 'cast' ? initials(item.title) : titleFor(item, kind));
 
   const p = progress(item);
   show(tile.bar, p > 0.01);
