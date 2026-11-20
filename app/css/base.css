@@ -345,8 +345,9 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
 .menu-list.more-bottom { -webkit-mask-image: linear-gradient(#000 calc(100% - 48px), transparent); }
 .menu-list.more-top.more-bottom { -webkit-mask-image: linear-gradient(transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 /*
- * The focus highlight: a white card on its own layer, last in the list's track. It clips a dark
- * copy of the whole list, which ui/menu.js keeps pinned over the list's own labels.
+ * The focus highlight: a white card on its own layer, last in the list's track. It clips dark
+ * labels (ui/menu.js): a pooled few pinned over the list's own, or while a key is held
+ * (.held), one riding with the fill.
  */
 .menu-hl {
   position: absolute; top: 0; left: 0; width: 512px; height: 72px; border-radius: var(--r-option);
@@ -366,7 +367,9 @@ html.fast .row.live .row-track .tile, html.fast .grid.vmove .grid-track .tile, h
 .menu-tick { margin-left: auto; padding-left: 18px; }
 .menu-tick svg { display: block; margin: 0; }
 .menu-opt.focus { background: var(--focus-bg); color: var(--focus-fg); }
-.menu-hl .menu-opt { color: var(--focus-fg); }
+.menu-hl .menu-opt { position: absolute; top: 0; left: 0; width: 512px; color: var(--focus-fg); }
+.menu-hl.held .menu-track { transition: none; }
+.menu-hl.held .menu-win, .menu-hl:not(.held) .menu-one { visibility: hidden; }
 
 .btn-wide {
   display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
