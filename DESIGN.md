@@ -368,6 +368,7 @@ Every colour, radius, shadow, duration and easing lives here. Screen stylesheets
 | `--t-swap` | 180ms | new |
 | `--t-focus` | 200ms | inline 200ms and 220ms on the ring |
 | `--t-held` | 110ms | inline 110ms under `html.fast` |
+| `--t-screen` | 200ms | new |
 
 Removed with no replacement: `--coral`, `--coral-rgb`, `--black`, `--black-rgb`, `--white-rgb`, `--key-yellow`. `--hud` stays as the dev overlay colour and is not part of the look.
 
@@ -646,7 +647,7 @@ Never changes: the Tizen application id `SamSucks01.samsucks`, package `SamSucks
 | Sheet highlight or list (one per key press) | transform | 180 ms (`--t-slide`) | `--ease` |
 | Sheet highlight label swap: 8 px nudge in, fade from 0 | transform, opacity | 180 ms (`--t-swap`) | `--ease` |
 | Row dim (0.55) and hide above | opacity | 200 ms (`--t-focus`) | ease |
-| Screen fade | opacity | V2 benches it; dropped if it misses the bench thresholds | ease |
+| Screen fade: a cover in the room's colour fades off the incoming screen. None for the first screen, into or out of the player, or between Home and the libraries. Dropped if it misses the bench thresholds | opacity | 200 ms (`--t-screen`) | ease |
 
 `--ease` starts moving on the first frame but spreads the travel: a 78 px sheet step moves 16, 18, 16, 11 and 7 px over its first frames at 51 fps. A steeper start, such as cubic-bezier(0.2, 0.8, 0.2, 1) over 260 ms, puts 80 percent of the travel in the first few frames, which reads as a jump and then a creep.
 

@@ -84,6 +84,7 @@
   --t-swap: 180ms;
   --t-focus: 200ms;
   --t-held: 110ms;
+  --t-screen: 200ms;
 
   /*
    * Old names, still read by the screen stylesheets V2 has not restyled yet. Each line goes

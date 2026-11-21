@@ -1,4 +1,4 @@
-// Full-screen ambience from Plex's UltraBlur corner colors, plus a hero image.
+// Full-screen ambience from Plex's UltraBlur corner colors, plus a hero image and the screen fade.
 //
 // Painting a full-screen CSS gradient takes ~2s on a 2022 TV CPU, and even a
 // software canvas stretched to full screen costs ~100ms per change. Instead the
@@ -88,6 +88,36 @@ class Ambience {
 }
 
 let shared = null;
+
+// The room flattened to one colour, the mean of its corners: what a screen fades in from.
+export function roomColor() {
+  const c = (shared && shared.colors) || FALLBACK;
+  const px = [c.topLeft, c.topRight, c.bottomLeft, c.bottomRight].map(rgb);
+  const mean = i => Math.round((px[0][i] + px[1][i] + px[2][i] + px[3][i]) / 4);
+  return 'rgb(' + mean(0) + ',' + mean(1) + ',' + mean(2) + ')';
+}
+
+// The screen fade: a cover in that colour over every screen, there only while it fades off the
+// incoming one. The screen paints and takes keys as it would without it and never gets a layer
+// of its own, so the fade costs one solid quad per frame and no repaint.
+let cover = null;
+let flip = false;
+
+export function fadeIn(color) {
+  if (!cover) {
+    cover = document.createElement('div');
+    cover.addEventListener('animationend', stopFade);
+    document.body.appendChild(cover);
+  }
+  cover.style.background = color;
+  // A new animation name restarts a fade that is still running.
+  flip = !flip;
+  cover.className = 'screen-cover ' + (flip ? 'fade-a' : 'fade-b');
+}
+
+export function stopFade() {
+  if (cover) cover.className = 'screen-cover';
+}
 
 export function setLegacyGradients(on) {
   legacy = on;

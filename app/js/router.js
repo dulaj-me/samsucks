@@ -5,9 +5,12 @@
 import { setHandler } from './input.js';
 import { exitApp } from './platform/tizen.js';
 import { toast } from './ui/toast.js';
+import { fadeIn, stopFade, roomColor } from './ui/backdrop.js';
 
 // A second Back at the root inside this window exits.
 const EXIT_WINDOW = 3000;
+// These share the top nav, which stays still as they swap.
+const NAV_SCREENS = ['home', 'library'];
 
 const stack = [];
 let root = null;
@@ -39,25 +42,47 @@ function reveal(screen) {
   if (screen.onShow) screen.onShow();
 }
 
-export function push(screen) {
+// No fade for the first screen (the splash covers it) or into and out of the player, whose
+// video plays under the web layer.
+function fades(from, to) {
+  return !!from && from.name !== 'player' && to.name !== 'player' &&
+    !(NAV_SCREENS.includes(from.name) && NAV_SCREENS.includes(to.name));
+}
+
+// color is the room's before the new screen shows and restores its own, so the cover starts
+// from what was on screen.
+function settle(from, to, color) {
+  if (fades(from, to)) fadeIn(color);
+  else stopFade();
+}
+
+function enter(screen, from, color) {
   exitUntil = 0; // the exit prompt only counts on the screen that showed it
   const top = stack[stack.length - 1];
   if (top) hide(top);
   stack.push(screen);
   root.appendChild(screen.el);
   reveal(screen);
+  settle(from, screen, color);
+}
+
+export function push(screen) {
+  enter(screen, stack[stack.length - 1], roomColor());
 }
 
 export function replace(screen) {
+  const color = roomColor();
   const top = stack.pop();
   if (top) destroy(top);
-  push(screen);
+  enter(screen, top, color);
 }
 
 // Clear everything and start over from one screen (sign in/out, server switch).
 export function reset(screen) {
+  const color = roomColor();
+  const from = stack[stack.length - 1];
   while (stack.length) destroy(stack.pop());
-  push(screen);
+  enter(screen, from, color);
 }
 
 function destroy(screen) {
@@ -69,8 +94,11 @@ function destroy(screen) {
 // Straight back to the bottom of the stack (Home), e.g. from a library's nav.
 export function popToRoot() {
   if (stack.length <= 1) return;
+  const color = roomColor();
+  const from = stack[stack.length - 1];
   while (stack.length > 1) destroy(stack.pop());
   reveal(stack[0]);
+  settle(from, stack[0], color);
 }
 
 // At the root (Home, the sign-in screen, or the profile picker after a rejected token)
@@ -85,8 +113,11 @@ export function back() {
     toast('Press Back again to exit', EXIT_WINDOW);
     return;
   }
-  destroy(stack.pop());
+  const color = roomColor();
+  const from = stack.pop();
+  destroy(from);
   reveal(stack[stack.length - 1]);
+  settle(from, stack[stack.length - 1], color);
 }
 
 export function top() {
