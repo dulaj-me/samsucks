@@ -31,22 +31,6 @@ export function timeLeft(item) {
   return duration(Math.max(60000, item.duration - item.viewOffset)) + ' left';
 }
 
-// The line under a title: "2019 · PG-13 · 2h 4m" style.
-export function metaLine(item) {
-  const parts = [];
-  if (item.type === 'episode') {
-    parts.push(episodeLabel(item));
-    if (item.originallyAvailableAt) parts.push(item.originallyAvailableAt.slice(0, 4));
-  } else if (item.year) {
-    parts.push(item.year);
-  }
-  if (item.contentRating) parts.push(item.contentRating);
-  if (item.type === 'show' && item.childCount) parts.push(item.childCount + (item.childCount === 1 ? ' season' : ' seasons'));
-  else if (item.duration) parts.push(duration(item.duration));
-  if (item.audienceRating) parts.push('★ ' + Number(item.audienceRating).toFixed(1));
-  return parts.join('  ·  ');
-}
-
 export function progress(item) {
   if (!item.viewOffset || !item.duration) return 0;
   return Math.min(1, item.viewOffset / item.duration);
