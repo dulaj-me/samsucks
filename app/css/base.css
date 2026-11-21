@@ -38,6 +38,17 @@ html.playing .ambience { display: none; }
 #splash img { width: 1920px; height: 1080px; display: block; }
 #splash.gone { opacity: 0; }
 
+/* The screen fade (fadeIn in ui/backdrop.js): over the screens, under the toast and the splash. */
+.screen-cover {
+  display: none; position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+  z-index: 40; pointer-events: none; will-change: opacity;
+}
+.screen-cover.fade-a, .screen-cover.fade-b { display: block; animation: var(--t-screen) ease forwards; }
+.screen-cover.fade-a { animation-name: cover-a; }
+.screen-cover.fade-b { animation-name: cover-b; }
+@keyframes cover-a { from { opacity: 1; } to { opacity: 0; } }
+@keyframes cover-b { from { opacity: 1; } to { opacity: 0; } }
+
 .screen { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; }
 
 /* ---------- ambience + hero art ---------- */
