@@ -4,6 +4,12 @@
 import { h } from '../util/dom.js';
 import { session } from '../session.js';
 
+// plex.tv sends 80px avatars unless asked for a size, too small for a 200px face.
+function sourced(thumb, size) {
+  if (!/^https:\/\/plex\.tv\/users\/[^/]+\/avatar/.test(thumb)) return thumb;
+  return thumb + (thumb.indexOf('?') >= 0 ? '&' : '?') + 's=' + size * 2;
+}
+
 export function avatar(parent, user, size) {
   const box = h('div', 'avatar', parent);
   box.style.width = size + 'px';
@@ -13,7 +19,7 @@ export function avatar(parent, user, size) {
   if (user && user.thumb && session.server) {
     const img = h('img', 'avatar-img', box);
     img.onerror = () => img.remove();
-    img.src = session.server.image(user.thumb, size, size);
+    img.src = session.server.image(sourced(user.thumb, size), size, size);
   }
   return box;
 }
