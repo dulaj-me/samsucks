@@ -85,23 +85,5 @@
   --t-focus: 200ms;
   --t-held: 110ms;
   --t-screen: 200ms;
-
-  /*
-   * Old names, still read by the screen stylesheets V2 has not restyled yet. Each line goes
-   * when its last user does. Coral maps to Lamplight: the chrome has no accent.
-   */
-  --bg: var(--ink);
-  --bg-rgb: var(--veil-rgb);
-  --cream: var(--text);
-  --cream-rgb: var(--text-rgb);
-  --dim: var(--mute);
-  --raised: var(--sheet);
-  --coral: var(--text);
-  --coral-rgb: var(--text-rgb);
-  --white: var(--text);
-  --black: #000;
-  --black-rgb: 0, 0, 0;
-  --display: var(--sans);
-  --body: var(--sans);
 }
 
