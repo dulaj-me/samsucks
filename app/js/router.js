@@ -50,10 +50,11 @@ function fades(from, to) {
 }
 
 // color is the room's before the new screen shows and restores its own, so the cover starts
-// from what was on screen.
+// from what was on screen. Called before onShow, so a screen that opens another from onShow
+// gets the last word. Other changes let a running fade finish; only the player cuts it.
 function settle(from, to, color) {
   if (fades(from, to)) fadeIn(color);
-  else stopFade();
+  else if (to.name === 'player') stopFade();
 }
 
 function enter(screen, from, color) {
@@ -62,8 +63,8 @@ function enter(screen, from, color) {
   if (top) hide(top);
   stack.push(screen);
   root.appendChild(screen.el);
-  reveal(screen);
   settle(from, screen, color);
+  reveal(screen);
 }
 
 export function push(screen) {
@@ -97,8 +98,8 @@ export function popToRoot() {
   const color = roomColor();
   const from = stack[stack.length - 1];
   while (stack.length > 1) destroy(stack.pop());
-  reveal(stack[0]);
   settle(from, stack[0], color);
+  reveal(stack[0]);
 }
 
 // At the root (Home, the sign-in screen, or the profile picker after a rejected token)
@@ -116,8 +117,8 @@ export function back() {
   const color = roomColor();
   const from = stack.pop();
   destroy(from);
-  reveal(stack[stack.length - 1]);
   settle(from, stack[stack.length - 1], color);
+  reveal(stack[stack.length - 1]);
 }
 
 export function top() {

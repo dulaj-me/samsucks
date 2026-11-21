@@ -106,7 +106,8 @@ let flip = false;
 export function fadeIn(color) {
   if (!cover) {
     cover = document.createElement('div');
-    cover.addEventListener('animationend', stopFade);
+    // The end of a fade that a newer one replaced can still arrive; it must not cut the new one.
+    cover.addEventListener('animationend', e => { if (e.animationName === (flip ? 'cover-a' : 'cover-b')) stopFade(); });
     document.body.appendChild(cover);
   }
   cover.style.background = color;
